@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1280, initial-scale=1" />
+<title>ReservasGym · Presentación ejecutiva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06080C;
+    --bg-2:#0B0F16;
+    --ink:#F4F7FB;
+    --ink-2:#AAB4C4;
+    --ink-3:#6E7A8C;
+    --line:rgba(255,255,255,.10);
+    --line-2:rgba(255,255,255,.06);
+    --surface:rgba(255,255,255,.045);
+    --surface-2:rgba(255,255,255,.075);
+    --acc:#C9FF3D;
+    --acc-deep:#9BE000;
+    --blue:#5B8CFF;
+    --violet:#A46BFF;
+    --warn:#FFB020;
+    --danger:#FF5F56;
+    --r-s:12px;
+    --r-m:18px;
+    --r-l:26px;
+    --r-xl:34px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{background:#000}
+  body{
+    font-family:"Inter","Helvetica Neue",Arial,sans-serif;
+    background:#000;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  /* ---------- Slide shell ---------- */
+  .deck{display:flex;flex-direction:column;align-items:center;gap:28px;padding:28px 0}
+  .slide{
+    position:relative;
+    width:1280px;height:720px;
+    overflow:hidden;
+    background:
+      radial-gradient(900px 520px at 82% -12%, rgba(201,255,61,.14), transparent 62%),
+      radial-gradient(760px 520px at -8% 106%, rgba(91,140,255,.16), transparent 60%),
+      linear-gradient(160deg,#080B11 0%, #06080C 48%, #080A10 100%);
+    padding:52px 64px 78px;
+    display:flex;flex-direction:column;
+  }
+  .slide::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+    background-size:64px 64px;
+    mask-image:radial-gradient(120% 100% at 50% 0%,#000 20%,transparent 78%);
+    -webkit-mask-image:radial-gradient(120% 100% at 50% 0%,#000 20%,transparent 78%);
+  }
+  .slide > *{position:relative;z-index:1}
+
+  /* ---------- Typography ---------- */
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:9px;
+    font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--acc);
+  }
+  .eyebrow::before{content:"";width:22px;height:2px;border-radius:2px;background:var(--acc)}
+  h1{font-size:64px;line-height:1.02;font-weight:800;letter-spacing:-.033em}
+  h2{font-size:44px;line-height:1.08;font-weight:800;letter-spacing:-.028em}
+  h3{font-size:20px;line-height:1.25;font-weight:700;letter-spacing:-.012em}
+  .lead{font-size:21px;line-height:1.5;color:var(--ink-2);font-weight:400}
+  .p{font-size:15.5px;line-height:1.58;color:var(--ink-2)}
+  .p-sm{font-size:14px;line-height:1.55;color:var(--ink-3)}
+  .em{color:var(--ink);font-weight:600}
+  .acc{color:var(--acc)}
+  .grad{
+    background:linear-gradient(96deg,#FFFFFF 8%, #C9FF3D 52%, #9BE000 92%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+
+  .head{margin-bottom:34px}
+  .head h2{margin-top:14px}
+  .head .lead{margin-top:14px;max-width:840px}
+
+  /* ---------- Bits ---------- */
+  .ico{width:22px;height:22px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round;display:block}
+  .ico-lg{width:26px;height:26px}
+  .chip{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:46px;height:46px;border-radius:14px;
+    background:linear-gradient(150deg,rgba(201,255,61,.20),rgba(201,255,61,.05));
+    border:1px solid rgba(201,255,61,.30);
+    color:var(--acc);flex:none;
+  }
+  .chip.blue{background:linear-gradient(150deg,rgba(91,140,255,.22),rgba(91,140,255,.05));border-color:rgba(91,140,255,.32);color:#9CB8FF}
+  .chip.red{background:linear-gradient(150deg,rgba(255,95,86,.20),rgba(255,95,86,.05));border-color:rgba(255,95,86,.30);color:#FF8A82}
+  .chip.warn{background:linear-gradient(150deg,rgba(255,176,32,.20),rgba(255,176,32,.05));border-color:rgba(255,176,32,.30);color:#FFC85A}
+  .chip.violet{background:linear-gradient(150deg,rgba(164,107,255,.22),rgba(164,107,255,.05));border-color:rgba(164,107,255,.32);color:#C7A4FF}
+  .chip-sm{width:38px;height:38px;border-radius:11px}
+  .chip-sm .ico{width:19px;height:19px}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--r-l);
+    padding:26px;
+    backdrop-filter:blur(14px);
+  }
+  .card.tight{padding:20px;border-radius:var(--r-m)}
+  .card.glow{
+    background:linear-gradient(155deg,rgba(201,255,61,.13),rgba(255,255,255,.03));
+    border-color:rgba(201,255,61,.28);
+  }
+
+  .grid{display:grid;gap:18px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .g6{grid-template-columns:repeat(6,1fr)}
+  .fill{flex:1;min-height:0}
+
+  .num{
+    width:34px;height:34px;border-radius:11px;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:800;color:#0A0D06;
+    background:linear-gradient(150deg,var(--acc),var(--acc-deep));
+  }
+
+  .stat{font-size:52px;font-weight:800;letter-spacing:-.035em;line-height:1}
+  .stat-sm{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1}
+
+  .tick{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;line-height:1.5;color:var(--ink-2)}
+  .tick .ico{width:17px;height:17px;color:var(--acc);flex:none;margin-top:3px;stroke-width:2.6}
+  .tick.mut .ico{color:var(--ink-3)}
+
+  .pill{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:6px 13px;border-radius:999px;
+    font-size:12.5px;font-weight:600;letter-spacing:.01em;
+    background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);
+  }
+  .pill.acc{background:rgba(201,255,61,.14);border-color:rgba(201,255,61,.34);color:var(--acc)}
+
+  /* ---------- Footer ---------- */
+  .foot{
+    position:absolute;left:64px;right:64px;bottom:24px;
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:11.5px;font-weight:500;color:var(--ink-3);letter-spacing:.04em;
+    padding-top:14px;border-top:1px solid var(--line-2);z-index:2;
+  }
+  .foot .brand{display:flex;align-items:center;gap:8px;color:var(--ink-2);font-weight:700;letter-spacing:-.01em;font-size:12.5px}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--acc)}
+
+  /* ---------- Logo ---------- */
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo-mark{
+    width:44px;height:44px;border-radius:13px;flex:none;
+    background:linear-gradient(150deg,var(--acc),var(--acc-deep));
+    display:flex;align-items:center;justify-content:center;color:#0A0D06;
+  }
+  .logo-mark .ico{width:24px;height:24px;stroke-width:2.4}
+  .logo-txt{font-size:22px;font-weight:800;letter-spacing:-.03em}
+  .logo-txt span{color:var(--acc)}
+
+  /* ---------- Phone mockup ---------- */
+  .phone{
+    width:236px;height:462px;flex:none;
+    border-radius:38px;padding:9px;
+    background:linear-gradient(165deg,#252B36,#0D1017);
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 26px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.14);
+  }
+  .screen{
+    width:100%;height:100%;border-radius:30px;overflow:hidden;
+    background:linear-gradient(180deg,#10141C,#0A0D13);
+    display:flex;flex-direction:column;position:relative;
+  }
+  .notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:74px;height:19px;border-radius:12px;background:#04060A;z-index:3}
+  .sbar{display:flex;justify-content:space-between;align-items:center;padding:11px 16px 4px;font-size:9.5px;font-weight:700;color:var(--ink-2)}
+  .sbar .r{display:flex;gap:4px;align-items:center}
+  .sbar .r i{display:block;width:13px;height:7px;border:1px solid var(--ink-3);border-radius:2px;position:relative}
+  .sbar .r i::after{content:"";position:absolute;inset:1px;right:4px;background:var(--acc);border-radius:1px}
+  .scr-body{flex:1;padding:6px 14px 0;overflow:hidden}
+  .scr-title{font-size:17px;font-weight:800;letter-spacing:-.02em;margin:4px 0 3px}
+  .scr-sub{font-size:9.5px;color:var(--ink-3);font-weight:500}
+  .fake-search{
+    display:flex;align-items:center;gap:7px;margin:11px 0 9px;
+    background:rgba(255,255,255,.07);border:1px solid var(--line);
+    border-radius:11px;padding:8px 10px;font-size:10px;color:var(--ink-3);font-weight:500;
+  }
+  .fake-search .ico{width:13px;height:13px;color:var(--ink-3)}
+  .chips{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
+  .mini-chip{font-size:8.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--ink-2)}
+  .mini-chip.on{background:var(--acc);border-color:var(--acc);color:#0A0D06}
+  .cls{
+    background:rgba(255,255,255,.055);border:1px solid var(--line);
+    border-radius:13px;padding:9px 10px;margin-bottom:7px;
+    display:flex;gap:9px;align-items:center;
+  }
+  .cls .t{width:38px;flex:none;text-align:center}
+  .cls .t b{display:block;font-size:12px;font-weight:800;letter-spacing:-.02em}
+  .cls .t s{display:block;font-size:7.5px;color:var(--ink-3);text-decoration:none;font-weight:600;margin-top:1px}
+  .cls .m{flex:1;min-width:0}
+  .cls .m b{display:block;font-size:10.5px;font-weight:700;letter-spacing:-.01em}
+  .cls .m s{display:block;font-size:8.5px;color:var(--ink-3);text-decoration:none;margin-top:2px;font-weight:500}
+  .cap{font-size:7.5px;font-weight:800;padding:3px 7px;border-radius:999px;white-space:nowrap}
+  .cap.ok{background:rgba(201,255,61,.16);color:var(--acc)}
+  .cap.low{background:rgba(255,176,32,.16);color:#FFC85A}
+  .cap.full{background:rgba(255,95,86,.15);color:#FF8A82}
+  .tabbar{
+    display:flex;justify-content:space-around;align-items:center;
+    padding:9px 6px 13px;border-top:1px solid var(--line-2);
+    background:rgba(255,255,255,.035);
+  }
+  .tabbar div{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-3);font-size:7.5px;font-weight:700}
+  .tabbar div .ico{width:16px;height:16px}
+  .tabbar div.on{color:var(--acc)}
+  .btn-acc{
+    background:linear-gradient(150deg,var(--acc),var(--acc-deep));color:#0A0D06;
+    border-radius:12px;padding:11px;text-align:center;font-size:11.5px;font-weight:800;letter-spacing:-.01em;
+  }
+  .qr-box{
+    background:#fff;border-radius:14px;padding:11px;width:132px;height:132px;margin:0 auto;
+    display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);gap:2px;
+  }
+  .qr-box i{background:#0A0D06;border-radius:1px}
+  .qr-box i.o{background:transparent}
+
+  /* ---------- Desktop mockup ---------- */
+  .win{
+    border-radius:16px;overflow:hidden;border:1px solid var(--line);
+    background:linear-gradient(180deg,#0E131B,#0A0D13);
+    box-shadow:0 24px 60px rgba(0,0,0,.5);display:flex;flex-direction:column;
+  }
+  .win-bar{display:flex;align-items:center;gap:6px;padding:9px 13px;border-bottom:1px solid var(--line-2);background:rgba(255,255,255,.035)}
+  .win-bar u{width:9px;height:9px;border-radius:50%;background:#3A4150;display:block}
+  .win-bar u:nth-child(1){background:#FF5F56}.win-bar u:nth-child(2){background:#FFBD2E}.win-bar u:nth-child(3){background:#27C93F}
+  .win-bar span{margin-left:10px;font-size:9.5px;color:var(--ink-3);font-weight:600}
+  .win-body{display:flex;flex:1;min-height:0}
+  .side{width:132px;flex:none;border-right:1px solid var(--line-2);padding:13px 10px;background:rgba(255,255,255,.02)}
+  .side a{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:8px;font-size:9.5px;font-weight:600;color:var(--ink-3);margin-bottom:2px}
+  .side a .ico{width:13px;height:13px}
+  .side a.on{background:rgba(201,255,61,.14);color:var(--acc)}
+  .main{flex:1;padding:14px 16px;min-width:0}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+  .kpi{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:9px 10px}
+  .kpi s{display:block;font-size:8px;color:var(--ink-3);text-decoration:none;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+  .kpi b{display:block;font-size:19px;font-weight:800;letter-spacing:-.03em;margin-top:3px}
+  .kpi b em{font-style:normal;font-size:10px;color:var(--acc);font-weight:700;margin-left:4px}
+  .chart{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+  .chart h4{font-size:10.5px;font-weight:700;margin-bottom:11px;letter-spacing:-.01em}
+  .bars{display:flex;align-items:flex-end;gap:8px;height:92px}
+  .bars div{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
+  .bars div u{width:100%;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--acc),rgba(155,224,0,.35));display:block}
+  .bars div u.b{background:linear-gradient(180deg,var(--blue),rgba(91,140,255,.3))}
+  .bars div s{font-size:7.5px;color:var(--ink-3);text-decoration:none;font-weight:600}
+  .tbl{display:flex;flex-direction:column;gap:3px}
+  .tr{display:grid;grid-template-columns:.6fr 1fr .9fr .6fr .8fr;align-items:center;gap:6px;font-size:9px;font-weight:600;color:var(--ink-2);padding:5px 7px;border-radius:7px;background:rgba(255,255,255,.035)}
+  .tr.th{background:none;padding:0 7px 2px;font-size:7.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+  .tr .cap{justify-self:start;font-size:7px}
+
+  /* ---------- Table ---------- */
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .plan{
+    border:1px solid var(--line);border-radius:var(--r-l);padding:22px 20px;
+    background:var(--surface);display:flex;flex-direction:column;position:relative;
+  }
+  .plan.best{
+    background:linear-gradient(160deg,rgba(201,255,61,.15),rgba(255,255,255,.035));
+    border-color:rgba(201,255,61,.4);
+    box-shadow:0 0 0 1px rgba(201,255,61,.12), 0 20px 46px rgba(201,255,61,.09);
+  }
+  .plan .tag{position:absolute;top:-11px;left:20px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;background:linear-gradient(150deg,var(--acc),var(--acc-deep));color:#0A0D06;padding:5px 11px;border-radius:999px}
+  .plan .nm{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+  .plan.best .nm{color:var(--acc)}
+  .plan .who{font-size:12px;color:var(--ink-3);margin-top:6px;line-height:1.35;min-height:32px}
+  .plan .price{margin:11px 0 3px;display:flex;align-items:baseline;gap:5px}
+  .plan .price b{font-size:36px;font-weight:800;letter-spacing:-.035em}
+  .plan .price s{font-size:12.5px;color:var(--ink-3);text-decoration:none;font-weight:600}
+  .plan .setup{font-size:11.5px;color:var(--ink-2);font-weight:500;padding-bottom:11px;border-bottom:1px solid var(--line-2);margin-bottom:12px}
+  .plan .setup b{color:var(--ink);font-weight:700}
+  .plan ul{list-style:none;display:flex;flex-direction:column;gap:6.5px}
+  .plan ul .tick{font-size:13px;line-height:1.35}
+  .plan ul .tick .ico{width:15px;height:15px;margin-top:2px}
+
+  /* ---------- Misc blocks ---------- */
+  .flow{display:flex;align-items:stretch;gap:12px}
+  .flow .arrow{display:flex;align-items:center;color:var(--ink-3);flex:none}
+  .flow .arrow .ico{width:22px;height:22px}
+  .step{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:18px}
+  .quote{
+    border-left:3px solid var(--acc);padding:4px 0 4px 20px;
+    font-size:24px;line-height:1.35;font-weight:600;letter-spacing:-.02em;color:var(--ink);
+  }
+  .step-card{display:flex;gap:15px;align-items:flex-start;padding:16px 18px}
+  .step-card h3{font-size:18.5px}
+  .step-card .p{margin-top:4px;font-size:14.5px;line-height:1.5}
+  .addon .card{padding:17px 17px 16px}
+  .addon h3{font-size:15.5px;margin-top:12px}
+  .addon .p-sm{margin-top:5px;font-size:12.5px;line-height:1.45}
+  .feat .card{padding:16px 16px 15px}
+  .feat h3{font-size:15px;margin-top:11px}
+  .feat .p-sm{margin-top:5px;font-size:12.5px;line-height:1.42}
+  .faq b{display:block;font-size:15px;font-weight:700;margin-bottom:6px;letter-spacing:-.012em}
+  .faq p{font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+
+  @media print{
+    html,body{background:#000}
+    .deck{gap:0;padding:0}
+    .slide{break-after:page;page-break-after:always;box-shadow:none;margin:0}
+    .slide:last-child{break-after:auto;page-break-after:auto}
+  }
+  @page{size:1280px 720px;margin:0}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4.5 13.5H11l-.9 8.5 8.4-11.5H12z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16.6 16.6"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 4.5 1.8 5.7 1.8 5.7H4.2S6 13.5 6 9Z"/><path d="M10 19a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14h1M14 20h3M20 17v4"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.8 20a6.2 6.2 0 0 1 12.4 0"/><path d="M16.5 5.3a3.4 3.4 0 0 1 0 6.5M17.6 14.4A6.2 6.2 0 0 1 21.2 20"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 21h18"/><rect x="4" y="12" width="4" height="7" rx="1.2"/><rect x="10" y="7" width="4" height="12" rx="1.2"/><rect x="16" y="3" width="4" height="16" rx="1.2"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.4 2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5 9.5 17.5 19.5 6.5"/></symbol>
+  <symbol id="i-checkc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16.2 9.3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.7 2.5 17.2A2 2 0 0 0 4.2 20.2h15.6a2 2 0 0 0 1.7-3l-7.8-13.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4.2M12 17h.01"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3.5 20.5l1.4-5.9A8 8 0 1 1 21 12Z"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 10h19M6.5 15h3"/></symbol>
+  <symbol id="i-slid" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.6 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.9-5.4 2.9 1-6L3.2 10l6.1-.9z"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.3 4.2 12.8a4.8 4.8 0 0 1 7.8-5.4 4.8 4.8 0 0 1 7.8 5.4z"/></symbol>
+  <symbol id="i-dumb" viewBox="0 0 24 24"><path d="M3 9v6M6.5 6.5v11M17.5 6.5v11M21 9v6M6.5 12h11"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2.5"/><path d="M9 21h6M12 17v4"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="3"/><path d="M10.5 18.5h3"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M4 9a5 5 0 0 1 5-5h11"/><path d="m17 1 3 3-3 3"/><path d="M20 15a5 5 0 0 1-5 5H4"/><path d="m7 23-3-3 3-3"/></symbol>
+  <symbol id="i-news" viewBox="0 0 24 24"><rect x="3" y="5" width="14" height="15" rx="2"/><path d="M17 9h3a1 1 0 0 1 1 1v8a2 2 0 0 1-2 2M6.5 9h7M6.5 12.5h7M6.5 16h4"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 2.5s5.5 4.4 5.5 9.5a5.5 5.5 0 0 1-11 0c0-2 1-3.6 1-3.6s.6 1.6 2 1.6c1.7 0 2.5-2.5 2.5-7.5Z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M4 12h16"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3.5 10.5 8.5-7 8.5 7V19a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8.5V6.5a1.5 1.5 0 0 1 1.5-1.5h15A1.5 1.5 0 0 1 21 6.5v2a3.5 3.5 0 0 0 0 7v2a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-2a3.5 3.5 0 0 0 0-7Z"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M15.5 3.5a5.5 5.5 0 0 0-5 7.7L3.8 17.9a2 2 0 0 0 2.8 2.8l6.7-6.7a5.5 5.5 0 0 0 7-7.2l-3.1 3.1-2.8-.7-.7-2.8z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.8 4.5 6v6c0 4.6 3.2 8.1 7.5 9.2 4.3-1.1 7.5-4.6 7.5-9.2V6z"/><path d="m9 12 2.2 2.2L15.2 10"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18h10.5a3.9 3.9 0 0 0 .4-7.8A5.6 5.6 0 0 0 7.2 9.6 4.2 4.2 0 0 0 7 18Z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.2 9.5h17.6M3.2 14.5h17.6"/><path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 11.2V4.5a1 1 0 0 1 1-1h6.7a1 1 0 0 1 .7.3l8 8a1 1 0 0 1 0 1.4l-6.7 6.7a1 1 0 0 1-1.4 0l-8-8a1 1 0 0 1-.3-.7Z"/><circle cx="8" cy="8" r="1.4"/></symbol>
+</defs></svg>
+
+<div class="deck">
+
+<!-- ============ 01 · PORTADA ============ -->
+<section class="slide" style="justify-content:space-between">
+  <div class="logo">
+    <div class="logo-mark"><svg class="ico"><use href="#i-bolt"/></svg></div>
+    <div class="logo-txt">Reservas<span>Gym</span></div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:56px;margin-top:-20px">
+    <div style="flex:1">
+      <div class="eyebrow">Presentación ejecutiva</div>
+      <h1 style="margin-top:20px">Tus socios<br>reservan solos.<br><span class="grad">Tú controlas todo.</span></h1>
+      <p class="lead" style="margin-top:24px;max-width:520px">
+        La aplicación de reservas, aforo y asistencia para tu gimnasio.
+        Sin cupos sobrevendidos, sin filas en recepción y sin perder horas en WhatsApp.
+      </p>
+      <div style="display:flex;gap:10px;margin-top:28px;flex-wrap:wrap">
+        <span class="pill acc"><svg class="ico" style="width:15px;height:15px"><use href="#i-checkc"/></svg> Prueba 30 días gratis</span>
+        <span class="pill"><svg class="ico" style="width:15px;height:15px"><use href="#i-clock"/></svg> Operativo en 2 semanas</span>
+        <span class="pill"><svg class="ico" style="width:15px;height:15px"><use href="#i-globe"/></svg> Soporte en Ecuador</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:20px;align-items:center">
+      <div class="phone" style="transform:rotate(-4deg) translateY(14px) scale(.94)">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="sbar"><span>7:41</span><div class="r"><span>Gym</span><i></i></div></div>
+          <div class="scr-body">
+            <div class="scr-title">Hola, Andrea 👋</div>
+            <div class="scr-sub">Martes 13 de enero</div>
+            <div class="card tight" style="margin-top:11px;padding:11px;border-radius:13px;background:linear-gradient(150deg,rgba(201,255,61,.17),rgba(255,255,255,.03));border-color:rgba(201,255,61,.3)">
+              <div style="font-size:8px;font-weight:800;letter-spacing:.1em;color:var(--acc);text-transform:uppercase">Tu próxima clase</div>
+              <div style="font-size:13px;font-weight:800;margin-top:5px;letter-spacing:-.02em">Spinning · 19:00</div>
+              <div style="font-size:9px;color:var(--ink-3);margin-top:3px;font-weight:500">Sala Cycle · Con Carla Díaz</div>
+              <div class="btn-acc" style="margin-top:10px;padding:8px;font-size:10px">Ver mi código QR</div>
+            </div>
+            <div style="font-size:10px;font-weight:800;margin:13px 0 7px;letter-spacing:-.01em">Hoy en tu gym</div>
+            <div class="cls"><div class="t"><b>18:00</b><s>60 min</s></div><div class="m"><b>Funcional</b><s>Sala 2 · Luis M.</s></div><span class="cap ok">6 cupos</span></div>
+            <div class="cls"><div class="t"><b>19:00</b><s>45 min</s></div><div class="m"><b>Spinning</b><s>Cycle · Carla D.</s></div><span class="cap low">2 cupos</span></div>
+            <div class="cls"><div class="t"><b>20:00</b><s>50 min</s></div><div class="m"><b>Yoga flow</b><s>Sala 1 · Ana P.</s></div><span class="cap full">Llena</span></div>
+          </div>
+          <div class="tabbar">
+            <div class="on"><svg class="ico"><use href="#i-home"/></svg>Inicio</div>
+            <div><svg class="ico"><use href="#i-search"/></svg>Explorar</div>
+            <div><svg class="ico"><use href="#i-cal"/></svg>Agenda</div>
+            <div><svg class="ico"><use href="#i-user"/></svg>Perfil</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="brand"><span class="dot"></span> ReservasGym</div>
+    <div>Propuesta preparada para tu gimnasio · Ecuador</div>
+  </div>
+</section>
+
+<!-- ============ 02 · EL PROBLEMA ============ -->
+<section class="slide">
+  <div class="head">
+    <div class="eyebrow">El punto de partida</div>
+    <h2>Lo que está pasando hoy<br>en tu gimnasio</h2>
+  </div>
+
+  <div class="grid g2 fill" style="gap:20px">
+    <div class="card" style="display:flex;gap:18px">
+      <div class="chip red"><svg class="ico ico-lg"><use href="#i-msg"/></svg></div>
+      <div>
+        <h3>El WhatsApp no da abasto</h3>
+        <p class="p" style="margin-top:9px">Recepción contesta decenas de mensajes al día para agendar, mover y cancelar. Nadie tiene el horario claro y siempre se cuela un error.</p>
+      </div>
+    </div>
+
+    <div class="card" style="display:flex;gap:18px">
+      <div class="chip warn"><svg class="ico ico-lg"><use href="#i-alert"/></svg></div>
+      <div>
+        <h3>Clases sobrevendidas</h3>
+        <p class="p" style="margin-top:9px">Llegan 22 personas a una sala de 15. El socio que sí avisó se queda afuera, se molesta y esa queja te cuesta la renovación.</p>
+      </div>
+    </div>
+
+    <div class="card" style="display:flex;gap:18px">
+      <div class="chip red"><svg class="ico ico-lg"><use href="#i-x"/></svg></div>
+      <div>
+        <h3>1 de cada 5 no aparece</h3>
+        <p class="p" style="margin-top:9px">Apartan el cupo y no vienen. Ese lugar pudo ser de otro socio, pero nadie se enteró de que quedó libre.</p>
+      </div>
+    </div>
+
+    <div class="card" style="display:flex;gap:18px">
+      <div class="chip warn"><svg class="ico ico-lg"><use href="#i-chart"/></svg></div>
+      <div>
+        <h3>Decides a ciegas</h3>
+        <p class="p" style="margin-top:9px">No sabes qué horarios se llenan, cuáles están vacíos ni qué clase conviene mantener, mover o cerrar. Se decide por intuición.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card glow" style="margin-top:20px;padding:18px 24px;display:flex;align-items:center;gap:16px">
+    <svg class="ico ico-lg" style="color:var(--acc);flex:none"><use href="#i-trend"/></svg>
+    <p style="font-size:17px;font-weight:600;letter-spacing:-.015em">
+      Ninguno de estos problemas es de tecnología. <span class="acc">Todos son de dinero:</span> cupos que no se venden y socios que no renuevan.
+    </p>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>02</div></div>
+</section>
+
+<!-- ============ 03 · LA SOLUCIÓN ============ -->
+<section class="slide">
+  <div class="head">
+    <div class="eyebrow">La propuesta</div>
+    <h2>Una sola app para tu gimnasio</h2>
+    <p class="lead">Tus socios reservan desde su celular. Tú ves en tiempo real quién viene, a qué clase y cuánto cupo queda. Nada más.</p>
+  </div>
+
+  <div class="grid g3 fill">
+    <div class="card" style="display:flex;flex-direction:column">
+      <div class="chip"><svg class="ico ico-lg"><use href="#i-phone"/></svg></div>
+      <h3 style="margin-top:20px">Reservas sin fricción</h3>
+      <p class="p" style="margin-top:11px">En dos toques, a cualquier hora, sin llamar ni escribirle a nadie. El socio ve los cupos reales antes de confirmar.</p>
+      <div style="margin-top:auto;padding-top:18px;display:flex;flex-direction:column;gap:9px">
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Reservar, cancelar y reagendar</div>
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Lista de espera automática</div>
+      </div>
+    </div>
+
+    <div class="card" style="display:flex;flex-direction:column">
+      <div class="chip blue"><svg class="ico ico-lg"><use href="#i-shield"/></svg></div>
+      <h3 style="margin-top:20px">Aforo bajo control</h3>
+      <p class="p" style="margin-top:11px">Nunca más una sala con más gente de la que cabe. El cupo se cierra solo y el check-in con QR confirma quién entró de verdad.</p>
+      <div style="margin-top:auto;padding-top:18px;display:flex;flex-direction:column;gap:9px">
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Cupo exacto por sala y clase</div>
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Control real de asistencia</div>
+      </div>
+    </div>
+
+    <div class="card" style="display:flex;flex-direction:column">
+      <div class="chip violet"><svg class="ico ico-lg"><use href="#i-chart"/></svg></div>
+      <h3 style="margin-top:20px">Datos para decidir</h3>
+      <p class="p" style="margin-top:11px">Qué horarios se llenan, cuáles están vacíos y quién no está viniendo. Con eso rediseñas la parrilla y recuperas horas muertas.</p>
+      <div style="margin-top:auto;padding-top:18px;display:flex;flex-direction:column;gap:9px">
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Ocupación por clase y por zona</div>
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Reportes en Excel y PDF</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>03</div></div>
+</section>
+
+<!-- ============ 04 · RECORRIDO DEL SOCIO ============ -->
+<section class="slide">
+  <div class="head" style="margin-bottom:24px">
+    <div class="eyebrow">Experiencia del socio</div>
+    <h2>Así de simple lo vive tu socio</h2>
+  </div>
+
+  <div style="display:flex;gap:26px;align-items:flex-start;flex:1;min-height:0">
+    <div style="display:flex;gap:16px;flex:none">
+      <div class="phone" style="width:212px;height:442px">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="sbar"><span>7:41</span><div class="r"><i></i></div></div>
+          <div class="scr-body">
+            <div class="scr-title">Explorar</div>
+            <div class="fake-search"><svg class="ico"><use href="#i-search"/></svg> Buscar clase, zona o instructor</div>
+            <div class="chips">
+              <span class="mini-chip on">Hoy</span><span class="mini-chip">Tarde</span><span class="mini-chip">Cardio</span>
+            </div>
+            <div class="cls"><div class="t"><b>17:00</b><s>50 min</s></div><div class="m"><b>HIIT</b><s>Sala 3</s></div><span class="cap ok">9 cupos</span></div>
+            <div class="cls"><div class="t"><b>18:00</b><s>60 min</s></div><div class="m"><b>Funcional</b><s>Sala 2</s></div><span class="cap ok">6 cupos</span></div>
+            <div class="cls"><div class="t"><b>19:00</b><s>45 min</s></div><div class="m"><b>Spinning</b><s>Cycle</s></div><span class="cap low">2 cupos</span></div>
+            <div class="cls"><div class="t"><b>20:00</b><s>50 min</s></div><div class="m"><b>Yoga flow</b><s>Sala 1</s></div><span class="cap full">Llena</span></div>
+          </div>
+          <div class="tabbar">
+            <div><svg class="ico"><use href="#i-home"/></svg>Inicio</div>
+            <div class="on"><svg class="ico"><use href="#i-search"/></svg>Explorar</div>
+            <div><svg class="ico"><use href="#i-cal"/></svg>Agenda</div>
+            <div><svg class="ico"><use href="#i-user"/></svg>Perfil</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phone" style="width:212px;height:442px">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="sbar"><span>7:41</span><div class="r"><i></i></div></div>
+          <div class="scr-body" style="display:flex;flex-direction:column">
+            <div class="scr-title" style="margin-top:8px">Tu acceso</div>
+            <div class="scr-sub">Spinning · Hoy 19:00</div>
+            <div style="margin-top:16px">
+              <div class="qr-box">
+                <i></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i></i>
+                <i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i>
+                <i></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i></i>
+                <i class="o"></i><i class="o"></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i>
+                <i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i>
+                <i class="o"></i><i></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i>
+                <i></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i class="o"></i><i></i><i></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i></i>
+                <i></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+            </div>
+            <div style="text-align:center;margin-top:14px">
+              <div style="font-size:10px;font-weight:800;color:var(--acc);letter-spacing:.05em">RESERVA CONFIRMADA</div>
+              <div style="font-size:9px;color:var(--ink-3);margin-top:5px;font-weight:500;line-height:1.4">Muestra este código<br>en la entrada</div>
+            </div>
+            <div style="margin-top:auto;padding-bottom:10px;display:flex;gap:6px">
+              <div style="flex:1;text-align:center;padding:9px;border-radius:11px;background:rgba(255,255,255,.07);border:1px solid var(--line);font-size:9.5px;font-weight:700;color:var(--ink-2)">Reagendar</div>
+              <div style="flex:1;text-align:center;padding:9px;border-radius:11px;background:rgba(255,95,86,.13);border:1px solid rgba(255,95,86,.3);font-size:9.5px;font-weight:700;color:#FF8A82">Cancelar</div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div><svg class="ico"><use href="#i-home"/></svg>Inicio</div>
+            <div><svg class="ico"><use href="#i-search"/></svg>Explorar</div>
+            <div class="on"><svg class="ico"><use href="#i-ticket"/></svg>Reservas</div>
+            <div><svg class="ico"><use href="#i-user"/></svg>Perfil</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px;padding-top:2px">
+      <div class="card tight step-card">
+        <div class="num">1</div>
+        <div><h3>Busca su clase</h3><p class="p">Por tipo, horario, instructor, intensidad o duración. También reserva la piscina, el sauna o la cancha.</p></div>
+      </div>
+      <div class="card tight step-card">
+        <div class="num">2</div>
+        <div><h3>Reserva en dos toques</h3><p class="p">Ve cuántos cupos quedan antes de confirmar. Si va siempre al mismo horario, lo deja agendado de una sola vez.</p></div>
+      </div>
+      <div class="card tight step-card">
+        <div class="num">3</div>
+        <div><h3>Recibe su recordatorio</h3><p class="p">Un aviso automático antes de la clase. Si ya no puede venir, cancela y libera el cupo para otro socio.</p></div>
+      </div>
+      <div class="card tight glow step-card">
+        <div class="num">4</div>
+        <div><h3>Entra con su código QR</h3><p class="p">Check-in en segundos en la entrada. Sin filas y sin que recepción tenga que buscar el nombre en una lista.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>04</div></div>
+</section>
+
+<!-- ============ 05 · LISTA DE ESPERA ============ -->
+<section class="slide">
+  <div class="head">
+    <div class="eyebrow">La función que más se nota</div>
+    <h2>¿Clase llena? Nadie se queda por fuera</h2>
+    <p class="lead">Cuando una clase se llena, el socio no se va con las manos vacías: entra automáticamente a la lista de espera.</p>
+  </div>
+
+  <div class="flow" style="margin-bottom:22px">
+    <div class="step">
+      <div class="chip warn chip-sm"><svg class="ico"><use href="#i-users"/></svg></div>
+      <h3 style="margin-top:15px;font-size:17px">Se anota en la lista</h3>
+      <p class="p" style="margin-top:8px">Ve su posición exacta: "eres el número 2 de 4". Sin llamar a preguntar si se liberó algo.</p>
+    </div>
+    <div class="arrow"><svg class="ico"><use href="#i-arrow"/></svg></div>
+    <div class="step">
+      <div class="chip blue chip-sm"><svg class="ico"><use href="#i-bell"/></svg></div>
+      <h3 style="margin-top:15px;font-size:17px">Alguien cancela</h3>
+      <p class="p" style="margin-top:8px">En ese instante el sistema avisa al primero de la lista. Automático, sin que nadie del equipo intervenga.</p>
+    </div>
+    <div class="arrow"><svg class="ico"><use href="#i-arrow"/></svg></div>
+    <div class="step" style="background:linear-gradient(155deg,rgba(201,255,61,.14),rgba(255,255,255,.03));border-color:rgba(201,255,61,.3)">
+      <div class="chip chip-sm"><svg class="ico"><use href="#i-checkc"/></svg></div>
+      <h3 style="margin-top:15px;font-size:17px">Su cupo queda listo</h3>
+      <p class="p" style="margin-top:8px">Confirma y ya tiene su lugar. La clase vuelve a salir llena en lugar de quedar con sillas vacías.</p>
+    </div>
+  </div>
+
+  <div class="grid g3" style="gap:16px">
+    <div class="card tight" style="display:flex;gap:13px;align-items:center">
+      <div class="chip chip-sm"><svg class="ico"><use href="#i-clock"/></svg></div>
+      <div><div style="font-size:14.5px;font-weight:700;letter-spacing:-.01em">Política de cancelación</div><p class="p-sm" style="margin-top:3px">Tú decides con cuántas horas se puede cancelar sin penalidad.</p></div>
+    </div>
+    <div class="card tight" style="display:flex;gap:13px;align-items:center">
+      <div class="chip chip-sm"><svg class="ico"><use href="#i-x"/></svg></div>
+      <div><div style="font-size:14.5px;font-weight:700;letter-spacing:-.01em">Control de ausencias</div><p class="p-sm" style="margin-top:3px">Quien reserva y no viene queda marcado. Tú defines la consecuencia.</p></div>
+    </div>
+    <div class="card tight" style="display:flex;gap:13px;align-items:center">
+      <div class="chip chip-sm"><svg class="ico"><use href="#i-repeat"/></svg></div>
+      <div><div style="font-size:14.5px;font-weight:700;letter-spacing:-.01em">Sin doble reserva</div><p class="p-sm" style="margin-top:3px">El sistema impide que un socio aparte dos clases a la misma hora.</p></div>
+    </div>
+  </div>
+
+  <div class="quote" style="margin-top:auto;font-size:22px">
+    El resultado: tus clases se llenan al <span class="acc">100%</span>,<br>incluso cuando hay cancelaciones de último minuto.
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>05</div></div>
+</section>
+
+<!-- ============ 06 · PANEL DE CONTROL ============ -->
+<section class="slide">
+  <div class="head" style="margin-bottom:26px">
+    <div class="eyebrow">Para ti y tu equipo</div>
+    <h2>Tu centro de control</h2>
+  </div>
+
+  <div style="display:flex;gap:30px;flex:1;min-height:0">
+    <div class="win" style="flex:1.35">
+      <div class="win-bar"><u></u><u></u><u></u><span>Panel de administración · Mi Gimnasio</span></div>
+      <div class="win-body">
+        <div class="side">
+          <a class="on"><svg class="ico"><use href="#i-chart"/></svg> Resumen</a>
+          <a><svg class="ico"><use href="#i-cal"/></svg> Horarios</a>
+          <a><svg class="ico"><use href="#i-dumb"/></svg> Clases y zonas</a>
+          <a><svg class="ico"><use href="#i-users"/></svg> Instructores</a>
+          <a><svg class="ico"><use href="#i-ticket"/></svg> Reservas</a>
+          <a><svg class="ico"><use href="#i-wrench"/></svg> Mantenimiento</a>
+          <a><svg class="ico"><use href="#i-card"/></svg> Membresías</a>
+          <a><svg class="ico"><use href="#i-slid"/></svg> Ajustes</a>
+        </div>
+        <div class="main">
+          <div class="kpis">
+            <div class="kpi"><s>Ocupación hoy</s><b>87%<em>+12</em></b></div>
+            <div class="kpi"><s>Reservas</s><b>214</b></div>
+            <div class="kpi"><s>Check-in</s><b>191</b></div>
+            <div class="kpi"><s>Ausencias</s><b>23</b></div>
+          </div>
+          <div class="chart">
+            <h4>Ocupación por franja horaria · esta semana</h4>
+            <div class="bars">
+              <div><u style="height:34%"></u><s>06h</s></div>
+              <div><u style="height:52%"></u><s>08h</s></div>
+              <div><u class="b" style="height:26%"></u><s>10h</s></div>
+              <div><u class="b" style="height:19%"></u><s>12h</s></div>
+              <div><u class="b" style="height:31%"></u><s>15h</s></div>
+              <div><u style="height:72%"></u><s>17h</s></div>
+              <div><u style="height:96%"></u><s>19h</s></div>
+              <div><u style="height:81%"></u><s>20h</s></div>
+              <div><u style="height:44%"></u><s>21h</s></div>
+            </div>
+            <div style="display:flex;gap:14px;margin-top:11px;font-size:8.5px;color:var(--ink-3);font-weight:600">
+              <span style="display:flex;align-items:center;gap:5px"><u style="width:8px;height:8px;border-radius:2px;background:var(--acc);display:block"></u> Alta demanda</span>
+              <span style="display:flex;align-items:center;gap:5px"><u style="width:8px;height:8px;border-radius:2px;background:var(--blue);display:block"></u> Horas valle · oportunidad</span>
+            </div>
+          </div>
+
+          <div class="chart" style="margin-top:10px">
+            <h4>Clases de hoy</h4>
+            <div class="tbl">
+              <div class="tr th"><span>Hora</span><span>Clase</span><span>Instructor</span><span>Cupo</span><span>Estado</span></div>
+              <div class="tr"><span>17:00</span><span>Cardio HIIT</span><span>Luis Mora</span><span>21 / 30</span><span class="cap ok">Abierta</span></div>
+              <div class="tr"><span>18:00</span><span>Funcional</span><span>Luis Mora</span><span>18 / 24</span><span class="cap ok">Abierta</span></div>
+              <div class="tr"><span>19:00</span><span>Spinning</span><span>Carla Díaz</span><span>28 / 30</span><span class="cap low">Casi llena</span></div>
+              <div class="tr"><span>20:00</span><span>Yoga flow</span><span>Ana Paredes</span><span>20 / 20</span><span class="cap full">5 en espera</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;display:flex;flex-direction:column;gap:13px;justify-content:center">
+      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Ocupación en vivo</span> por clase, por sala y por zona.</span></div>
+      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Horarios, cupos e instructores</span> se cambian en un clic, sin llamar a nadie.</span></div>
+      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Quién vino y quién no.</span> Se acabó la lista impresa.</span></div>
+      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Cierre por mantenimiento:</span> bloqueas la piscina y el sistema avisa solo a los afectados.</span></div>
+      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Reportes descargables</span> en Excel y PDF para tu reunión mensual.</span></div>
+      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Permisos por rol:</span> recepción ve lo suyo, gerencia lo ve todo.</span></div>
+
+      <div class="card glow" style="margin-top:8px;padding:16px 18px">
+        <p style="font-size:14.5px;line-height:1.5;font-weight:500;color:var(--ink)">
+          Las <span class="acc">horas valle</span> del gráfico son plata sobre la mesa: ahí es donde metes una clase nueva o una promoción y llenas la sala.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>06</div></div>
+</section>
+
+<!-- ============ 07 · TODO LO QUE INCLUYE ============ -->
+<section class="slide">
+  <div class="head" style="margin-bottom:22px">
+    <div class="eyebrow">Alcance</div>
+    <h2>Todo lo que hace la app</h2>
+  </div>
+
+  <div class="grid g4 fill feat" style="gap:13px">
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-dumb"/></svg></div><h3>Clases y zonas</h3><p class="p-sm">Pesas, cardio, funcional, spinning, piscina, sauna, cancha y personal.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-search"/></svg></div><h3>Buscador y filtros</h3><p class="p-sm">Por tipo, instructor, día, horario, intensidad y duración.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-cal"/></svg></div><h3>Agenda completa</h3><p class="p-sm">Vista de día, semana y mes, con el cupo siempre a la vista.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-ticket"/></svg></div><h3>Mis reservas</h3><p class="p-sm">Próximas, historial y estado de cada una. Reagenda en un toque.</p></div>
+
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-repeat"/></svg></div><h3>Reservas fijas</h3><p class="p-sm">"Spinning los martes y jueves" queda agendado de una vez.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-users"/></svg></div><h3>Lista de espera</h3><p class="p-sm">Automática, con aviso instantáneo al liberarse un cupo.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-qr"/></svg></div><h3>Check-in con QR</h3><p class="p-sm">Entrada en segundos desde el celular o el tótem.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-bell"/></svg></div><h3>Recordatorios</h3><p class="p-sm">Antes de la clase, al liberarse un cupo y si algo se cancela.</p></div>
+
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-card"/></svg></div><h3>Membresías</h3><p class="p-sm">Planes, vigencias, avisos de vencimiento y acceso por plan.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-star"/></svg></div><h3>Entrenadores</h3><p class="p-sm">Perfil de cada instructor y valoraciones de tus socios.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-flame"/></svg></div><h3>Rutinas y progreso</h3><p class="p-sm">Asistencias, racha de constancia y calorías estimadas.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-news"/></svg></div><h3>Noticias del club</h3><p class="p-sm">Avisos, promociones y novedades directo en la app.</p></div>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>07</div></div>
+</section>
+
+<!-- ============ 08 · FUNCIONA EN TODO ============ -->
+<section class="slide">
+  <div class="head">
+    <div class="eyebrow">Sin comprar nada</div>
+    <h2>Funciona en lo que ya tienes</h2>
+    <p class="lead">No necesitas equipos nuevos ni instalar programas. Se abre en cualquier celular, tablet o computador.</p>
+  </div>
+
+  <div class="grid g4 fill" style="gap:16px">
+    <div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div class="chip" style="width:58px;height:58px;border-radius:18px"><svg class="ico" style="width:30px;height:30px"><use href="#i-phone"/></svg></div>
+      <h3 style="margin-top:18px">Celular del socio</h3>
+      <p class="p-sm" style="margin-top:9px">Se instala como app con un ícono en su pantalla de inicio. Sin pasar por tiendas ni descargar nada.</p>
+    </div>
+    <div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div class="chip blue" style="width:58px;height:58px;border-radius:18px"><svg class="ico" style="width:30px;height:30px"><use href="#i-monitor"/></svg></div>
+      <h3 style="margin-top:18px">Recepción</h3>
+      <p class="p-sm" style="margin-top:9px">En la tablet o el computador que ya usan. Tu equipo reserva por el socio que prefiere hacerlo en persona.</p>
+    </div>
+    <div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div class="chip violet" style="width:58px;height:58px;border-radius:18px"><svg class="ico" style="width:30px;height:30px"><use href="#i-scan"/></svg></div>
+      <h3 style="margin-top:18px">Tótem de entrada</h3>
+      <p class="p-sm" style="margin-top:9px">Una tablet en la puerta lee el QR y registra la entrada sola. Recepción deja de hacer de portero.</p>
+    </div>
+    <div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div class="chip warn" style="width:58px;height:58px;border-radius:18px"><svg class="ico" style="width:30px;height:30px"><use href="#i-cloud"/></svg></div>
+      <h3 style="margin-top:18px">Siempre disponible</h3>
+      <p class="p-sm" style="margin-top:9px">Respaldos diarios, actualizaciones incluidas y tus datos siempre a salvo. Nosotros nos encargamos.</p>
+    </div>
+  </div>
+
+  <div class="grid g3" style="margin-top:20px;gap:16px">
+    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-globe"/></svg></div><div><div style="font-size:14px;font-weight:700">Todo en español</div><p class="p-sm" style="margin-top:2px">Fechas, horas y precios en formato de Ecuador.</p></div></div>
+    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-bolt"/></svg></div><div><div style="font-size:14px;font-weight:700">Modo claro y oscuro</div><p class="p-sm" style="margin-top:2px">Se adapta al gusto y al horario de cada socio.</p></div></div>
+    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-heart"/></svg></div><div><div style="font-size:14px;font-weight:700">Fácil para todos</div><p class="p-sm" style="margin-top:2px">Textos grandes y alto contraste para quien ve poco.</p></div></div>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>08</div></div>
+</section>
+
+<!-- ============ 09 · LOS NÚMEROS ============ -->
+<section class="slide">
+  <div class="head">
+    <div class="eyebrow">El caso de negocio</div>
+    <h2>Se paga solo</h2>
+    <p class="lead">Ejemplo real de un gimnasio de <span class="em">400 socios</span> con mensualidad de <span class="em">$35</span>, es decir <span class="em">$14.000</span> de facturación al mes.</p>
+  </div>
+
+  <div class="grid g4" style="gap:16px;margin-bottom:20px">
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center">
+      <div class="stat acc">1,1%</div>
+      <p class="p-sm" style="margin-top:11px;line-height:1.45">de tu facturación mensual es lo que cuesta el plan recomendado.</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center">
+      <div class="stat">5</div>
+      <p class="p-sm" style="margin-top:11px;line-height:1.45">socios retenidos al mes ya cubren el costo, y sobran <span style="color:var(--acc);font-weight:700">$26</span>.</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center">
+      <div class="stat">~20%</div>
+      <p class="p-sm" style="margin-top:11px;line-height:1.45">de cupos hoy se pierden por gente que reserva y no aparece.</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center">
+      <div class="stat">$550</div>
+      <p class="p-sm" style="margin-top:11px;line-height:1.45">cuesta al mes una persona más en recepción. El plan cuesta <span style="color:var(--acc);font-weight:700">$149</span>.</p>
+    </div>
+  </div>
+
+  <div class="grid g3" style="gap:16px;margin-bottom:20px">
+    <div class="card tight" style="display:flex;gap:13px;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-trend"/></svg></div><div><div style="font-size:14.5px;font-weight:700">Más ocupación</div><p class="p-sm" style="margin-top:4px">Los recordatorios y la lista de espera vuelven a llenar los cupos que hoy se pierden.</p></div></div>
+    <div class="card tight" style="display:flex;gap:13px;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-heart"/></svg></div><div><div style="font-size:14.5px;font-weight:700">Mejor retención</div><p class="p-sm" style="margin-top:4px">El socio que consigue su clase sin pelear por el cupo es el que renueva.</p></div></div>
+    <div class="card tight" style="display:flex;gap:13px;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-clock"/></svg></div><div><div style="font-size:14.5px;font-weight:700">Menos tiempo perdido</div><p class="p-sm" style="margin-top:4px">Tu equipo deja de agendar por chat y vuelve a atender a la gente que está adentro.</p></div></div>
+  </div>
+
+  <div class="quote">
+    No es un gasto de tecnología.<br>Es <span class="acc">ocupación, retención y tiempo</span> de tu equipo.
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>09</div></div>
+</section>
+
+<!-- ============ 10 · PLANES ============ -->
+<section class="slide">
+  <div class="head" style="margin-bottom:24px">
+    <div class="eyebrow">Inversión</div>
+    <h2>Elige el plan de tu gimnasio</h2>
+  </div>
+
+  <div class="plans fill">
+    <div class="plan">
+      <div class="nm">Básico</div>
+      <div class="who">Una sede que necesita ordenar sus cupos</div>
+      <div class="price"><b>$69</b><s>/ mes</s></div>
+      <div class="setup">Implementación única <b>$890</b></div>
+      <ul>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Hasta 300 socios · 3 usuarios</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Clases, zonas, buscador y filtros</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Agenda de día y semana</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Reservar, cancelar y lista de espera</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Check-in con código QR</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Panel de administración</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Tu logo y tus colores</li>
+        <li class="tick mut"><svg class="ico"><use href="#i-check"/></svg> Soporte por correo</li>
+      </ul>
+    </div>
+
+    <div class="plan best">
+      <div class="tag">Recomendado</div>
+      <div class="nm">Intermedio</div>
+      <div class="who">Gimnasio o box con clases, membresías y equipo</div>
+      <div class="price"><b>$149</b><s>/ mes</s></div>
+      <div class="setup">Implementación única <b>$1.890</b></div>
+      <ul>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Hasta 1.000 socios · 2 sedes · 10 usuarios</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> <span class="em">Todo lo del plan Básico</span></li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Vista de mes y reservas fijas</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Reagendar en un toque</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Control de ausencias y penalidades</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Membresías con avisos de vencimiento</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Recordatorios automáticos</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Reportes en Excel y PDF</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Carga de tus socios desde Excel</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Soporte por correo y WhatsApp</li>
+      </ul>
+    </div>
+
+    <div class="plan">
+      <div class="nm">Avanzado</div>
+      <div class="who">Cadena de varias sedes o centro deportivo completo</div>
+      <div class="price"><b>$299</b><s>/ mes</s></div>
+      <div class="setup">Implementación única <b>$3.900</b></div>
+      <ul>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Socios, sedes y usuarios ilimitados</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> <span class="em">Todo lo del plan Intermedio</span></li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Reportes consolidados por sede</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Rutinas, progreso y racha del socio</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Agenda de entrenamiento personal</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Tótem de entrada y permisos por rol</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Tablero de indicadores para gerencia</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Recordatorios por WhatsApp</li>
+        <li class="tick mut"><svg class="ico"><use href="#i-check"/></svg> Soporte prioritario</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center">
+    <span class="pill acc"><svg class="ico" style="width:14px;height:14px"><use href="#i-tag"/></svg> Pago anual: 2 meses gratis</span>
+    <span class="pill">Sin entrada: implementación en $0 con contrato a 18 meses</span>
+    <span class="pill">Valores en dólares, no incluyen IVA</span>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>10</div></div>
+</section>
+
+<!-- ============ 11 · COMPLEMENTOS ============ -->
+<section class="slide">
+  <div class="head" style="margin-bottom:24px">
+    <div class="eyebrow">Cuando lo necesites</div>
+    <h2>La app crece contigo</h2>
+    <p class="lead">Nada de esto hace falta para arrancar. Se suma cuando tu operación lo pida.</p>
+  </div>
+
+  <div class="grid g3 fill addon" style="gap:14px">
+    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-card"/></svg></div><span class="pill" style="font-size:11px">Fase 2</span></div><h3 style="margin-top:14px;font-size:16.5px">Cobro en línea</h3><p class="p-sm" style="margin-top:6px">Tus socios pagan la mensualidad desde la app y se renueva sola. Compatible con los medios de pago del país.</p></div>
+
+    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-phone"/></svg></div><span class="pill" style="font-size:11px">Opcional</span></div><h3 style="margin-top:14px;font-size:16.5px">App en las tiendas</h3><p class="p-sm" style="margin-top:6px">Tu gimnasio con app propia publicada en App Store y Google Play, con tu nombre y tu ícono.</p></div>
+
+    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-msg"/></svg></div><span class="pill" style="font-size:11px">Opcional</span></div><h3 style="margin-top:14px;font-size:16.5px">Avisos por WhatsApp</h3><p class="p-sm" style="margin-top:6px">Los recordatorios llegan al canal que tus socios sí revisan, de forma automática.</p></div>
+
+    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-lock"/></svg></div><span class="pill" style="font-size:11px">Opcional</span></div><h3 style="margin-top:14px;font-size:16.5px">Control de acceso</h3><p class="p-sm" style="margin-top:6px">Conectamos la app al torniquete o al lector de huella. Solo entra quien tiene su plan al día.</p></div>
+
+    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-news"/></svg></div><span class="pill" style="font-size:11px">Fase 2</span></div><h3 style="margin-top:14px;font-size:16.5px">Facturación electrónica</h3><p class="p-sm" style="margin-top:6px">Emisión automática de comprobantes al SRI cada vez que un socio paga.</p></div>
+
+    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-globe"/></svg></div><span class="pill" style="font-size:11px">Opcional</span></div><h3 style="margin-top:14px;font-size:16.5px">Sedes adicionales</h3><p class="p-sm" style="margin-top:6px">Abres un local nuevo y lo sumas al mismo sistema, con reportes comparativos entre sedes.</p></div>
+  </div>
+
+  <div class="card" style="margin-top:16px;padding:15px 22px;display:flex;align-items:center;gap:15px">
+    <svg class="ico ico-lg" style="color:var(--ink-3);flex:none"><use href="#i-shield"/></svg>
+    <p class="p" style="font-size:14px">
+      <span class="em">Importante:</span> la versión que contratas hoy <span class="em">no procesa cobros</span>. Gestiona planes, vigencias y comprobantes, pero el dinero lo sigues recibiendo como lo haces hoy. Así arrancamos rápido y sin trámites.
+    </p>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>11</div></div>
+</section>
+
+<!-- ============ 12 · IMPLEMENTACIÓN ============ -->
+<section class="slide">
+  <div class="head">
+    <div class="eyebrow">Puesta en marcha</div>
+    <h2>En dos semanas estás operando</h2>
+    <p class="lead">Nosotros hacemos la carga y la configuración. Tu equipo solo recibe la capacitación.</p>
+  </div>
+
+  <div class="grid g4 fill" style="gap:16px">
+    <div class="card" style="display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px"><div class="num">1</div><span class="pill" style="font-size:11px">Días 1 a 3</span></div>
+      <h3 style="margin-top:18px">Configuramos tu gym</h3>
+      <p class="p-sm" style="margin-top:9px">Creamos tus salas y zonas, aplicamos tu logo y tus colores, y definimos contigo las reglas: cupos, horas mínimas para cancelar y política de ausencias.</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px"><div class="num">2</div><span class="pill" style="font-size:11px">Días 4 a 7</span></div>
+      <h3 style="margin-top:18px">Cargamos tus datos</h3>
+      <p class="p-sm" style="margin-top:9px">Tu parrilla completa de clases, tus instructores y tu lista de socios desde el Excel que ya tienes. Tú solo revisas y apruebas.</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px"><div class="num">3</div><span class="pill" style="font-size:11px">Días 8 a 10</span></div>
+      <h3 style="margin-top:18px">Capacitamos al equipo</h3>
+      <p class="p-sm" style="margin-top:9px">Sesiones prácticas con recepción, instructores y gerencia. Cada uno aprende solo lo que necesita para su rol.</p>
+    </div>
+    <div class="card glow" style="display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px"><div class="num">4</div><span class="pill acc" style="font-size:11px">Días 11 a 14</span></div>
+      <h3 style="margin-top:18px">Lanzamos con tus socios</h3>
+      <p class="p-sm" style="margin-top:9px">Te entregamos el afiche con el código QR para la recepción y los textos listos para tus redes. Acompañamos todo el primer mes.</p>
+    </div>
+  </div>
+
+  <div class="grid g3" style="margin-top:20px;gap:16px">
+    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-users"/></svg></div><div><div style="font-size:14px;font-weight:700">Sin parar la operación</div><p class="p-sm" style="margin-top:2px">El gimnasio sigue funcionando normal durante todo el proceso.</p></div></div>
+    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-shield"/></svg></div><div><div style="font-size:14px;font-weight:700">Tus datos son tuyos</div><p class="p-sm" style="margin-top:2px">Te los entregamos completos cuando los pidas, sin condiciones.</p></div></div>
+    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-checkc"/></svg></div><div><div style="font-size:14px;font-weight:700">Garantía de 90 días</div><p class="p-sm" style="margin-top:2px">Cualquier falla se corrige sin costo adicional.</p></div></div>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>12</div></div>
+</section>
+
+<!-- ============ 13 · PREGUNTAS FRECUENTES ============ -->
+<section class="slide">
+  <div class="head" style="margin-bottom:28px">
+    <div class="eyebrow">Antes de que lo preguntes</div>
+    <h2>Preguntas frecuentes</h2>
+  </div>
+
+  <div class="grid g2 fill" style="gap:18px">
+    <div class="card faq"><b>¿Y mis socios mayores, van a poder usarla?</b><p>Sí, la app está pensada para que cualquiera la use. Y si alguno prefiere no hacerlo, recepción le reserva en cinco segundos desde el panel. Nadie se queda afuera.</p></div>
+    <div class="card faq"><b>¿Tengo que cambiar mi forma de cobrar?</b><p>No. La versión que contratas hoy no toca tus cobros. Sigues cobrando como siempre; la app solo controla reservas, aforo y asistencia.</p></div>
+    <div class="card faq"><b>¿Necesito comprar equipos o programas?</b><p>No. Funciona con los celulares de tus socios y con la tablet o computador que ya tienes en recepción. Nosotros ponemos todo lo demás.</p></div>
+    <div class="card faq"><b>¿Qué pasa si se cae el internet?</b><p>El check-in tiene respaldo manual y la lista del día se puede descargar. Tu clase nunca se detiene por un problema de conexión.</p></div>
+    <div class="card faq"><b>¿Los datos de mis socios son míos?</b><p>Siempre. Son tuyos y te los entregamos completos cuando los pidas, incluso si algún día decides dejar de trabajar con nosotros.</p></div>
+    <div class="card faq"><b>¿Y si no me convence?</b><p>Por eso existe la prueba de 30 días gratis, sin tarjeta y sin compromiso. Si no ves el resultado, no hay nada que cancelar.</p></div>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>13</div></div>
+</section>
+
+<!-- ============ 14 · CIERRE ============ -->
+<section class="slide" style="justify-content:center">
+  <div style="display:flex;gap:50px;align-items:center">
+    <div style="flex:1.15">
+      <div class="eyebrow">El siguiente paso</div>
+      <h1 style="font-size:56px;margin-top:20px">Pruébalo<br><span class="grad">30 días gratis.</span></h1>
+      <p class="lead" style="margin-top:22px;max-width:520px">
+        Sin tarjeta y sin compromiso. Configuramos una sala o tres de tus clases
+        con tu horario real y lo ves funcionando con tus propios socios.
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:11px;margin-top:26px">
+        <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> Te mostramos la app cargada con tu horario, no con ejemplos genéricos.</div>
+        <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> Si decides seguir, en dos semanas está operando el gimnasio completo.</div>
+        <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> Si no, cierras la prueba y no pagas absolutamente nada.</div>
+      </div>
+
+      <div class="card glow" style="margin-top:28px;padding:18px 22px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--acc)">Oferta cliente fundador</div>
+        <p class="p" style="margin-top:8px;font-size:14.5px">
+          Para los primeros gimnasios que se suman: <span class="em">25% de descuento en la implementación</span> a cambio de tu testimonio y de poder mostrar tu caso.
+        </p>
+      </div>
+    </div>
+
+    <div style="flex:.85;display:flex;flex-direction:column;align-items:center;gap:22px">
+      <div class="logo" style="flex-direction:column;gap:16px">
+        <div class="logo-mark" style="width:76px;height:76px;border-radius:22px"><svg class="ico" style="width:40px;height:40px"><use href="#i-bolt"/></svg></div>
+        <div class="logo-txt" style="font-size:32px">Reservas<span>Gym</span></div>
+      </div>
+      <div class="card" style="width:100%;text-align:center;padding:24px">
+        <div class="p-sm" style="font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:11px">Conversemos</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:12px">[Tu nombre]</div>
+        <div class="p" style="margin-top:10px;font-size:15px;line-height:1.75">
+          WhatsApp <span class="em">[09xx xxx xxx]</span><br>
+          Correo <span class="em">[tucorreo@dominio.com]</span><br>
+          <span class="p-sm">Quito · Guayaquil · Todo Ecuador</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>Gracias · 14</div></div>
+</section>
+
+</div>
+</body>
+</html>

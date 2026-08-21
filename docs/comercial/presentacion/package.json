@@ -1,0 +1,13 @@
+{
+  "name": "reservasgym-presentacion",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Generador de la presentacion ejecutiva de ReservasGym en PDF e imagenes",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.10.0"
+  }
+}
