@@ -21,7 +21,7 @@
 
 ---
 
-## 2. Dos modelos de comercialización
+## 2. Tres modelos de comercialización
 
 ### Modelo A — SaaS: implementación + mensualidad (**recomendado**)
 
@@ -30,6 +30,10 @@ El gimnasio no compra el software: paga una implementación única y una suscrip
 ### Modelo B — Desarrollo a medida por fases
 
 El gimnasio paga por fases entregables y recibe licencia de uso perpetua (y opcionalmente el código fuente). Se usa solo cuando el cliente exige ser dueño de la solución o es una cadena grande. El precio total es más alto y el mantenimiento se contrata aparte.
+
+### Modelo C — Canal de socios comerciales
+
+Cuando quien te contacta **no es el gimnasio sino un intermediario** (un consultor, un proveedor de equipos, alguien que quiere ofrecer el servicio a varios gimnasios). Se detalla en la sección 6. Nunca lo ofrezcas antes de confirmar que efectivamente es un intermediario y no el dueño.
 
 ---
 
@@ -88,6 +92,7 @@ Todo lo del Intermedio, más:
 
 - **Multi-sede** con reportes consolidados y comparativos entre locales.
 - **Rutinas y seguimiento de progreso** del socio.
+- **Control de peso y medidas**: registro de peso, medidas corporales (cintura, cadera, brazo, pecho, pierna), IMC calculado, metas con fecha objetivo y gráfico de evolución. El entrenador registra la evaluación inicial y las de control.
 - **Métricas del socio**: asistencias, racha (streak), calorías estimadas.
 - **Entrenamiento personal** con agenda propia por entrenador.
 - **Roles y permisos granulares** (recepción, instructor, gerente, dueño).
@@ -146,6 +151,9 @@ Estos módulos se ofrecen **a partir del tercer mes de uso**, cuando el cliente 
 | **App nativa iOS y Android** publicada en las tiendas | $1.500–$4.500 | $49/mes |
 | **Control de acceso** (torniquete, QR o huella) — hardware aparte | $900 | $25/mes |
 | **Recordatorios por WhatsApp** (API oficial) | $450 | $29/mes + costo de mensajes |
+| **Control de peso y medidas** (incluido en Avanzado; complemento para Básico e Intermedio) | $950 | $25/mes |
+| **Evaluación corporal avanzada**: % de grasa y masa muscular, fotos de progreso con control de privacidad, comparativas e informe imprimible para el socio | $780 | $19/mes |
+| **Integración con balanza de bioimpedancia** (InBody, Tanita, Omron) o con Apple Health / Google Fit | $650 | $19/mes |
 | **Módulo de nutrición y planes alimenticios** | $700 | — |
 | **Retos y gamificación** (rankings, insignias, temporadas) | $900 | $19/mes |
 | **Reportes BI avanzados** / conexión a Looker Studio | $600 | $19/mes |
@@ -160,7 +168,42 @@ Estos módulos se ofrecen **a partir del tercer mes de uso**, cuando el cliente 
 
 ---
 
-## 6. Condiciones comerciales
+## 6. Canal de socios comerciales
+
+Aplica cuando quien te contacta quiere **ofrecer el servicio a gimnasios** en vez de usarlo en el suyo. Hay tres niveles, de menor a mayor compromiso. Empieza siempre ofreciendo el primero.
+
+### Nivel 1 — Referidor
+
+No firma nada ni asume riesgo: solo te presenta al gimnasio.
+
+- **15% de la implementación** y **10% de la mensualidad durante los primeros 12 meses**, pagado mientras la cuenta siga activa.
+- Tú facturas al gimnasio, tú das el soporte y la relación con el cliente es tuya.
+- Es el nivel correcto para casi todo el mundo. No exige nada y se cierra en una conversación.
+
+### Nivel 2 — Revendedor
+
+Compra a precio mayorista y le factura él al gimnasio.
+
+- **30% de descuento sobre la lista** en implementación y mensualidad. Él fija el precio final y se queda con la diferencia.
+- **Mínimo 3 cuentas activas** para mantener el descuento; por debajo de eso regresa al Nivel 1.
+- Él da la atención de primer nivel (dudas de uso, capacitación); tú das el segundo nivel (fallas y cambios).
+- Requiere que se capacite: 2 sesiones incluidas.
+
+### Nivel 3 — Marca blanca
+
+La app sale con el nombre y la marca del socio, no con la nuestra.
+
+- **$2.500 de implementación** de la marca + **$199/mes de licencia base** + **$39/mes por cada gimnasio conectado**.
+- Compromiso de **5 cuentas en los primeros 12 meses**. Si no las alcanza, pasa a Nivel 2.
+- El código y la plataforma siguen siendo nuestros; él licencia el uso y la marca.
+
+### Reglas del canal
+
+- **Nunca ofrezcas Nivel 2 o 3 en la primera conversación.** Primero confirma que tiene acceso real a varios gimnasios; mucha gente dice que conoce a diez dueños y termina trayendo cero.
+- **Registro de oportunidad:** el socio te informa por escrito qué gimnasio va a presentar. Si ya está en tu pipeline, no aplica comisión. Esto evita el conflicto más común del canal.
+- **El precio al gimnasio no baja.** El margen del socio sale de tu descuento, no de rebajarle al cliente final. Si el socio vende más barato que la lista, se rompe el mercado.
+
+## 7. Condiciones comerciales
 
 - **Contrato mínimo:** 12 meses en Modelo A. Renovación automática con aviso de 30 días.
 - **Formas de pago de la implementación:** 50% al firmar y 50% a la entrega; o 3 cuotas sin interés.
@@ -177,7 +220,7 @@ Estos módulos se ofrecen **a partir del tercer mes de uso**, cuando el cliente 
 
 ---
 
-## 7. Argumento de venta y retorno de inversión
+## 8. Argumento de venta y retorno de inversión
 
 **El pitch en una frase:** *"Deja de perder cupos y de contestar WhatsApps: tus socios reservan solos, tú ves en tiempo real qué clases se llenan y cuáles no."*
 
@@ -197,7 +240,7 @@ Estos módulos se ofrecen **a partir del tercer mes de uso**, cuando el cliente 
 
 ---
 
-## 8. Proceso de venta
+## 9. Proceso de venta
 
 1. **Prospección.** Instagram y visita en frío a boxes de CrossFit, estudios boutique y centros deportivos de Quito, Guayaquil, Cuenca, Ambato y Manta. El decisor es el dueño o el gerente, casi nunca recepción.
 2. **Demo con sus propios datos.** Antes de la reunión, cargar el horario real del gimnasio (está publicado en su Instagram) en la app. Ver su propia parrilla de clases funcionando cierra más que cualquier presentación.
@@ -219,7 +262,7 @@ Estos módulos se ofrecen **a partir del tercer mes de uso**, cuando el cliente 
 
 ---
 
-## 9. Proyección de ingresos (referencia)
+## 10. Proyección de ingresos (referencia)
 
 Escenario conservador para el primer año, con una mezcla de 2 clientes Básico, 6 Intermedio y 1 Avanzado:
 
@@ -231,7 +274,7 @@ El valor real del negocio está en el MRR: 20 clientes en el plan Intermedio son
 
 ---
 
-## 10. Nota sobre pagos en línea
+## 11. Nota sobre pagos en línea
 
 **La pasarela de pagos y la facturación electrónica quedan explícitamente fuera del alcance de la versión actual del producto.** La app gestiona membresías, planes, vigencias y visualización de facturas, pero no procesa cobros.
 
