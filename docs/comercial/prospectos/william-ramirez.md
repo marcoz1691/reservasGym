@@ -2,7 +2,7 @@
 
 **Origen:** referido de Caro (contacto en común). Llegó por WhatsApp.
 **Fecha del primer contacto:** agosto 2026.
-**Estado:** pendiente de llamada de descubrimiento.
+**Estado:** **en cierre** — pidió tiempos para arrancar con un paquete de $4.500 y quiere la app funcionando en diciembre. Ver "Estado de la negociación" al final.
 
 ## Lo que dijo textualmente
 
@@ -132,3 +132,69 @@ Si aparecen dos o más, califica el prospecto como frío y no le dediques horas 
 2. **Dentro de 48 horas:** propuesta por escrito con alcance, precio, tiempos y qué queda fuera.
 3. **Demo con sus datos:** carga el horario real del gimnasio antes de la segunda reunión. Es lo que más convierte de todo el proceso.
 4. **Si es intermediario:** propón el acuerdo de referidor (Nivel 1) y pídele por escrito qué gimnasios va a presentar, para registrar la oportunidad.
+
+---
+
+## Estado de la negociación — agosto 2026
+
+### Lo que preguntó (textual, por WhatsApp)
+
+> "en tiempos si estaríamos bien para comenzar con la app con el plan de 4500? o q tiempos necesitas tu para q la app esté funcionando en diciembre"
+>
+> "además es totalmente personalizado a nuestra imagen verdad?"
+
+**Cómo leerlo:** ya no está evaluando, está planificando. Habla de "el plan de 4500", de una fecha propia y dice "nuestra imagen". Eso es un comprador, no un curioso. A partir de aquí el riesgo ya no es que el precio le parezca alto: es que asuma cosas que no están incluidas y que el proyecto arranque con expectativas distintas. Responder rápido, con fechas concretas, y poner por escrito lo que queda fuera **antes** de cobrar el anticipo.
+
+### Cronograma comprometible (arrancando a fines de agosto)
+
+Diciembre es holgado. El calendario que sí se puede sostener, contado desde el anticipo:
+
+| Tramo | Qué recibe | Fase técnica |
+|---|---|---|
+| Semana 1 | Levantamiento (horarios, zonas, instructores, marca) y sistema de diseño con su logo y colores | 1 |
+| Semanas 2–4 | App navegable en su celular: catálogo de clases y zonas, agenda día/semana/mes, perfil y membresía | 2–3 |
+| Semanas 5–8 | Motor de reservas completo: reservar, cancelar, reagendar, recurrentes, lista de espera y check-in con QR | 4 |
+| Semanas 9–10 | Control de peso y medidas, rutinas y progreso, notificaciones, entrenadores, noticias | 5 |
+| Semanas 11–12 | Panel de administración: CRUD, aforos, bloqueos por mantenimiento y reportes de ocupación | 6 |
+| Últimas 2 semanas | Carga de datos reales, capacitación al staff y piloto con un grupo pequeño de socios | 7 |
+
+**Argumento de fecha:** no vender "diciembre" a secas, sino *operando en diciembre para arrancar enero con todo corriendo*. Enero es el pico de inscripciones del año (ver plan comercial, sección 1) y es lo que hace que la fecha le importe a él, no solo a nosotros.
+
+### Respuesta enviada por WhatsApp
+
+**Mensaje 1 — tiempos**
+
+> Con gusto, William 🙌 Sí, en tiempos estamos bien: si arrancamos ahora, en diciembre lo tienes funcionando. Y te lo planteo así a propósito, porque lo que te conviene es llegar con la app corriendo a enero, que es cuando entra la ola de inscripciones.
+>
+> El cronograma desde que confirmas:
+> • *Semana 1:* levantamiento (horarios, salas, instructores) y el diseño ya con su logo y sus colores.
+> • *Semanas 2 a 4:* la ves navegando en tu celular con las clases y la agenda.
+> • *Semanas 5 a 8:* reservas completas: reservar, cancelar, reagendar, clases fijas de la semana, lista de espera y check-in con QR.
+> • *Semanas 9 a 12:* control de peso y medidas, rutinas y progreso, avisos y el panel de administración con los reportes de ocupación.
+> • *Últimas 2 semanas:* cargamos sus datos reales, capacitamos al equipo y hacemos un piloto con un grupo chico de socios.
+
+**Mensaje 2 — personalización (su pregunta directa)**
+
+> Y sí, totalmente personalizada a su imagen: nombre, logo, colores, tipografía y su propio ícono, con dominio propio (tipo sugimnasio.app). Se instala en el celular del socio con ese ícono y se abre como cualquier app. No es una plantilla con mi marca encima: el socio no ve mi nombre por ningún lado.
+>
+> Si además la quieren publicada en App Store y Google Play, eso sí es un paso aparte (implica cuentas de desarrollador y revisión de las tiendas) y te lo cotizo por separado cuando lo necesiten.
+
+**Mensaje 3 — arranque y lo que queda fuera**
+
+> Para dejarlo todo claro desde el inicio, dos cosas que prefiero decirte yo antes de que las asumas: la app maneja membresías, vigencias y facturas, pero *no cobra en línea* — la pasarela de pagos va en una fase posterior y te la cotizo cuando la quieran. Y después de la entrega hay un mantenimiento de *$89 al mes* que cubre hosting, respaldos, actualizaciones y soporte.
+>
+> Para arrancar: *50% al inicio y 50% a la entrega*, o en 3 cuotas sin interés si te acomoda mejor. Hoy mismo te mando la propuesta por escrito con el alcance exacto, el cronograma con fechas reales y la forma de pago. Solo dime a nombre de quién va la factura y me pasas el logo, y con el anticipo te bloqueo el cupo de desarrollo para entregar en diciembre.
+
+### Por qué está redactada así
+
+- **Responde "sí" a las dos preguntas en las primeras líneas.** Preguntó tiempos y personalización; si tiene que buscar la respuesta entre párrafos, la conversación pierde temperatura.
+- **Reencuadra "diciembre" como "listo para enero".** Le da una razón de negocio para no postergar, que es más fuerte que cualquier descuento.
+- **Declara las exclusiones antes de cobrar.** Pagos en línea, tiendas y mantenimiento son las tres cosas que el cliente asume incluidas y que después se convierten en el conflicto del proyecto. Dichas por nosotros suenan a transparencia; descubiertas por él, a letra chica.
+- **Cierra pidiendo algo pequeño y concreto** (a nombre de quién va la factura y el logo), no un "avísame qué decides". Es lo que convierte la conversación en un proyecto con fecha.
+
+### Pendientes antes de mandar la propuesta escrita
+
+1. **Confirmar de dónde salen los $4.500.** En la lista de precios el paquete de fases 1–5 es $4.750 (cerrado $4.300) y el de fases 1–6, $5.500. Hay que reconciliar qué se le cotizó y qué fases entran exactamente, porque el panel de administración (fase 6) es lo que más se suele dar por incluido sin estarlo.
+2. **"Nuestra imagen": ¿de quién?** Si la marca es la del gimnasio, es Modelo B normal. Si lo que quiere es la app con *su* marca para ofrecerla a varios gimnasios, es marca blanca (canal Nivel 3: $2.500 + $199/mes + $39/mes por gimnasio) y el precio cambia por completo. Preguntarlo sin rodeos en la propuesta: "¿la facturamos a nombre del gimnasio o de tu empresa?".
+3. **Alcance real del control de peso.** Sigue sin resolverse si es peso y medidas (incluido) o evaluación corporal avanzada / balanza de bioimpedancia (complementos aparte). No comprometer integración con balanza sin ver el modelo del equipo.
+4. **Retenciones y facturación.** Confirmar si es agente de retención para proyectar el flujo de caja del anticipo.
