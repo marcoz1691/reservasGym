@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,600;0,700;0,800;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+/* Las fuentes se cargan una sola vez desde index.html (<link> con preconnect). */
 @import 'tailwindcss';
 
 @theme {
@@ -85,11 +85,23 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #29313D;
+    background: var(--color-line);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: #3B4758;
+  }
+
+  /* Respeta la preferencia del sistema de reducir movimiento. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
