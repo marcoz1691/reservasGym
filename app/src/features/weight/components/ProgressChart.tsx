@@ -203,10 +203,10 @@ export function ProgressChart({
 
   return (
     <div
-      className={`overflow-hidden rounded-3xl border border-[#232B36] bg-[#161C24]/90 p-5 shadow-[0_10px_35px_rgba(0,0,0,0.35)] ${className}`}
+      className={`overflow-hidden rounded-3xl border border-line bg-surface/90 p-5 shadow-[0_10px_35px_rgba(0,0,0,0.35)] ${className}`}
     >
       {/* Header controls: Modes & Ranges */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#232B36]/80 pb-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/80 pb-3.5">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-acc/15 text-acc">
             <TrendingUp className="h-4 w-4" />
@@ -229,7 +229,7 @@ export function ProgressChart({
             className={`focus-ring inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition ${
               mode === 'weight'
                 ? 'bg-acc text-[#0A0D06] shadow-sm'
-                : 'bg-[#1E2530] text-ink-3 hover:text-ink'
+                : 'bg-surface-elevated text-ink-3 hover:text-ink'
             }`}
           >
             <TrendingUp className="h-3 w-3" />
@@ -241,7 +241,7 @@ export function ProgressChart({
             className={`focus-ring inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition ${
               mode === 'bmi'
                 ? 'bg-acc text-[#0A0D06] shadow-sm'
-                : 'bg-[#1E2530] text-ink-3 hover:text-ink'
+                : 'bg-surface-elevated text-ink-3 hover:text-ink'
             }`}
           >
             <Activity className="h-3 w-3" />
@@ -253,7 +253,7 @@ export function ProgressChart({
             className={`focus-ring inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition ${
               mode === 'waistHip'
                 ? 'bg-acc text-[#0A0D06] shadow-sm'
-                : 'bg-[#1E2530] text-ink-3 hover:text-ink'
+                : 'bg-surface-elevated text-ink-3 hover:text-ink'
             }`}
           >
             <Ruler className="h-3 w-3" />
@@ -261,7 +261,7 @@ export function ProgressChart({
           </button>
 
           {/* Time range selector */}
-          <div className="ml-2 flex items-center rounded-xl bg-[#0E1117] p-0.5 border border-[#232B36]">
+          <div className="ml-2 flex items-center rounded-xl bg-bg p-0.5 border border-line">
             {(['1M', '3M', '6M', 'ALL'] as TimeRange[]).map((r) => (
               <button
                 key={r}
@@ -269,7 +269,7 @@ export function ProgressChart({
                 onClick={() => setRange(r)}
                 className={`rounded-lg px-2 py-0.5 text-[10px] font-bold transition ${
                   range === r
-                    ? 'bg-[#1E2530] text-acc'
+                    ? 'bg-surface-elevated text-acc'
                     : 'text-ink-3 hover:text-ink'
                 }`}
               >
@@ -472,7 +472,7 @@ export function ProgressChart({
                 top: `${(hoveredPoint.y / height) * 100}%`,
               }}
             >
-              <div className="rounded-xl border border-line bg-[#0E1117]/95 px-3 py-2 text-xs shadow-xl backdrop-blur-md">
+              <div className="rounded-xl border border-line bg-bg/95 px-3 py-2 text-xs shadow-xl backdrop-blur-md">
                 <div className="flex items-center gap-1.5 text-[11px] text-ink-3">
                   <Calendar className="h-3 w-3" />
                   <span>{hoveredPoint.date}</span>

@@ -29,7 +29,7 @@ export function BmiGauge({
   if (bmi == null || !category) {
     return (
       <div
-        className={`rounded-2xl border border-line/60 bg-[#161C24]/80 p-4 text-center ${className}`}
+        className={`rounded-2xl border border-line/60 bg-surface/80 p-4 text-center ${className}`}
       >
         <div className="flex items-center justify-center gap-2 text-ink-3">
           <Activity className="h-4 w-4" />
@@ -53,26 +53,26 @@ export function BmiGauge({
       border: 'border-blue-500/30',
     },
     normal: {
-      bg: 'bg-[#22C55E]/15',
-      text: 'text-[#22C55E]',
-      border: 'border-[#22C55E]/30',
+      bg: 'bg-success/15',
+      text: 'text-success',
+      border: 'border-success/30',
     },
     overweight: {
-      bg: 'bg-[#F59E0B]/15',
-      text: 'text-[#F59E0B]',
-      border: 'border-[#F59E0B]/30',
+      bg: 'bg-warn/15',
+      text: 'text-warn',
+      border: 'border-warn/30',
     },
     obese: {
-      bg: 'bg-[#EF4444]/15',
-      text: 'text-[#EF4444]',
-      border: 'border-[#EF4444]/30',
+      bg: 'bg-danger/15',
+      text: 'text-danger',
+      border: 'border-danger/30',
     },
   }
 
   const defaultBadgeStyle = {
-    bg: 'bg-[#22C55E]/15',
-    text: 'text-[#22C55E]',
-    border: 'border-[#22C55E]/30',
+    bg: 'bg-success/15',
+    text: 'text-success',
+    border: 'border-success/30',
   }
   const badgeStyle = categoryColorStyles[category.key] ?? defaultBadgeStyle
 
@@ -94,7 +94,7 @@ export function BmiGauge({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-[#232B36] bg-[#161C24]/90 p-4.5 backdrop-blur-md shadow-[0_8px_30px_rgba(0,0,0,0.35)] ${className}`}
+      className={`relative overflow-hidden rounded-2xl border border-line bg-surface/90 p-4.5 backdrop-blur-md shadow-[0_8px_30px_rgba(0,0,0,0.35)] ${className}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -133,7 +133,7 @@ export function BmiGauge({
 
       {/* Visual Segmented Gauge Bar */}
       <div className="mt-4 space-y-1.5">
-        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[#0E1117] flex">
+        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-bg flex">
           {/* Bajo peso (< 18.5) -> minScale 15 to 18.5: (3.5 / 20) = 17.5% */}
           <div
             className="h-full bg-blue-500/80 transition-all"
@@ -142,19 +142,19 @@ export function BmiGauge({
           />
           {/* Normal (18.5 - 25.0) -> (6.5 / 20) = 32.5% */}
           <div
-            className="h-full bg-[#22C55E]/80 transition-all"
+            className="h-full bg-success/80 transition-all"
             style={{ width: '32.5%' }}
             title="Normal (18.5 - 24.9)"
           />
           {/* Sobrepeso (25.0 - 30.0) -> (5.0 / 20) = 25.0% */}
           <div
-            className="h-full bg-[#F59E0B]/80 transition-all"
+            className="h-full bg-warn/80 transition-all"
             style={{ width: '25%' }}
             title="Sobrepeso (25.0 - 29.9)"
           />
           {/* Obesidad (≥ 30.0) -> (5.0 / 20) = 25.0% */}
           <div
-            className="h-full bg-[#EF4444]/80 transition-all"
+            className="h-full bg-danger/80 transition-all"
             style={{ width: '25%' }}
             title="Obesidad (≥ 30.0)"
           />
@@ -179,8 +179,8 @@ export function BmiGauge({
         <div className="flex justify-between text-[10px] font-medium text-ink-3 px-0.5">
           <span>15</span>
           <span className="text-blue-400/80">18.5</span>
-          <span className="text-[#22C55E]/80">25.0</span>
-          <span className="text-[#F59E0B]/80">30.0</span>
+          <span className="text-success/80">25.0</span>
+          <span className="text-warn/80">30.0</span>
           <span>35+</span>
         </div>
       </div>

@@ -12,17 +12,17 @@ function getPaymentStatusBadge(status: PaymentStatus) {
     case 'approved':
       return {
         label: 'Aprobado',
-        className: 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30',
+        className: 'bg-success/15 text-success border border-success/30',
       }
     case 'pending':
       return {
         label: 'Pendiente',
-        className: 'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30',
+        className: 'bg-warn/15 text-warn border border-warn/30',
       }
     case 'rejected':
       return {
         label: 'Rechazado',
-        className: 'bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30',
+        className: 'bg-danger/15 text-danger border border-danger/30',
       }
     case 'refunded':
       return {

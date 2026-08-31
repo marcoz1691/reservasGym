@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Calendar,
   Clock,
@@ -25,20 +25,20 @@ function getStatusBadge(status: MembershipStatus) {
     case 'active':
       return {
         label: 'Membresía activa',
-        className: 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30',
-        dotClass: 'bg-[#22C55E]',
+        className: 'bg-success/15 text-success border border-success/30',
+        dotClass: 'bg-success',
       }
     case 'grace':
       return {
         label: 'En período de gracia',
-        className: 'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30',
-        dotClass: 'bg-[#F59E0B] animate-pulse',
+        className: 'bg-warn/15 text-warn border border-warn/30',
+        dotClass: 'bg-warn animate-pulse',
       }
     case 'expired':
       return {
         label: 'Membresía vencida',
-        className: 'bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30',
-        dotClass: 'bg-[#EF4444]',
+        className: 'bg-danger/15 text-danger border border-danger/30',
+        dotClass: 'bg-danger',
       }
     case 'cancelled':
     default:
@@ -51,6 +51,8 @@ function getStatusBadge(status: MembershipStatus) {
 }
 
 export function MembershipCard({ membership, plan, zones }: MembershipCardProps) {
+  // Instante de montaje, estable entre renders (evita impureza en render).
+  const [nowMs] = useState(() => Date.now())
   const status = useMemo(
     () => computeMembershipStatus(membership),
     [membership],
@@ -66,11 +68,10 @@ export function MembershipCard({ membership, plan, zones }: MembershipCardProps)
     if (status === 'expired' || status === 'cancelled') return 0
     const start = new Date(membership.startsAt).getTime()
     const end = new Date(membership.endsAt).getTime()
-    const now = Date.now()
     const total = Math.max(1, end - start)
-    const remaining = Math.max(0, end - now)
+    const remaining = Math.max(0, end - nowMs)
     return Math.min(100, Math.max(0, Math.round((remaining / total) * 100)))
-  }, [membership, status])
+  }, [membership, status, nowMs])
 
   const planName = plan?.name ?? 'Plan de Membresía'
   const hasQuota = plan?.visitQuota !== null && plan?.visitQuota !== undefined
@@ -80,7 +81,7 @@ export function MembershipCard({ membership, plan, zones }: MembershipCardProps)
     <div className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-bg-2 via-bg-2 to-surface/60 p-6 shadow-2xl transition-all">
       {/* Decorative background glow */}
       <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-acc/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-[#22C55E]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-success/10 blur-3xl" />
 
       <div className="relative z-10 space-y-6">
         {/* Header: Plan Name & Status Badge */}
@@ -121,7 +122,7 @@ export function MembershipCard({ membership, plan, zones }: MembershipCardProps)
 
           {plan?.priceCents ? (
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#22C55E]/10 text-[#22C55E]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-success/10 text-success">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
@@ -174,14 +175,14 @@ export function MembershipCard({ membership, plan, zones }: MembershipCardProps)
           {/* Progress Bar */}
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface border border-line/40">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${
+              className={`h-full rounded-full transition-[width] duration-500 ease-[var(--ease-out)] ${
                 status === 'active'
                   ? remainingDays <= 5
-                    ? 'bg-amber-400'
+                    ? 'bg-warn'
                     : 'bg-acc'
                   : status === 'grace'
-                    ? 'bg-amber-500'
-                    : 'bg-rose-500'
+                    ? 'bg-warn'
+                    : 'bg-danger'
               }`}
               style={{
                 width: status === 'active' ? `${progressPercent}%` : status === 'grace' ? '15%' : '0%',

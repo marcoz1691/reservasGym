@@ -24,17 +24,17 @@ export function Button({
 }: ButtonProps) {
   const variantStyles: Record<string, string> = {
     primary:
-      'bg-acc text-white font-bold hover:brightness-110 active:scale-[0.98] shadow-md shadow-acc/20 border border-transparent disabled:opacity-50 disabled:shadow-none',
+      'bg-acc text-[var(--color-acc-contrast)] font-bold hover:bg-acc-hi active:scale-[0.97] shadow-[var(--shadow-acc)] border border-transparent disabled:opacity-50 disabled:shadow-none',
     accent:
-      'bg-acc text-white font-bold hover:brightness-110 active:scale-[0.98] shadow-md shadow-acc/20 border border-transparent disabled:opacity-50',
+      'bg-acc text-[var(--color-acc-contrast)] font-bold hover:bg-acc-hi active:scale-[0.97] shadow-[var(--shadow-acc)] border border-transparent disabled:opacity-50',
     secondary:
-      'bg-surface-elevated text-ink border border-line hover:border-acc/40 hover:bg-surface active:scale-[0.98] disabled:opacity-50',
+      'bg-surface-elevated text-ink border border-line hover:border-acc/40 hover:bg-surface active:scale-[0.97] disabled:opacity-50',
     outline:
-      'bg-transparent text-ink border border-line hover:border-acc/60 hover:bg-acc/10 active:scale-[0.98] disabled:opacity-50',
+      'bg-transparent text-ink border border-line hover:border-acc/60 hover:bg-acc-soft active:scale-[0.97] disabled:opacity-50',
     ghost:
-      'bg-transparent text-ink-2 hover:bg-surface hover:text-ink active:scale-[0.98] disabled:opacity-50',
+      'bg-transparent text-ink-2 hover:bg-surface hover:text-ink active:scale-[0.97] disabled:opacity-50',
     danger:
-      'bg-danger text-white font-bold hover:brightness-110 active:scale-[0.98] shadow-md shadow-danger/20 disabled:opacity-50',
+      'bg-danger text-white font-bold hover:brightness-110 active:scale-[0.97] shadow-md shadow-danger/20 disabled:opacity-50',
   }
 
   const sizeStyles: Record<string, string> = {
@@ -46,7 +46,7 @@ export function Button({
   return (
     <button
       disabled={disabled || isLoading}
-      className={`focus-ring inline-flex cursor-pointer items-center justify-center font-semibold transition-all duration-200 select-none disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100 ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
+      className={`focus-ring inline-flex cursor-pointer items-center justify-center font-semibold transition-[transform,background-color,border-color,box-shadow,filter] duration-150 ease-[var(--ease-out)] select-none disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100 ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
       {...props}
     >
       {isLoading ? (
@@ -78,7 +78,7 @@ export function Input({
         </span>
       ) : null}
       <input
-        className={`focus-ring w-full rounded-2xl border bg-surface-elevated px-3.5 py-2.5 text-ink outline-none placeholder:text-ink-3 transition-colors duration-200 focus-visible:border-acc/60 focus-visible:ring-2 focus-visible:ring-acc/20 ${
+        className={`focus-ring w-full rounded-2xl border bg-surface-elevated px-3.5 py-2.5 text-ink outline-none placeholder:text-ink-3 transition-colors duration-150 ease-[var(--ease-out)] focus-visible:border-acc/60 focus-visible:ring-2 focus-visible:ring-acc/20 ${
           error ? 'border-danger/80' : 'border-line'
         } ${className}`}
         {...props}
@@ -112,7 +112,7 @@ export function Select({
         </span>
       ) : null}
       <select
-        className={`focus-ring w-full rounded-2xl border bg-surface-elevated px-3.5 py-2.5 text-ink outline-none transition-colors duration-200 focus-visible:border-acc/60 focus-visible:ring-2 focus-visible:ring-acc/20 ${
+        className={`focus-ring w-full rounded-2xl border bg-surface-elevated px-3.5 py-2.5 text-ink outline-none transition-colors duration-150 ease-[var(--ease-out)] focus-visible:border-acc/60 focus-visible:ring-2 focus-visible:ring-acc/20 ${
           error ? 'border-danger/80' : 'border-line'
         }`}
         {...props}
@@ -146,7 +146,7 @@ export function Textarea({
         </span>
       ) : null}
       <textarea
-        className={`focus-ring w-full rounded-2xl border bg-surface-elevated px-3.5 py-2.5 text-ink outline-none placeholder:text-ink-3 transition-colors duration-200 focus-visible:border-acc/60 focus-visible:ring-2 focus-visible:ring-acc/20 ${
+        className={`focus-ring w-full rounded-2xl border bg-surface-elevated px-3.5 py-2.5 text-ink outline-none placeholder:text-ink-3 transition-colors duration-150 ease-[var(--ease-out)] focus-visible:border-acc/60 focus-visible:ring-2 focus-visible:ring-acc/20 ${
           error ? 'border-danger/80' : 'border-line'
         } ${className}`}
         {...props}
@@ -165,7 +165,7 @@ export function Card({
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`rounded-3xl border border-line bg-surface p-4 shadow-lg shadow-black/20 transition-all duration-200 ${className}`}
+      className={`ring-hairline rounded-3xl border border-line bg-surface p-4 shadow-[var(--shadow-card)] transition-[transform,border-color,box-shadow] duration-200 ease-[var(--ease-out)] ${className}`}
       {...props}
     >
       {children}
@@ -240,7 +240,7 @@ export function Spinner({
   return (
     <div className={`flex items-center justify-center ${size === 'md' ? 'min-h-[30vh]' : ''} ${className}`}>
       <div
-        className={`animate-spin rounded-full border-line border-t-acc ${sizeClasses[size]}`}
+        className={`animate-spin rounded-full border-line border-t-acc [animation-duration:0.6s] ${sizeClasses[size]}`}
       />
     </div>
   )
