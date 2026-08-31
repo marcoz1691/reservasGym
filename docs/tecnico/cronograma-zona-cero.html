@@ -1,0 +1,1131 @@
+<meta charset="utf-8">
+<title>Cronograma Maestro Zona Cero</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --bg: #F3F5F8;
+    --surface: #FFFFFF;
+    --surface-2: #EBEEF2;
+    --ink: #141922;
+    --ink-muted: #576270;
+    --ink-faint: #8A929E;
+    --border: #DBE0E7;
+    --border-strong: #C3CAD3;
+
+    --accent: #D63A1E;
+    --accent-ink: #AE2D13;
+
+    --sprint: #35567E;
+    --sprint-2: #4A7BB0;
+    --buffer: #97640F;
+    --golive: #2C7A6B;
+    --client: #6A5A94;
+
+    --grid: #E1E5EB;
+    --track: #F7F8FA;
+
+    --sev-high: #B93A28;
+    --sev-med: #97640F;
+    --sev-low: #4A7A3A;
+
+    --shadow: 0 1px 2px rgba(20,25,34,.04), 0 6px 20px rgba(20,25,34,.05);
+    --radius: 12px;
+
+    --maxw: 1180px;
+    --font-display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1117;
+      --surface: #161C24;
+      --surface-2: #1E2530;
+      --ink: #E6EBF1;
+      --ink-muted: #9AA4B1;
+      --ink-faint: #6C7683;
+      --border: #29313D;
+      --border-strong: #3A434F;
+
+      --accent: #FF6146;
+      --accent-ink: #FF8368;
+
+      --sprint: #6E9BD1;
+      --sprint-2: #8DB4DE;
+      --buffer: #D79E3F;
+      --golive: #4FB3A0;
+      --client: #A493CF;
+
+      --grid: #262E39;
+      --track: #12171E;
+
+      --sev-high: #E5654F;
+      --sev-med: #D79E3F;
+      --sev-low: #7DB463;
+
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0E1117;
+    --surface: #161C24;
+    --surface-2: #1E2530;
+    --ink: #E6EBF1;
+    --ink-muted: #9AA4B1;
+    --ink-faint: #6C7683;
+    --border: #29313D;
+    --border-strong: #3A434F;
+    --accent: #FF6146;
+    --accent-ink: #FF8368;
+    --sprint: #6E9BD1;
+    --sprint-2: #8DB4DE;
+    --buffer: #D79E3F;
+    --golive: #4FB3A0;
+    --client: #A493CF;
+    --grid: #262E39;
+    --track: #12171E;
+    --sev-high: #E5654F;
+    --sev-med: #D79E3F;
+    --sev-low: #7DB463;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 28px 16px 56px; }
+  }
+
+  /* ---------- typography ---------- */
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.12;
+    text-wrap: balance;
+    margin: 0;
+    letter-spacing: .1px;
+  }
+  h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+  h2 { font-size: clamp(1.4rem, 3vw, 1.9rem); text-transform: uppercase; letter-spacing: .4px; }
+  h3 { font-size: 1.12rem; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    font-weight: 500;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0 0 14px;
+  }
+
+  p { margin: 0 0 12px; }
+  a { color: var(--accent-ink); }
+
+  .lead {
+    font-size: 1.05rem;
+    color: var(--ink-muted);
+    max-width: 64ch;
+  }
+
+  /* ---------- header ---------- */
+  header.masthead {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+  }
+  .sub {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.15rem;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 8px;
+  }
+  .meta-grid {
+    margin-top: 26px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .meta-grid div {
+    background: var(--surface);
+    padding: 14px 16px;
+  }
+  .meta-grid dt {
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .meta-grid dd {
+    margin: 0;
+    font-weight: 500;
+    font-size: .92rem;
+  }
+
+  /* ---------- section ---------- */
+  section { margin-top: 52px; }
+  .section-head { margin-bottom: 22px; }
+  .section-head p { color: var(--ink-muted); margin-top: 8px; max-width: 68ch; }
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  /* ---------- stat tiles ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    box-shadow: var(--shadow);
+  }
+  .stat .n {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.9rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .n.hot { color: var(--accent-ink); }
+  .stat .l {
+    margin-top: 8px;
+    font-size: .82rem;
+    color: var(--ink-muted);
+  }
+
+  /* ---------- gantt ---------- */
+  .gantt-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .gantt {
+    min-width: 940px;
+    padding: 4px 0 10px;
+  }
+  .g-row {
+    display: grid;
+    grid-template-columns: 226px 1fr;
+    align-items: stretch;
+    border-top: 1px solid var(--border);
+  }
+  .g-row:first-child { border-top: 0; }
+  .g-row.group .g-name {
+    font-family: var(--font-mono);
+    font-size: .66rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: var(--surface-2);
+  }
+  .g-row.group .g-track { background: var(--surface-2); }
+
+  .g-name {
+    padding: 11px 14px;
+    font-size: .84rem;
+    font-weight: 500;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+  }
+  .g-name small {
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    color: var(--ink-faint);
+    font-weight: 400;
+  }
+
+  .g-track {
+    position: relative;
+    background: var(--track);
+    background-image:
+      linear-gradient(var(--grid) 0 0),
+      linear-gradient(var(--grid) 0 0),
+      linear-gradient(var(--grid) 0 0);
+    background-size: 1px 100%, 1px 100%, 1px 100%;
+    background-position: 24.59% 0, 50% 0, 74.59% 0;
+    background-repeat: no-repeat;
+    min-height: 38px;
+  }
+
+  /* month header */
+  .g-months {
+    display: grid;
+    grid-template-columns: 226px 1fr;
+    border-top: 0;
+  }
+  .g-months .spacer { border-right: 1px solid var(--border); }
+  .g-months .mrow {
+    display: flex;
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .g-months .mrow span {
+    padding: 8px 10px;
+    border-left: 1px solid var(--border);
+  }
+  .g-months .mrow span:first-child { border-left: 0; }
+  .m-sep { width: 24.59%; }
+  .m-oct { width: 25.41%; }
+  .m-nov { width: 24.59%; }
+  .m-dic { width: 25.41%; }
+
+  .bar {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 22px;
+    border-radius: 4px;
+    background: var(--sprint);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .bar.sprint2 { background: var(--sprint-2); }
+  .bar.buffer {
+    background: repeating-linear-gradient(45deg, var(--buffer) 0 7px, color-mix(in srgb, var(--buffer) 62%, #000) 7px 14px);
+  }
+  .bar.golive { background: var(--golive); }
+  .bar.client {
+    background: transparent;
+    border: 1.5px dashed var(--client);
+    height: 18px;
+  }
+  .bar.thin { height: 14px; }
+
+  .mile {
+    position: absolute;
+    top: 50%;
+    width: 13px;
+    height: 13px;
+    background: var(--accent);
+    transform: translate(-50%, -50%) rotate(45deg);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .mile.gate {
+    background: var(--surface);
+    border: 2px solid var(--ink-muted);
+  }
+  .mile .tag {
+    position: absolute;
+    left: 50%;
+    top: -20px;
+    transform: translateX(-50%) rotate(-45deg);
+    font-family: var(--font-mono);
+    font-size: .62rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--ink);
+  }
+  .mile.below .tag { top: auto; bottom: -20px; }
+
+  .pay {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 13px solid var(--accent);
+  }
+  .pay .tag {
+    position: absolute;
+    left: 50%;
+    top: 15px;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: .64rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--accent-ink);
+  }
+
+  .startline {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--ink);
+  }
+
+  /* legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    margin-top: 16px;
+    font-size: .8rem;
+    color: var(--ink-muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .sw { width: 22px; height: 12px; border-radius: 3px; flex: none; }
+  .sw.sprint { background: var(--sprint); }
+  .sw.sprint2 { background: var(--sprint-2); }
+  .sw.buffer { background: repeating-linear-gradient(45deg, var(--buffer) 0 5px, color-mix(in srgb, var(--buffer) 62%, #000) 5px 10px); }
+  .sw.golive { background: var(--golive); }
+  .sw.client { background: transparent; border: 1.5px dashed var(--client); }
+  .sw.dia { width: 12px; height: 12px; border-radius: 2px; background: var(--accent); transform: rotate(45deg); }
+  .sw.gate { width: 12px; height: 12px; border-radius: 2px; background: var(--surface); border: 2px solid var(--ink-muted); transform: rotate(45deg); }
+  .sw.pay { width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 11px solid var(--accent); border-radius: 0; }
+
+  /* ---------- tables ---------- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; background: var(--surface); font-size: .88rem; }
+  th, td { text-align: left; padding: 12px 14px; border-top: 1px solid var(--border); vertical-align: top; }
+  thead th {
+    border-top: 0;
+    background: var(--surface-2);
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+  td.mono, th.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td strong { font-weight: 600; }
+  .center { text-align: center; }
+
+  .chip {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: .66rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .chip.high { color: var(--sev-high); }
+  .chip.med { color: var(--sev-med); }
+  .chip.low { color: var(--sev-low); }
+
+  .raci-r { color: var(--accent-ink); font-weight: 700; }
+  .raci-a { color: var(--sprint); font-weight: 700; }
+
+  /* ---------- WBS tree ---------- */
+  .wbs {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    font-family: var(--font-mono);
+    font-size: .82rem;
+    line-height: 1.9;
+    overflow-x: auto;
+  }
+  .wbs b { color: var(--accent-ink); font-weight: 600; }
+  .wbs .l1 { color: var(--ink); font-weight: 600; }
+  .wbs .l2 { color: var(--ink-muted); padding-left: 2ch; }
+
+  /* ---------- callouts ---------- */
+  .notes {
+    display: grid;
+    gap: 12px;
+  }
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: .88rem;
+  }
+  .note b { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .5px; font-size: .84rem; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+  .card h3 { margin-bottom: 6px; }
+  .card .when {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    color: var(--accent-ink);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .card ul { margin: 10px 0 0; padding-left: 18px; color: var(--ink-muted); font-size: .86rem; }
+  .card li { margin-bottom: 4px; }
+
+  .cpm {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+  }
+  .cpm-chain {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: .76rem;
+    margin-bottom: 16px;
+  }
+  .cpm-chain .node {
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 5px 9px;
+    white-space: nowrap;
+  }
+  .cpm-chain .arr { color: var(--accent); font-weight: 700; }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 2px solid var(--ink);
+    font-size: .82rem;
+    color: var(--ink-muted);
+  }
+  footer p { margin-bottom: 6px; }
+
+  @media (max-width: 560px) {
+    .g-name { font-size: .8rem; }
+  }
+
+  /* ---------- print / PDF ---------- */
+  @media print {
+    @page { size: A4 landscape; margin: 12mm; }
+    *, *::before, *::after {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    :root {
+      --bg: #fff; --surface: #fff; --surface-2: #f1f3f6;
+      --ink: #111; --ink-muted: #3f4650; --ink-faint: #6a7280;
+      --border: #b9c0c9; --border-strong: #9aa2ac;
+      --track: #fafbfc; --grid: #dde2e8; --shadow: none;
+    }
+    body { font-size: 10.5px; background: #fff; }
+    .wrap { max-width: none; padding: 0; }
+    section { margin-top: 22px; break-inside: avoid; }
+    .masthead { break-after: avoid; }
+    .gantt-scroll, .table-scroll, .cpm, .wbs, .card, .note, .stat { box-shadow: none; }
+    .gantt { min-width: 0; }
+    .g-row, .cards, .stats, .cpm-chain, tr { break-inside: avoid; }
+    table { font-size: 9.5px; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Plan de gestión de proyecto · Línea base</p>
+    <h1>Cronograma Maestro<br>App Zona Cero Performance Center</h1>
+    <div class="sub">Paquete Avanzada — desarrollo, certificación y puesta en producción</div>
+    <p class="lead" style="margin-top:18px">
+      Línea de tiempo del proyecto, del 1&nbsp;de septiembre al 31&nbsp;de diciembre de 2026:
+      6&nbsp;sprints de construcción sobre ruta crítica, un buffer estratégico para la revisión
+      de tiendas y la marcha blanca operativa en el gimnasio.
+    </p>
+
+    <dl class="meta-grid">
+      <div><dt>Project Manager / Lead Dev</dt><dd>Marco Vinicio Zurita Rojas</dd></div>
+      <div><dt>Sponsor / Product Owner</dt><dd>William Ramírez · Zona Cero</dd></div>
+      <div><dt>Equipo de construcción</dt><dd>1 desarrollador full-stack</dd></div>
+      <div><dt>Metodología</dt><dd>Agile-Híbrido (Scrum-ban + CPM + Quality Gates)</dd></div>
+      <div><dt>Zona horaria de operación</dt><dd>America/Guayaquil · UTC−5</dd></div>
+      <div><dt>Kickoff estimado</dt><dd>01–03 sep 2026</dd></div>
+      <div><dt>Inicio (línea base)</dt><dd>01 sep 2026</dd></div>
+      <div><dt>Entrega técnica (fast-track)</dt><dd>20 nov 2026 · Semana 12</dd></div>
+      <div><dt>MVP operativo</dt><dd>26 nov 2026 · Semana 12</dd></div>
+      <div><dt>Cierre / go-live</dt><dd>31 dic 2026 · Semana 17</dd></div>
+    </dl>
+  </header>
+
+  <!-- ============ RESUMEN ============ -->
+  <section id="resumen" style="margin-top:40px">
+    <div class="section-head">
+      <span class="kicker">01 — Resumen ejecutivo</span>
+      <h2>Estrategia: fast-track + buffer de contingencia</h2>
+      <p>
+        La construcción técnica termina en la Semana&nbsp;12 (20&nbsp;nov). Se reservan 5&nbsp;semanas
+        entre el envío técnico y la fecha límite para absorber cualquier demora de
+        Apple/Google, del banco o del cliente sin comprometer el 31&nbsp;de diciembre.
+      </p>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n">17</div><div class="l">semanas de plazo total<br>(122 días calendario)</div></div>
+      <div class="stat"><div class="n">12</div><div class="l">semanas de construcción técnica<br>(Sprints 1–6, ruta crítica)</div></div>
+      <div class="stat"><div class="n">5</div><div class="l">semanas de buffer estratégico<br>(tiendas + marcha blanca)</div></div>
+      <div class="stat"><div class="n hot">0</div><div class="l">días de holgura en desarrollo<br>(disciplina semana a semana)</div></div>
+      <div class="stat"><div class="n hot">31 dic</div><div class="l">fecha límite del proyecto<br>(Quality Gate 4 · acta)</div></div>
+    </div>
+  </section>
+
+  <!-- ============ LÍNEA DE TIEMPO / GANTT ============ -->
+  <section id="timeline">
+    <div class="section-head">
+      <span class="kicker">02 — Línea de tiempo</span>
+      <h2>Diagrama de Gantt · Sep – Dic 2026</h2>
+      <p>
+        Barras = duración de cada frente de trabajo. Rombos rellenos = hitos; rombos huecos =
+        Quality Gates de aprobación del cliente. Triángulos = desembolsos. La franja rayada es
+        el buffer de certificación en tiendas (sin trabajo de desarrollo en ruta crítica).
+      </p>
+    </div>
+
+    <div class="gantt-scroll">
+      <div class="gantt">
+
+        <div class="g-months">
+          <div class="spacer"></div>
+          <div class="mrow">
+            <span class="m-sep">Septiembre</span>
+            <span class="m-oct">Octubre</span>
+            <span class="m-nov">Noviembre</span>
+            <span class="m-dic">Diciembre</span>
+          </div>
+        </div>
+
+        <!-- GRUPO: Construcción técnica -->
+        <div class="g-row group">
+          <div class="g-name">1 · Construcción técnica</div>
+          <div class="g-track"><div class="startline"></div></div>
+        </div>
+
+        <div class="g-row">
+          <div class="g-name">Sprint 1 — BD &amp; Auth <small>01–13 sep · 13 d</small></div>
+          <div class="g-track"><div class="bar" style="left:0%;width:9.84%" title="Sprint 1 · Base de datos Supabase + RLS + Auth JWT"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Sprint 2 — Membresías &amp; Planes <small>14–24 sep · 11 d</small></div>
+          <div class="g-track"><div class="bar sprint2" style="left:10.66%;width:8.2%" title="Sprint 2 · Catálogo de planes, estados active/grace/expired, TDD"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Sprint 3 — Cobros POS &amp; Gate <small>25 sep–04 oct · 10 d</small></div>
+          <div class="g-track"><div class="bar" style="left:19.67%;width:7.38%" title="Sprint 3 · Panel de cobros recepción + gate de vencidos + Mi plan"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Sprint 4 — Agenda 8 áreas, QR &amp; acceso por nivel <small>05–15 oct · 11 d</small></div>
+          <div class="g-track"><div class="bar sprint2" style="left:27.87%;width:8.2%" title="Sprint 4 · Motor de reservas UTC−5, aforos, waitlist, QR, acceso por plan"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Sprint 5 — Antropometría &amp; UI/UX <small>16–28 oct · 13 d</small></div>
+          <div class="g-track"><div class="bar" style="left:36.89%;width:9.84%" title="Sprint 5 · Peso/IMC, design system dark, branding Zona Cero"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Sprint 6 — Staging, QA E2E &amp; capacitación <small>29 oct–15 nov · 18 d</small></div>
+          <div class="g-track"><div class="bar sprint2" style="left:47.54%;width:13.93%" title="Sprint 6 · Deploy staging, pruebas E2E en dispositivos reales, capacitación recepción"></div></div>
+        </div>
+
+        <!-- GRUPO: Publicación y cierre -->
+        <div class="g-row group">
+          <div class="g-name">2 · Publicación &amp; cierre</div>
+          <div class="g-track"></div>
+        </div>
+
+        <div class="g-row">
+          <div class="g-name">Compilación Capacitor + fichas de tienda <small>16–20 nov · 5 d</small></div>
+          <div class="g-track"><div class="bar thin" style="left:63.11%;width:4.1%" title="Binarios iOS .ipa / Android .aab + assets + política de privacidad"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Buffer — certificación App Store &amp; Google Play <small>21 nov–04 dic · 14 d</small></div>
+          <div class="g-track"><div class="bar buffer" style="left:66.39%;width:10.66%" title="Monitoreo y respuesta a observaciones de Apple/Google"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Sprint 7 — Go-live &amp; marcha blanca <small>05–20 dic · 16 d</small></div>
+          <div class="g-track"><div class="bar golive" style="left:77.87%;width:12.3%" title="Publicación en tiendas, migración a Supabase Prod, operación real"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Estabilización &amp; cierre <small>21–31 dic · 11 d</small></div>
+          <div class="g-track"><div class="bar golive" style="left:90.98%;width:8.2%" title="Ajustes finales, acta de entrega, activación de garantía"></div></div>
+        </div>
+
+        <!-- GRUPO: Frentes en paralelo -->
+        <div class="g-row group">
+          <div class="g-name">3 · Frentes en paralelo</div>
+          <div class="g-track"></div>
+        </div>
+
+        <div class="g-row">
+          <div class="g-name">Provisionamiento Supabase (staging + prod) <small>01–09 sep</small></div>
+          <div class="g-track"><div class="bar thin" style="left:0%;width:6.56%" title="Proyectos Supabase, RLS, entornos separados"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Cuentas Apple ($99) y Google ($25) — Cliente <small>08 sep–06 oct</small></div>
+          <div class="g-track"><div class="bar client" style="left:5.74%;width:22.95%" title="Riesgo R1 · trámite iniciado en Semana 2 con acompañamiento remoto"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Capacitación al personal de recepción <small>06–12 nov · Semana 11</small></div>
+          <div class="g-track"><div class="bar client thin" style="left:54.1%;width:4.92%" title="Sesión práctica anticipada + manual operativo simplificado"></div></div>
+        </div>
+
+        <!-- GRUPO: Hitos -->
+        <div class="g-row group">
+          <div class="g-name">4 · Hitos &amp; Quality Gates</div>
+          <div class="g-track"></div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Hitos de control</div>
+          <div class="g-track" style="min-height:52px">
+            <div class="mile" style="left:0.4%"><span class="tag">Kickoff</span></div>
+            <div class="mile gate below" style="left:27.05%"><span class="tag">QG1 · Cobros</span></div>
+            <div class="mile gate" style="left:61.48%"><span class="tag">QG2 · Staging</span></div>
+            <div class="mile below" style="left:65.57%"><span class="tag">Envío tiendas</span></div>
+            <div class="mile" style="left:70.49%"><span class="tag">★ MVP 26 nov</span></div>
+            <div class="mile gate below" style="left:99%"><span class="tag">QG4</span></div>
+            <div class="mile" style="left:99.6%"><span class="tag">★ Cierre 31 dic</span></div>
+          </div>
+        </div>
+        <div class="g-row">
+          <div class="g-name">Desembolsos (30 / 50 / 20)</div>
+          <div class="g-track" style="min-height:44px">
+            <div class="pay" style="left:0.6%"><span class="tag">30% · $2.040</span></div>
+            <div class="pay" style="left:70.49%"><span class="tag">50% · $3.400</span></div>
+            <div class="pay" style="left:99.4%"><span class="tag">20% · $1.360</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><i class="sw sprint"></i> Sprint técnico (ruta crítica)</span>
+      <span><i class="sw sprint2"></i> Sprint técnico (alterno visual)</span>
+      <span><i class="sw buffer"></i> Buffer certificación tiendas</span>
+      <span><i class="sw golive"></i> Go-live &amp; marcha blanca</span>
+      <span><i class="sw client"></i> Frente a cargo / con el Cliente</span>
+      <span><i class="sw dia"></i> Hito</span>
+      <span><i class="sw gate"></i> Quality Gate (aprobación cliente)</span>
+      <span><i class="sw pay"></i> Desembolso</span>
+    </div>
+  </section>
+
+  <!-- ============ SPRINTS ============ -->
+  <section id="sprints">
+    <div class="section-head">
+      <span class="kicker">03 — Cronograma por sprints</span>
+      <h2>Entregables y Definition of Done</h2>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Sprint / Hito</th>
+            <th class="mono">Fechas</th>
+            <th class="mono center">Días</th>
+            <th class="mono">Dependencia</th>
+            <th>Entregable clave (DoD)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Sprint 1 — Base de datos &amp; Auth</strong></td>
+            <td class="mono">01–13 sep</td><td class="mono center">13</td><td class="mono">Inicio</td>
+            <td>BD Supabase desplegada, tablas relacionales con RLS, login JWT y recuperación de clave funcional.</td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 2 — Membresías &amp; Planes</strong></td>
+            <td class="mono">14–24 sep</td><td class="mono center">11</td><td class="mono">S1</td>
+            <td>Catálogo de planes, estados <code>active</code>/<code>grace</code>/<code>expired</code>, reglas de dominio con pruebas TDD (Vitest) aprobadas.</td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 3 — Cobros POS &amp; Gate</strong></td>
+            <td class="mono">25 sep–04 oct</td><td class="mono center">10</td><td class="mono">S2</td>
+            <td>Panel de cobros en recepción (Datafast físico / efectivo / transferencia), vista socio “Mi plan” y bloqueo de reservas a vencidos con gracia de 3 días.</td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 4 — Agenda 8 áreas, QR &amp; acceso por nivel</strong></td>
+            <td class="mono">05–15 oct</td><td class="mono center">11</td><td class="mono">S3</td>
+            <td>Motor de reservas en horario Ecuador (UTC−5), aforos, lista de espera, check-in QR y acceso a áreas según plan (Gold / Silver / Plata, reglas del kickoff).</td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 5 — Antropometría &amp; UI/UX</strong></td>
+            <td class="mono">16–28 oct</td><td class="mono center">13</td><td class="mono">S4</td>
+            <td>Módulo de peso/IMC con gráfica histórica, formulario de registro ampliado, design system oscuro premium y branding corporativo de Zona Cero aplicado.</td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 6 — Staging, QA E2E &amp; capacitación</strong></td>
+            <td class="mono">29 oct–15 nov</td><td class="mono center">18</td><td class="mono">S5</td>
+            <td>App desplegada en Staging, pruebas end-to-end en dispositivos reales, personal de recepción capacitado y demo validada por el cliente.</td>
+          </tr>
+          <tr>
+            <td><strong>★ Hito fast-track — Envío a tiendas</strong></td>
+            <td class="mono">20 nov</td><td class="mono center">—</td><td class="mono">S6</td>
+            <td>Binarios Capacitor subidos a App Store Connect y Google Play Console; fichas, assets y política de privacidad listos.</td>
+          </tr>
+          <tr>
+            <td><strong>★ Hito — MVP funcional</strong></td>
+            <td class="mono">26 nov</td><td class="mono center">—</td><td class="mono">S6</td>
+            <td>Reservas, aforo, check-in QR y panel de administración operativos (sin publicación en tiendas). Habilita el pago de avance.</td>
+          </tr>
+          <tr>
+            <td><strong>Buffer — Certificación en tiendas</strong></td>
+            <td class="mono">21 nov–04 dic</td><td class="mono center">14</td><td class="mono">Fast-track</td>
+            <td>Monitoreo y resolución de observaciones de Apple y Google hasta aprobación final.</td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 7 — Go-live &amp; marcha blanca</strong></td>
+            <td class="mono">05–20 dic</td><td class="mono center">16</td><td class="mono">Buffer</td>
+            <td>App publicada para descarga, migración a Supabase Prod, carga de catálogo oficial y operación real en el gimnasio.</td>
+          </tr>
+          <tr>
+            <td><strong>★ Hito final — Cierre del proyecto</strong></td>
+            <td class="mono">31 dic</td><td class="mono center">—</td><td class="mono">S7</td>
+            <td>Acta de entrega firmada, cierre de proyecto y activación de la garantía técnica (30 días). Habilita el pago final.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ WBS ============ -->
+  <section id="wbs">
+    <div class="section-head">
+      <span class="kicker">04 — Estructura de desglose del trabajo (WBS / EDT)</span>
+      <h2>Paquetes de trabajo</h2>
+    </div>
+    <div class="wbs">
+<span class="l1">1.0 PROYECTO APP ZONA CERO — PAQUETE AVANZADA</span>
+<span class="l1"> ├─ <b>1.1</b> Gestión y arquitectura base</span>
+<span class="l2">│   ├─ 1.1.1 Kickoff, acta de inicio y requerimientos</span>
+<span class="l2">│   ├─ 1.1.2 Provisionamiento Supabase (PostgreSQL, RLS staging &amp; prod)</span>
+<span class="l2">│   └─ 1.1.3 Autenticación segura (JWT, registro, login, recuperación)</span>
+<span class="l1"> ├─ <b>1.2</b> Motor de membresías y cobros (core financiero)</span>
+<span class="l2">│   ├─ 1.2.1 Catálogo de planes y duraciones (reglas de dominio TDD)</span>
+<span class="l2">│   ├─ 1.2.2 Panel de cobros recepción (efectivo, transferencia, Datafast POS)</span>
+<span class="l2">│   ├─ 1.2.3 Pantalla socio “Mi plan” e historial de pagos</span>
+<span class="l2">│   └─ 1.2.4 Gate de reservas (vencimiento + gracia de 3 días)</span>
+<span class="l1"> ├─ <b>1.3</b> Motor de reservas multizona y asistencia</span>
+<span class="l2">│   ├─ 1.3.1 Parametrización 8 áreas en timezone Ecuador</span>
+<span class="l2">│   ├─ 1.3.2 Agendamiento, aforos, solapamientos y lista de espera</span>
+<span class="l2">│   ├─ 1.3.3 Check-in con validación QR dinámico</span>
+<span class="l2">│   └─ 1.3.4 Acceso a áreas por nivel de membresía (Gold / Silver / Plata)</span>
+<span class="l1"> ├─ <b>1.4</b> Seguimiento antropométrico (peso e IMC)</span>
+<span class="l2">│   ├─ 1.4.1 Registro de medidas, estatura y peso + ficha ampliada</span>
+<span class="l2">│   └─ 1.4.2 Cálculo de IMC y gráfica histórica de progreso</span>
+<span class="l1"> ├─ <b>1.5</b> Experiencia de usuario (UI/UX) y branding</span>
+<span class="l2">│   ├─ 1.5.1 Design system deportivo dark mode &amp; tokens Zona Cero</span>
+<span class="l2">│   └─ 1.5.2 Responsive (móvil socio, tablet/desktop recepción)</span>
+<span class="l1"> ├─ <b>1.6</b> Aseguramiento de calidad y capacitación</span>
+<span class="l2">│   ├─ 1.6.1 Pruebas end-to-end en ambiente staging</span>
+<span class="l2">│   └─ 1.6.2 Capacitación operativa a recepción y administración</span>
+<span class="l1"> ├─ <b>1.7</b> Despliegue nativo y publicación en tiendas</span>
+<span class="l2">│   ├─ 1.7.1 Cuentas Apple Developer ($99) y Google Play ($25) — Cliente</span>
+<span class="l2">│   ├─ 1.7.2 Compilación de binarios Capacitor (iOS .ipa / Android .aab)</span>
+<span class="l2">│   ├─ 1.7.3 Fichas de tienda, assets y política de privacidad</span>
+<span class="l2">│   └─ 1.7.4 Envío y acompañamiento en la revisión oficial</span>
+<span class="l1"> └─ <b>1.8</b> Puesta en producción, marcha blanca y cierre</span>
+<span class="l2">     ├─ 1.8.1 Despliegue en producción y carga de catálogo oficial</span>
+<span class="l2">     ├─ 1.8.2 Marcha blanca con usuarios reales en Zona Cero</span>
+<span class="l2">     └─ 1.8.3 Firma de acta de entrega y activación de garantía</span>
+    </div>
+  </section>
+
+  <!-- ============ HITOS Y GATES ============ -->
+  <section id="gates">
+    <div class="section-head">
+      <span class="kicker">05 — Hitos y puertas de control</span>
+      <h2>Quality Gates</h2>
+      <p>Cada gate es una aprobación formal del cliente por videollamada + confirmación escrita (WhatsApp / correo). Sin gate aprobado no arranca la fase siguiente.</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="when">04 oct 2026</div>
+        <h3>QG1 · Cobranzas y membresías</h3>
+        <p style="color:var(--ink-muted);font-size:.86rem">Aprobación del módulo de cobros en recepción, estados de membresía y bloqueo de vencidos.</p>
+        <ul><li>Cierre de Sprints 1–3</li><li>Demo interactiva en staging</li></ul>
+      </div>
+      <div class="card">
+        <div class="when">15 nov 2026</div>
+        <h3>QG2 · App en Staging</h3>
+        <p style="color:var(--ink-muted);font-size:.86rem">Aprobación formal de la app completa en staging previa a compilar producción.</p>
+        <ul><li>Pruebas E2E en dispositivos reales</li><li>Recepción capacitada</li></ul>
+      </div>
+      <div class="card">
+        <div class="when">20 nov 2026</div>
+        <h3>QG3 · Autorización de subida a tiendas</h3>
+        <p style="color:var(--ink-muted);font-size:.86rem">Firma de autorización para enviar binarios a App Store y Google Play.</p>
+        <ul><li>Fichas, assets y política de privacidad listos</li><li>Cuentas de desarrollador activas</li></ul>
+      </div>
+      <div class="card">
+        <div class="when">31 dic 2026</div>
+        <h3>QG4 · Acta de entrega</h3>
+        <p style="color:var(--ink-muted);font-size:.86rem">Firma del acta de entrega, cierre definitivo del proyecto y arranque de la garantía.</p>
+        <ul><li>Criterios de aceptación verificados</li><li>Garantía técnica de 30 días activa</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INSUMOS DEL CLIENTE ============ -->
+  <section id="insumos">
+    <div class="section-head">
+      <span class="kicker">06 — Insumos y decisiones del Cliente</span>
+      <h2>Qué se necesita de Zona Cero y para cuándo</h2>
+      <p>
+        El avance depende de estos insumos en fecha. Todas las fechas son estimadas: si un insumo llega tarde,
+        el sprint que lo consume se desplaza día por día. Las aprobaciones (Quality Gates) tienen una ventana
+        de revisión de 10&nbsp;días calendario; sin respuesta en ese plazo se dan por aceptadas.
+      </p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Insumo / decisión de Zona Cero</th>
+            <th>Habilita</th>
+            <th class="mono">Fecha límite estimada</th>
+            <th class="center">Criticidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Pago de anticipo (30%)</strong></td><td>Arranque del desarrollo</td><td class="mono">Al firmar · antes del 01 sep</td><td class="center"><span class="chip high">Alta</span></td></tr>
+          <tr><td>Kickoff: confirmar áreas y disciplinas; datáfono Datafast operativo</td><td>Parametrización base (Sprint 1)</td><td class="mono">01–03 sep 2026</td><td class="center"><span class="chip high">Alta</span></td></tr>
+          <tr><td>Marca: logo, colores y nombre comercial</td><td>Design system y branding (Sprint 5)</td><td class="mono">05 sep 2026</td><td class="center"><span class="chip med">Media</span></td></tr>
+          <tr><td>Planes de membresía: nombre, precio, duración y visitas</td><td>Motor de membresías (Sprint 2)</td><td class="mono">12 sep 2026</td><td class="center"><span class="chip high">Alta</span></td></tr>
+          <tr><td>Usuarios de staff / admin iniciales</td><td>Panel y pruebas en staging (Sprint 3)</td><td class="mono">25 sep 2026</td><td class="center"><span class="chip med">Media</span></td></tr>
+          <tr><td>Áreas, horarios, cupos e instructores (carga inicial)</td><td>Motor de reservas (Sprint 4)</td><td class="mono">26 sep 2026</td><td class="center"><span class="chip high">Alta</span></td></tr>
+          <tr><td>Reglas de acceso por nivel de plan (Gold / Silver / Plata → áreas), <strong>por escrito</strong></td><td>Motor de reglas de reservas (Sprint 4)</td><td class="mono">03 oct 2026</td><td class="center"><span class="chip high">Alta · R6</span></td></tr>
+          <tr><td>Cuentas Apple Developer ($99) y Google Play ($25): creadas, pagadas y con acceso al Proveedor</td><td>Compilación y envío a tiendas</td><td class="mono">15 oct 2026 · iniciar 08 sep</td><td class="center"><span class="chip high">Alta · R1</span></td></tr>
+          <tr><td>Aprobación <strong>QG1</strong> — cobros y membresías</td><td>Habilita Sprints 4–5</td><td class="mono">hasta 14 oct 2026</td><td class="center"><span class="chip high">Alta</span></td></tr>
+          <tr><td>Nombre definitivo de la app (visible en App Store / Play)</td><td>Fichas de tienda</td><td class="mono">31 oct 2026</td><td class="center"><span class="chip med">Media</span></td></tr>
+          <tr><td>Disponibilidad de recepción para capacitación (1 sesión)</td><td>Adopción del panel de cobros</td><td class="mono">06–12 nov 2026</td><td class="center"><span class="chip med">Media · R4</span></td></tr>
+          <tr><td>Aprobación <strong>QG2</strong> — validación de la demo en staging</td><td>Autoriza compilar producción</td><td class="mono">15–25 nov 2026</td><td class="center"><span class="chip high">Alta</span></td></tr>
+          <tr><td>Autorización <strong>QG3</strong> — subida a tiendas</td><td>Envío de binarios</td><td class="mono">20 nov 2026</td><td class="center"><span class="chip high">Alta</span></td></tr>
+          <tr><td><strong>Pago de avance (50%)</strong></td><td>Continuidad tras el MVP</td><td class="mono">≈ 26 nov 2026</td><td class="center"><span class="chip high">Alta</span></td></tr>
+          <tr><td>Aprobación <strong>QG4</strong> + firma del acta de entrega</td><td>Cierre del proyecto</td><td class="mono">31 dic 2026</td><td class="center"><span class="chip high">Alta</span></td></tr>
+          <tr><td><strong>Pago final (20%)</strong></td><td>Cierre</td><td class="mono">≈ 31 dic 2026</td><td class="center"><span class="chip med">Media</span></td></tr>
+          <tr><td><em>(Opcional)</em> Credenciales Datafast Dataweb (test y prod)</td><td>Botón de pago online en la app · fase paralela</td><td class="mono">Solo si activan e-commerce</td><td class="center"><span class="chip low">Baja</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ CPM ============ -->
+  <section id="cpm">
+    <div class="section-head">
+      <span class="kicker">07 — Ruta crítica (CPM)</span>
+      <h2>Secuencia que fija la duración mínima</h2>
+    </div>
+    <div class="cpm">
+      <div class="cpm-chain">
+        <span class="node">1.1.2 Supabase</span><span class="arr">→</span>
+        <span class="node">1.1.3 Auth</span><span class="arr">→</span>
+        <span class="node">1.2.1 Planes</span><span class="arr">→</span>
+        <span class="node">1.2.2 Cobros</span><span class="arr">→</span>
+        <span class="node">1.2.4 Gate</span><span class="arr">→</span>
+        <span class="node">1.3.1 Áreas TZ</span><span class="arr">→</span>
+        <span class="node">1.3.2 Agenda</span><span class="arr">→</span>
+        <span class="node">1.5.1 Design system</span><span class="arr">→</span>
+        <span class="node">1.6.1 QA E2E</span><span class="arr">→</span>
+        <span class="node">1.7.2 Binarios</span><span class="arr">→</span>
+        <span class="node">1.7.4 Revisión tiendas</span><span class="arr">→</span>
+        <span class="node">1.8.1 Producción</span>
+      </div>
+      <p style="margin:0"><strong>Holgura en desarrollo técnico:</strong> 0 días — exige ejecución estricta semana a semana.</p>
+      <p style="margin:6px 0 0"><strong>Holgura estratégica del proyecto:</strong> 35 días de colchón entre el envío técnico (20 nov) y el cierre (31 dic). Cualquier demora externa de Apple/Google o del banco se absorbe aquí sin mover la fecha límite.</p>
+    </div>
+  </section>
+
+  <!-- ============ RIESGOS ============ -->
+  <section id="riesgos">
+    <div class="section-head">
+      <span class="kicker">08 — Matriz de gestión de riesgos</span>
+      <h2>Risk register</h2>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Riesgo</th><th class="center">Prob.</th><th class="center">Impacto</th><th class="center">Severidad</th><th>Mitigación / contingencia</th><th>Resp.</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">R1</td>
+            <td>Demora del cliente en crear las cuentas Apple ($99) / Google ($25).</td>
+            <td class="center">Media</td><td class="center">Alto</td>
+            <td class="center"><span class="chip high">Alta</span></td>
+            <td>Iniciar el trámite en la Semana&nbsp;2 con guía paso a paso y sesión remota con pantalla compartida.</td>
+            <td class="mono">PM / Cliente</td>
+          </tr>
+          <tr>
+            <td class="mono">R2</td>
+            <td>Rechazo inicial de la app en la revisión de Apple (permisos, guidelines).</td>
+            <td class="center">Media</td><td class="center">Medio</td>
+            <td class="center"><span class="chip med">Media</span></td>
+            <td>El fast-track al 20&nbsp;nov deja 3&nbsp;semanas para responder apelaciones sin afectar el go-live.</td>
+            <td class="mono">Lead Dev</td>
+          </tr>
+          <tr>
+            <td class="mono">R3</td>
+            <td>Inconsistencia en cobros por falta de conectividad en recepción.</td>
+            <td class="center">Baja</td><td class="center">Medio</td>
+            <td class="center"><span class="chip low">Baja</span></td>
+            <td>Repositorio offline-first con sincronización automática al recuperar conexión.</td>
+            <td class="mono">Lead Dev</td>
+          </tr>
+          <tr>
+            <td class="mono">R4</td>
+            <td>Resistencia al cambio del personal de recepción con el nuevo panel.</td>
+            <td class="center">Media</td><td class="center">Medio</td>
+            <td class="center"><span class="chip med">Media</span></td>
+            <td>Capacitación práctica anticipada (Semana&nbsp;11) y manual operativo simplificado.</td>
+            <td class="mono">PM / Cliente</td>
+          </tr>
+          <tr>
+            <td class="mono">R5</td>
+            <td>Desfase horario en las reservas de socios.</td>
+            <td class="center">Baja</td><td class="center">Alto</td>
+            <td class="center"><span class="chip low">Baja</span></td>
+            <td>Fijación estricta de <code>America/Guayaquil</code> (UTC−5) en base de datos y clientes; pruebas de borde.</td>
+            <td class="mono">Lead Dev</td>
+          </tr>
+          <tr>
+            <td class="mono">R6</td>
+            <td>Reglas de acceso por nivel de membresía sin definir al cerrar el motor de reservas.</td>
+            <td class="center">Media</td><td class="center">Alto</td>
+            <td class="center"><span class="chip high">Alta</span></td>
+            <td>Documentar Gold/Silver/Plata por escrito en el kickoff; cambios posteriores se tratan como control de cambios de alcance.</td>
+            <td class="mono">PM / Cliente</td>
+          </tr>
+          <tr>
+            <td class="mono">R7</td>
+            <td>Mora en el pago de avance (50%) tras la entrega del MVP.</td>
+            <td class="center">Baja</td><td class="center">Alto</td>
+            <td class="center"><span class="chip med">Media</span></td>
+            <td>Cronograma de pagos ligado a hitos; suspensión de entregas y ambientes ante mora &gt; 5 días calendario.</td>
+            <td class="mono">PM</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ RACI ============ -->
+  <section id="raci">
+    <div class="section-head">
+      <span class="kicker">09 — Matriz RACI</span>
+      <h2>Responsabilidades y gobernanza</h2>
+      <p><span class="raci-r">R</span> Responsible (ejecuta) · <span class="raci-a">A</span> Accountable (aprueba) · C Consulted · I Informed</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Entregable / actividad</th>
+            <th class="center">Lead Dev / PM<br>(M. Zurita)</th>
+            <th class="center">Product Owner<br>(Zona Cero)</th>
+            <th class="center">Recepción</th>
+            <th class="center">Tiendas<br>(Apple / Google)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Arquitectura, BD &amp; Auth</td><td class="center"><span class="raci-r">R</span>/<span class="raci-a">A</span></td><td class="center">I</td><td class="center">I</td><td class="center">—</td></tr>
+          <tr><td>Definición de planes, horarios y reglas de acceso</td><td class="center">C</td><td class="center"><span class="raci-r">R</span>/<span class="raci-a">A</span></td><td class="center">C</td><td class="center">—</td></tr>
+          <tr><td>Motor de membresías &amp; cobros</td><td class="center"><span class="raci-r">R</span>/<span class="raci-a">A</span></td><td class="center">C</td><td class="center">I</td><td class="center">—</td></tr>
+          <tr><td>Reservas, QR y antropometría</td><td class="center"><span class="raci-r">R</span>/<span class="raci-a">A</span></td><td class="center">I</td><td class="center">I</td><td class="center">—</td></tr>
+          <tr><td>Aporte de logotipo y marca</td><td class="center">C</td><td class="center"><span class="raci-r">R</span>/<span class="raci-a">A</span></td><td class="center">—</td><td class="center">—</td></tr>
+          <tr><td>Pruebas de aceptación (staging)</td><td class="center"><span class="raci-r">R</span></td><td class="center"><span class="raci-a">A</span></td><td class="center">C</td><td class="center">—</td></tr>
+          <tr><td>Capacitación operativa</td><td class="center"><span class="raci-r">R</span>/<span class="raci-a">A</span></td><td class="center">I</td><td class="center"><span class="raci-r">R</span></td><td class="center">—</td></tr>
+          <tr><td>Pago y alta de cuentas de desarrollo</td><td class="center">C</td><td class="center"><span class="raci-r">R</span>/<span class="raci-a">A</span></td><td class="center">—</td><td class="center"><span class="raci-a">A</span></td></tr>
+          <tr><td>Compilación y subida de binarios</td><td class="center"><span class="raci-r">R</span>/<span class="raci-a">A</span></td><td class="center">I</td><td class="center">—</td><td class="center">C</td></tr>
+          <tr><td>Revisión y certificación de la app</td><td class="center"><span class="raci-r">R</span></td><td class="center">I</td><td class="center">—</td><td class="center"><span class="raci-r">R</span>/<span class="raci-a">A</span></td></tr>
+          <tr><td>Puesta en producción y marcha blanca</td><td class="center"><span class="raci-r">R</span>/<span class="raci-a">A</span></td><td class="center"><span class="raci-a">A</span></td><td class="center"><span class="raci-r">R</span></td><td class="center">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ COMUNICACIÓN ============ -->
+  <section id="comunicacion">
+    <div class="section-head">
+      <span class="kicker">10 — Plan de comunicación</span>
+      <h2>Cadencia y gobernanza</h2>
+    </div>
+    <div class="cards">
+      <div class="card"><h3>Checkpoint semanal</h3><p style="color:var(--ink-muted);font-size:.86rem;margin:0">Reporte de avance y estado de tareas por WhatsApp / correo. Todos los viernes.</p></div>
+      <div class="card"><h3>Sprint demo</h3><p style="color:var(--ink-muted);font-size:.86rem;margin:0">Demostración interactiva en videollamada al cierre de cada hito funcional (bisemanal).</p></div>
+      <div class="card"><h3>Quality Gates</h3><p style="color:var(--ink-muted);font-size:.86rem;margin:0">4 aprobaciones formales (QG1–QG4). Confirmación escrita obligatoria antes de avanzar.</p></div>
+      <div class="card"><h3>Ventana de aceptación</h3><p style="color:var(--ink-muted);font-size:.86rem;margin:0">10 días calendario por entrega para observaciones escritas; sin observaciones, se da por aceptada.</p></div>
+      <div class="card"><h3>Control de cambios</h3><p style="color:var(--ink-muted);font-size:.86rem;margin:0">Toda solicitud fuera del alcance acordado (Anexo A) va por escrito; el Proveedor evalúa viabilidad, costo y efecto en plazos antes de tomarla.</p></div>
+      <div class="card"><h3>Escalamiento</h3><p style="color:var(--ink-muted);font-size:.86rem;margin:0">Bloqueo &gt; 48 h → llamada directa PM ↔ Sponsor. Demora de insumos &gt; 15 días → extensión formal de plazo.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ SUPUESTOS ============ -->
+  <section id="supuestos">
+    <div class="section-head">
+      <span class="kicker">11 — Supuestos y bases de planificación</span>
+      <h2>Sobre qué se construyó este cronograma</h2>
+      <p>Premisas de estimación. Cambiarlas mueve las fechas del plan.</p>
+    </div>
+    <div class="notes">
+      <div class="note"><b>Línea base.</b> Arranque operativo el <strong>01 sep 2026</strong>, tras el pago del anticipo y el kickoff. Todas las fechas son estimadas y en días calendario.</div>
+      <div class="note"><b>Fast-track del MVP.</b> El MVP operativo se apunta al <strong>15–20 nov</strong> para conservar colchón antes de la fecha objetivo del 26 nov; ese margen se usa en endurecimiento de QA y validación del cliente.</div>
+      <div class="note"><b>Recurso.</b> Estimación para <strong>1 desarrollador full-stack</strong> a dedicación continua. Vacaciones, bajas o trabajo en paralelo mueven las fechas.</div>
+      <div class="note"><b>Publicación en tiendas.</b> Depende de que Zona Cero cree y pague sus cuentas Apple Developer y Google Play. El Proveedor configura y sube; el retraso en el alta de cuentas es el riesgo R1 y desplaza el envío.</div>
+      <div class="note"><b>Pago online (Datafast Dataweb).</b> Fuera de la ruta crítica. Si Zona Cero activa la pasarela y entrega credenciales test/prod, el botón “Renovar / Pagar” se conecta como fase paralela, sin mover el resto del plan.</div>
+      <div class="note"><b>Aprobaciones.</b> Cada Quality Gate tiene una ventana de revisión de <strong>10 días calendario</strong>; la fase siguiente no arranca sin la aprobación previa.</div>
+      <div class="note"><b>Días.</b> Duraciones en días calendario. Semana de proyecto = lunes a domingo. Zona horaria <code>America/Guayaquil</code> (UTC−5).</div>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>Cronograma Maestro — App Zona Cero Performance Center · Paquete Avanzada.</strong></p>
+    <p>Documento de gestión de proyecto (línea base). PM / Lead Dev: Marco Vinicio Zurita Rojas · Sponsor: William Ramírez (Zona Cero Performance Center).</p>
+    <p>Basado en el Anexo A de alcance y el plan técnico Avanzada. Todas las fechas son estimadas y pueden ajustarse por demoras en los insumos del Cliente, cambios de alcance o tiempos de revisión de Apple/Google.</p>
+  </footer>
+
+</div>

@@ -1,6 +1,7 @@
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { PDFDocument } from 'pdf-lib';
 import puppeteer from 'puppeteer-core';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -9,6 +10,8 @@ const SLIDE = { width: 1280, height: 720 };
 /** Chrome del sistema: no descargamos binario, usamos el que ya esta instalado. */
 const CHROME_CANDIDATES = [
   process.env.CHROME_PATH,
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   '/usr/bin/google-chrome-stable',
   '/usr/bin/google-chrome',
   '/usr/local/bin/google-chrome',
@@ -34,32 +37,46 @@ const browser = await puppeteer.launch({
 
 try {
   const page = await browser.newPage();
-  await page.setViewport({ ...SLIDE, deviceScaleFactor: 2 });
+  // Escala 1 + JPEG: PDF liviano para WhatsApp (antes ~1.6 MB con scale 2).
+  await page.setViewport({ ...SLIDE, deviceScaleFactor: 1 });
   await page.goto(pathToFileURL(join(HERE, 'presentacion.html')).href, {
     waitUntil: 'networkidle0',
     timeout: 90_000,
   });
   await page.evaluate(() => document.fonts.ready);
 
-  const pdfPath = resolve(HERE, 'ReservasGym-Presentacion.pdf');
-  await page.pdf({
-    path: pdfPath,
-    width: `${SLIDE.width}px`,
-    height: `${SLIDE.height}px`,
-    printBackground: true,
-    preferCSSPageSize: true,
-  });
-  console.log(`PDF  -> ${pdfPath}`);
-
-  // Laminas sueltas en JPEG 1080p: es el formato que mejor viaja por WhatsApp
-  // cuando el cliente prefiere ver imagenes en vez de abrir el PDF.
-  await page.setViewport({ ...SLIDE, deviceScaleFactor: 1.5 });
   const slides = await page.$$('.slide');
+  const jpegBuffers = [];
+
   for (const [index, slide] of slides.entries()) {
     const name = `${String(index + 1).padStart(2, '0')}.jpg`;
-    await slide.screenshot({ path: join(slidesDir, name), type: 'jpeg', quality: 92 });
+    const outPath = join(slidesDir, name);
+    const buffer = await slide.screenshot({
+      type: 'jpeg',
+      quality: 72,
+      encoding: 'binary',
+    });
+    writeFileSync(outPath, buffer);
+    jpegBuffers.push(buffer);
     console.log(`IMG  -> slides/${name}`);
   }
+
+  // PDF armado con JPEG comprimidos (mucho mas liviano que page.pdf del HTML).
+  const pdf = await PDFDocument.create();
+  for (const buffer of jpegBuffers) {
+    const image = await pdf.embedJpg(buffer);
+    const pagePdf = pdf.addPage([SLIDE.width, SLIDE.height]);
+    pagePdf.drawImage(image, {
+      x: 0,
+      y: 0,
+      width: SLIDE.width,
+      height: SLIDE.height,
+    });
+  }
+
+  const pdfPath = resolve(HERE, 'ReservasGym-Presentacion.pdf');
+  writeFileSync(pdfPath, await pdf.save());
+  console.log(`PDF  -> ${pdfPath}`);
   console.log(`\n${slides.length} laminas generadas.`);
 } finally {
   await browser.close();

@@ -23,9 +23,9 @@
 
 ## 2. Tres modelos de comercialización
 
-### Modelo A — SaaS: implementación + mensualidad (**recomendado**)
+### Modelo A — Paquetes de pago único (**recomendado**)
 
-El gimnasio no compra el software: paga una implementación única y una suscripción. Baja la barrera de entrada, genera ingreso recurrente (MRR) y deja la puerta abierta a upsells. **Es el modelo por defecto en toda propuesta.**
+El gimnasio elige un paquete cerrado (Básica → Completa) y paga **una sola vez**. No hay mensualidad de plan. Baja la fricción de “otro gasto recurrente” y ancla el valor en el alcance entregado. **Es el modelo por defecto en toda propuesta.** Hosting y soporte posterior se ofrecen aparte como mantenimiento opcional (~$89/mes).
 
 ### Modelo B — Desarrollo a medida por fases
 
@@ -37,81 +37,66 @@ Cuando quien te contacta **no es el gimnasio sino un intermediario** (un consult
 
 ---
 
-## 3. Modelo A — Planes Básico / Intermedio / Avanzado
+## 3. Modelo A — Básica / Intermedia / Avanzada / Completa
 
-| | **BÁSICO — "Reserva"** | **INTERMEDIO — "Gestiona"** ⭐ | **AVANZADO — "Escala"** |
-|---|---|---|---|
-| **Para quién** | Gimnasio de 1 sede que solo necesita ordenar los cupos | Gimnasio o box con clases, membresías y staff | Cadena multi-sede o centro deportivo completo |
-| **Implementación (único)** | **$890** | **$1.890** | **$3.900** |
-| **Mensualidad** | **$69/mes** | **$149/mes** | **$299/mes** |
-| **Pago anual (10 meses)** | $690/año | $1.490/año | $2.990/año |
-| **Sedes** | 1 | Hasta 2 | Ilimitadas |
-| **Socios activos** | Hasta 300 | Hasta 1.000 | Ilimitados |
-| **Usuarios de staff** | 3 | 10 | Ilimitados |
-| **Soporte** | Email, 48 h hábiles | Email + WhatsApp, 24 h hábiles | Prioritario 8 h, SLA 99,5% |
+| | **BÁSICA** | **INTERMEDIA** | **AVANZADA** ⭐ | **COMPLETA** |
+|---|---|---|---|---|
+| **Para quién** | Quiere ordenar reservas ya, sin app de tiendas | Quiere app en iOS/Android y seguimiento de peso | Quiere cobrar y renovar membresías | Quiere facturación y venta de productos online |
+| **Pago único** | **desde $2.000** | **$4.500** | **$6.500** | **$9.500** |
+| **Entrega** | Link responsive | App iOS + Android | App + panel de cobros | Sistema completo |
+| **Reservas de áreas** | Sí | Sí | Sí | Sí |
+| **Control de peso (CRUD)** | — | Sí | Sí | Sí |
+| **Membresías, pagos y renovaciones** | — | — | Sí | Sí |
+| **Facturación + links de pago (productos)** | — | — | — | Sí |
 
 ### Qué incluye cada plan
 
-**BÁSICO — "Reserva" · $890 + $69/mes**
+**BÁSICA · desde $2.000 · link responsive**
 
-- Registro e inicio de sesión del socio (email/contraseña y Sign in with Apple).
-- Perfil del socio con su plan/membresía activa.
-- Catálogo de clases y zonas (pesas, cardio, funcional, spinning, piscina, sauna, cancha) con buscador y filtros.
-- Agenda con vista **día y semana**, con cupo disponible en cada slot.
-- Reservar y cancelar con política de tiempo mínimo configurable.
-- **Lista de espera automática** cuando la clase se llena, con promoción al liberarse un cupo.
-- **Check-in con código QR** desde el celular del socio.
-- "Mis reservas": próximas, historial y estados (confirmada, pendiente, cancelada, no-show).
-- Panel de administración: alta/baja/edición de clases, zonas, instructores y aforos.
-- Reporte básico de ocupación.
-- App **responsive** (celular, tablet y computador), modo claro/oscuro, en español.
-- Personalización de marca: logo y colores del gimnasio.
-- Hosting, dominio incluido tipo `tugimnasio.app`, respaldos diarios y actualizaciones de mantenimiento.
-- 1 sesión de capacitación (2 h) y carga inicial del catálogo.
+App web responsive (celular, tablet y computador) con motor de reservas para **todas las áreas**:
 
-**INTERMEDIO — "Gestiona" · $1.890 + $149/mes** *(el más vendido)*
+- Gimnasio / áreas con mayor seguimiento y reserva.
+- Fisioterapia, Nutrición, Bailoterapia.
+- Áreas comunes.
+- Hyrox (clases y preparación), Musculación, CrossFit (clases y preparación).
 
-Todo lo del Básico, más:
+Incluye: registro de reserva, cancelación, reagenda, catálogo y agenda, panel de administración, marca del gimnasio (logo y colores), carga inicial del catálogo y capacitación básica.
 
-- Vista de calendario **mes** además de día y semana.
-- **Reservas recurrentes** (ej. "spinning todos los martes y jueves 19:00").
-- **Reagendar en un toque** desde "Mis reservas".
-- Control de **no-shows** con penalizaciones y bloqueo temporal configurable.
-- Gestión de **membresías y planes**: vigencias, vencimientos, alertas de renovación y control de acceso por tipo de plan.
-- Perfiles de **entrenadores con valoraciones** de los socios.
-- **Favoritos** y **noticias del club**.
-- **Notificaciones push web y recordatorios automáticos** (antes de la clase, aviso de lista de espera, aviso de cancelación).
-- **Bloqueos por mantenimiento** de zonas, con cancelación en cascada y aviso a los afectados.
-- Reportes de ocupación y asistencia **exportables a CSV/PDF**.
-- **Importación de socios desde Excel**.
-- 2 sesiones de capacitación y acompañamiento durante el primer mes.
+**INTERMEDIA · $4.500**
 
-**AVANZADO — "Escala" · $3.900 + $299/mes**
+**Entrega principal: app en App Store y Google Play** (no es el paquete “link web” de Básica).
 
-Todo lo del Intermedio, más:
+Incluye las **funciones** de reservas de Básica (catálogo, agenda, aforo, check-in, admin, marca), **pero el canal de entrega al socio es la app nativa**, no un sitio web responsive como producto separado.
 
-- **Multi-sede** con reportes consolidados y comparativos entre locales.
-- **Rutinas y seguimiento de progreso** del socio.
-- **Control de peso y medidas**: registro de peso, medidas corporales (cintura, cadera, brazo, pecho, pierna), IMC calculado, metas con fecha objetivo y gráfico de evolución. El entrenador registra la evaluación inicial y las de control.
-- **Métricas del socio**: asistencias, racha (streak), calorías estimadas.
-- **Entrenamiento personal** con agenda propia por entrenador.
-- **Roles y permisos granulares** (recepción, instructor, gerente, dueño).
-- **Modo tótem/kiosko** para check-in con QR en la entrada.
-- **PWA instalable** con dominio propio (ícono en la pantalla de inicio, se ve y se siente como app).
-- **Dashboard ejecutivo** con KPIs: ocupación por franja, retención, clases más y menos rentables, horas valle.
-- **API y webhooks** para conectar con otros sistemas.
-- Recordatorios por **WhatsApp** (integración lista; el costo de los mensajes lo asume el cliente directamente con el proveedor).
-- 1 personalización menor incluida por trimestre.
+Además:
 
-**ENTERPRISE — a cotizar (desde $12.000 + $499/mes)**
+- App publicada en **App Store** y **Google Play**.
+- **Control de peso** por cliente: crear, editar, actualizar y eliminar registros.
+- Historial de peso del socio para el seguimiento del entrenador o del staff.
 
-Cadenas con más de 5 sedes, integraciones con ERP o control de acceso físico, requisitos de infraestructura propia, acuerdos de nivel de servicio a medida y desarrollo dedicado.
+> **Nota de alcance:** “Todo lo de Básica” = mismas **capacidades de negocio** (reservas, etc.). No obliga a entregar un segundo producto “web pública tipo Básica”. El panel de staff/admin puede abrirse en computador (navegador) por practicidad operativa; eso no es el entregable “link responsive” de Básica.
 
-### Opción alternativa: precio por socio activo
+**AVANZADA · $6.500** *(recomendado)*
 
-Para gimnasios que crecen rápido o que prefieren un costo variable:
+**Entrega principal: app iOS/Android** (igual que Intermedia) + panel de cobros.
 
-**$0,45 por socio activo/mes, con mínimo de $79/mes.** Solo se cobra por el socio que efectivamente usó la app en el mes. Es una excelente respuesta a la objeción "no sé cuántos van a usarla".
+Todo lo de **Intermedia** (funciones + app en tiendas), más:
+
+- **Seguimiento de membresías**: planes, vigencias y acceso según estado.
+- **Pagos y renovaciones** de la suscripción (pasarela online según lo que el gym ya use en Ecuador: Datafast / Kushki / PagoPlux / etc., o cobro en recepción).
+- Avisos de vencimiento y panel de cobros del gimnasio.
+
+**COMPLETA · $9.500**
+
+Todo lo de Avanzada, más:
+
+- **Sistema de facturación** incluido.
+- **Links de pago** para comprar productos en línea (suplementos, merch, etc.).
+- Cobros y comprobantes integrados en un solo flujo.
+
+### Mantenimiento opcional
+
+Hosting, respaldos, actualizaciones y soporte: **~$89/mes**. Sin él, la garantía se limita a 90 días tras la entrega.
 
 ---
 
@@ -142,29 +127,28 @@ Para el cliente que quiere pagar por partes o ser dueño de la solución. Cada f
 
 ## 5. Ventas adicionales (upsell y cross-sell)
 
-Estos módulos se ofrecen **a partir del tercer mes de uso**, cuando el cliente ya vio resultados. Es cuando mejor convierten.
+Estos módulos se ofrecen **cuando el cliente ya tiene un paquete** y quiere algo que no viene incluido (o subir de plan). Upsell preferido: subir de Básica → Intermedia → Avanzada → Completa.
 
-| Complemento | Implementación | Mensual |
+| Complemento | Precio | Nota |
 |---|---|---|
-| **Pasarela de pagos y cobro recurrente** (Payphone, DeUna, Datafast, Kushki) | $1.200 | $39/mes |
-| **Facturación electrónica SRI** | $1.400 | $45/mes |
-| **App nativa iOS y Android** publicada en las tiendas | $1.500–$4.500 | $49/mes |
-| **Control de acceso** (torniquete, QR o huella) — hardware aparte | $900 | $25/mes |
-| **Recordatorios por WhatsApp** (API oficial) | $450 | $29/mes + costo de mensajes |
-| **Control de peso y medidas** (incluido en Avanzado; complemento para Básico e Intermedio) | $950 | $25/mes |
-| **Evaluación corporal avanzada**: % de grasa y masa muscular, fotos de progreso con control de privacidad, comparativas e informe imprimible para el socio | $780 | $19/mes |
-| **Integración con balanza de bioimpedancia** (InBody, Tanita, Omron) o con Apple Health / Google Fit | $650 | $19/mes |
-| **Módulo de nutrición y planes alimenticios** | $700 | — |
-| **Retos y gamificación** (rankings, insignias, temporadas) | $900 | $19/mes |
-| **Reportes BI avanzados** / conexión a Looker Studio | $600 | $19/mes |
-| **Migración de datos** desde Excel u otro sistema | $250–$600 | — |
-| **Diseño de marca profundo** (más allá de logo y colores) | $450 | — |
-| **Soporte extendido 24/7** | — | +$99/mes |
+| **Subir de plan** (diferencia de lista) | Diferencia entre paquetes | Preferible a vender módulos sueltos |
+| **Control de acceso** (torniquete, QR o huella) — hardware aparte | $900 + $25/mes | Opcional en cualquier plan |
+| **Recordatorios por WhatsApp** (API oficial) | $450 + $29/mes + mensajes | Opcional |
+| **Evaluación corporal avanzada**: % de grasa y masa muscular, fotos de progreso | $780 + $19/mes | Sobre Intermedia o superior |
+| **Integración con balanza de bioimpedancia** (InBody, Tanita, Omron) o Apple Health / Google Fit | $650 + $19/mes | Sobre Intermedia o superior |
+| **Módulo de nutrición y planes alimenticios** | $700 | Una vez |
+| **Retos y gamificación** | $900 + $19/mes | Opcional |
+| **Reportes BI avanzados** / Looker Studio | $600 + $19/mes | Opcional |
+| **Migración de datos** desde Excel u otro sistema | $250–$600 | Según volumen |
+| **Diseño de marca profundo** | $450 | Una vez |
+| **Soporte extendido 24/7** | +$99/mes | Sobre el mantenimiento |
 | **Capacitación adicional** | $80 por sesión de 2 h | — |
 | **Bolsa de horas de evolución** | 10 h por $450 · 20 h por $800 | — |
-| **Sede adicional** (planes Básico e Intermedio) | $350 | +$49/mes |
+| **Sede adicional** | $350 | Por sede |
 
-> **Costos que asume el cliente directamente** (declararlo desde el principio para evitar fricción): cuenta de desarrollador de Apple $99/año y de Google $25 pago único si contrata app nativa; comisiones de la pasarela de pagos; costo por mensaje de WhatsApp.
+> **Ya incluidos por plan:** app nativa (desde Intermedia), control de peso (desde Intermedia), pagos/renovaciones de membresía (Avanzada), facturación + links de pago para productos (Completa).
+>
+> **Costos que asume el cliente directamente:** cuenta de desarrollador de Apple $99/año y de Google $25 único (planes con app nativa); comisiones de la pasarela; costo por mensaje de WhatsApp.
 
 ---
 
@@ -176,7 +160,7 @@ Aplica cuando quien te contacta quiere **ofrecer el servicio a gimnasios** en ve
 
 No firma nada ni asume riesgo: solo te presenta al gimnasio.
 
-- **15% de la implementación** y **10% de la mensualidad durante los primeros 12 meses**, pagado mientras la cuenta siga activa.
+- **15% del pago único del paquete** cerrado, pagado al cobrarse al gimnasio.
 - Tú facturas al gimnasio, tú das el soporte y la relación con el cliente es tuya.
 - Es el nivel correcto para casi todo el mundo. No exige nada y se cierra en una conversación.
 
@@ -184,7 +168,7 @@ No firma nada ni asume riesgo: solo te presenta al gimnasio.
 
 Compra a precio mayorista y le factura él al gimnasio.
 
-- **30% de descuento sobre la lista** en implementación y mensualidad. Él fija el precio final y se queda con la diferencia.
+- **30% de descuento sobre la lista** del paquete. Él fija el precio final y se queda con la diferencia.
 - **Mínimo 3 cuentas activas** para mantener el descuento; por debajo de eso regresa al Nivel 1.
 - Él da la atención de primer nivel (dudas de uso, capacitación); tú das el segundo nivel (fallas y cambios).
 - Requiere que se capacite: 2 sesiones incluidas.
@@ -205,18 +189,15 @@ La app sale con el nombre y la marca del socio, no con la nuestra.
 
 ## 7. Condiciones comerciales
 
-- **Contrato mínimo:** 12 meses en Modelo A. Renovación automática con aviso de 30 días.
-- **Formas de pago de la implementación:** 50% al firmar y 50% a la entrega; o 3 cuotas sin interés.
-- **Alternativa "sin entrada":** implementación en $0 con contrato a 18 meses y mensualidad +30%. Convierte muy bien con gimnasios pequeños que no tienen caja para el setup.
-- **Prueba piloto:** 30 días gratis limitado a 1 sala o 3 clases. Sin tarjeta, sin compromiso.
+- **Modelo de venta por defecto:** paquete de pago único (sección 3).
+- **Formas de pago del paquete:** 50% al firmar y 50% a la entrega; o 3 cuotas sin interés.
+- **Mantenimiento opcional:** ~$89/mes (hosting, respaldos, actualizaciones y soporte). Sin él, garantía limitada a 90 días.
+- **Prueba piloto:** no se ofrece. La app se desarrolla tras el acuerdo; el cierre se basa en alcance y propuesta por escrito.
 - **Garantía:** 90 días de corrección de errores sin costo tras cada entrega.
 - **Descuentos autorizados:**
-  - Pago anual anticipado: 2 meses gratis (ya reflejado en la tabla).
-  - Cliente fundador (primeros 5 gimnasios): −25% en implementación a cambio de testimonio, caso de éxito y derecho a usar su marca como referencia.
-  - Referido que cierra: 1 mes gratis para quien refiere.
   - Máximo descuento del vendedor sin autorización: **15%**.
-- **Reajuste anual:** hasta 8% en la renovación, avisado con 60 días.
-- **Propiedad de los datos:** son del gimnasio. Exportación completa en CSV a solicitud y al terminar el contrato.
+  - No anunciar descuentos ni “cliente fundador” en la presentación ni en el primer contacto.
+- **Propiedad de los datos:** son del gimnasio. Exportación completa en CSV a solicitud y al terminar la relación.
 
 ---
 
@@ -227,55 +208,62 @@ La app sale con el nombre y la marca del socio, no con la nuestra.
 **Los tres dolores que se atacan, en orden de impacto:**
 
 1. **No-shows.** Sin recordatorios ni política de cancelación, entre el 15% y el 25% de los cupos reservados se pierden. Cada cupo liberado a tiempo es un socio satisfecho que sí entra.
-2. **Recepción saturada.** Una recepcionista en Ecuador cuesta ~$550/mes con beneficios. El plan Intermedio cuesta $149/mes y absorbe la reserva, la cancelación y el reagendamiento.
+2. **Recepción saturada.** Una recepcionista cuesta ~$550/mes con beneficios. El plan Intermedia ($4.500 pago único) absorbe la reserva, la cancelación y el reagendamiento.
 3. **Cero visibilidad.** Nadie sabe qué franjas están vacías. Con el reporte de ocupación se rediseñan horarios y se llenan las horas valle.
 
 **Ejemplo de ROI para un gimnasio de 400 socios a $35/mes ($14.000/mes de facturación):**
 
-- Costo del plan Intermedio: $149/mes = **1,1% de la facturación**.
-- Con retener apenas **5 socios adicionales al mes** gracias a una mejor experiencia, se recuperan $175/mes. El sistema ya se pagó solo.
+- Inversión del plan Intermedia: **$4.500** = ~**32% de un mes** de facturación.
+- Con retener apenas **~9 socios adicionales al mes**, se recupera la inversión en menos de un trimestre.
 - Todo lo demás (menos carga en recepción, mejor ocupación en horas valle, datos para decidir) es ganancia.
 
-**Comparativo para la propuesta:** Mindbody arranca en ~$139/mes en inglés y con soporte en otra zona horaria; Fitco y Trainingym van de $80 a $250/mes sin implementación local. Nuestro plan Intermedio queda en $149/mes **con implementación, capacitación presencial y soporte en español en horario Ecuador**.
+**Comparativo para la propuesta:** Mindbody arranca en ~$139/mes en inglés y con soporte en otra zona horaria; Fitco y Trainingym van de $80 a $250/mes sin implementación local. Nuestro Intermedia es **$4.500 pago único** con app en tiendas, control de peso, capacitación y soporte en español.
 
 ---
 
 ## 9. Proceso de venta
 
 1. **Prospección.** Instagram y visita en frío a boxes de CrossFit, estudios boutique y centros deportivos de Quito, Guayaquil, Cuenca, Ambato y Manta. El decisor es el dueño o el gerente, casi nunca recepción.
-2. **Demo con sus propios datos.** Antes de la reunión, cargar el horario real del gimnasio (está publicado en su Instagram) en la app. Ver su propia parrilla de clases funcionando cierra más que cualquier presentación.
-3. **Piloto de 30 días** con una sola sala o clase. Bajo riesgo, alta conversión.
-4. **Cierre** con contrato a 12 meses. Ofrecer siempre el plan Intermedio como opción central; el Básico existe para hacerlo ver razonable y el Avanzado para anclar el precio hacia arriba.
+2. **Descubrimiento.** Entender áreas, cupos, cómo operan hoy y qué plan encaja. La app se construye después del acuerdo.
+3. **Propuesta por escrito** con alcance, precio y tiempos.
+4. **Cierre** con paquete de pago único. Ofrecer **Avanzada ($6.500)** como opción central; Intermedia y Básica existen para anclar hacia abajo y Completa hacia arriba.
 5. **Onboarding en 2 semanas**: carga de catálogo, importación de socios, capacitación y lanzamiento con material de comunicación para los socios (afiche con QR y guion para redes).
-6. **Upsell al mes 3–6**: pagos, app nativa y control de acceso, ya con datos de uso reales en la mano.
+6. **Upsell al mes 3–6**: subir a Avanzada/Completa, control de acceso o WhatsApp, ya con datos de uso reales en la mano.
 
 ### Manejo de objeciones
 
 | Objeción | Respuesta |
 |---|---|
-| "Está caro" | Comparar con el costo mensual de una recepcionista y con el valor de los cupos perdidos por no-show. Ofrecer la modalidad sin entrada a 18 meses. |
+| "Está caro" | Comparar con el costo mensual de una recepcionista ($550) y con el valor de los cupos perdidos por no-show. Mostrar que Intermedia es ~32% de un mes de facturación en un gym de 400 socios. |
 | "Ya manejo todo por WhatsApp" | WhatsApp no le dice cuántos cupos quedan ni quién no vino. Mostrar el reporte de ocupación. |
-| "Mis socios son mayores, no van a usar una app" | El check-in con QR en el tótem lo hace la recepción. La app es opcional para el socio y obligatoria solo para el staff. |
+| "Mis socios son mayores, no van a usar una app" | Recepción puede reservar por ellos. En Básica el link es suficiente; en Intermedia la app se descarga como cualquier otra. |
 | "¿Y si se cae el internet?" | La app funciona con datos en caché y los reportes son exportables. El check-in tiene respaldo manual. |
 | "Quiero ser dueño del sistema" | Pasar al Modelo B por fases, con entrega de código fuente por +40%. |
-| "Déjame pensarlo" | Activar el piloto gratuito de 30 días en ese mismo momento. Sin decisión de compra, no hay nada que pensar. |
+| "Déjame pensarlo" | Enviar la propuesta por escrito en 48 h y agendar una llamada corta para revisarla juntos. |
 
 ---
 
 ## 10. Proyección de ingresos (referencia)
 
-Escenario conservador para el primer año, con una mezcla de 2 clientes Básico, 6 Intermedio y 1 Avanzado:
+Escenario conservador para el primer año, con una mezcla de 2 Básica, 5 Intermedia, 1 Avanzada y 1 Completa:
 
-- **Implementaciones:** (2 × $890) + (6 × $1.890) + (1 × $3.900) = **$19.020** de ingreso único.
-- **Recurrente mensual:** (2 × $69) + (6 × $149) + (1 × $299) = **$1.331/mes** = $15.972/año.
-- **Upsells estimados** (30% de la base contrata pagos o app nativa al año siguiente): ~$4.000 adicionales.
+- **Paquetes:** (2 × $2.000) + (5 × $4.500) + (1 × $6.500) + (1 × $9.500) = **$41.500** de ingreso único.
+- **Mantenimiento opcional** (si 70% lo contrata a $89/mes): ~$560/mes ≈ $6.720/año.
+- **Upsells estimados** (subidas de plan y extras): ~$5.000 adicionales.
 
-El valor real del negocio está en el MRR: 20 clientes en el plan Intermedio son $2.980/mes recurrentes sin trabajo nuevo de desarrollo.
+El valor del negocio está en cerrar paquetes Intermedia/Avanzada y en el mantenimiento recurrente opcional.
 
 ---
 
 ## 11. Nota sobre pagos en línea
 
-**La pasarela de pagos y la facturación electrónica quedan explícitamente fuera del alcance de la versión actual del producto.** La app gestiona membresías, planes, vigencias y visualización de facturas, pero no procesa cobros.
+**Básica e Intermedia** no procesan cobros: ordenan reservas (y peso en Intermedia). El dinero de la membresía lo sigue recibiendo el gym como hoy.
 
-Se comercializan como **Fase 7 / complemento posterior** (ver sección 5). Esto es deliberado y conviene comercialmente: permite lanzar antes, evita el trámite de afiliación a la pasarela durante la venta inicial y deja un upsell claro de $1.200 + $39/mes para el mes 3–6, cuando el cliente ya confía en el sistema.
+**Avanzada** incluye **seguimiento de membresías, panel de cobros, renovaciones y avisos**. El cobro puede ser:
+
+- **En recepción** (efectivo, transferencia, datáfono Datafast, etc.) — la app registra y extiende la vigencia; o
+- **Online en la app** — solo si el gym ya tiene (o activa) una pasarela e-commerce (Datafast Dataweb, Kushki, PagoPlux, etc.).
+
+No exige checkout online si el gym solo tiene datáfono físico. **Completa** añade facturación SRI y links de pago para **productos** en línea.
+
+Eso permite arrancar rápido en Básica/Intermedia sin trámites de pasarela, y deja un upsell claro hacia Avanzada ($6.500) o Completa ($9.500).

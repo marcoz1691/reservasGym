@@ -16,7 +16,7 @@ Son tres ambigüedades y cada una mueve el precio en miles de dólares. **No man
 
 Es la pregunta más importante de toda la conversación y la que más se pasa por alto.
 
-- Si **es el dueño o gerente** del gimnasio, va por el Modelo A (implementación + mensualidad) y se le cotiza un plan directo.
+- Si **es el dueño o gerente** del gimnasio, va por el Modelo A (paquetes de pago único) y se le cotiza un plan directo.
 - Si **es un intermediario** que quiere ofrecer el servicio a gimnasios, es un socio de canal y va por la sección 6 del plan comercial. Se le arranca en Nivel 1 (referidor), nunca en marca blanca.
 
 La redacción "dar ese servicio **para** un gimnasio" se inclina hacia intermediario, pero no es concluyente. Pregúntalo directo y sin rodeos: no es incómodo, es lo normal.
@@ -37,7 +37,7 @@ Puede significar cuatro cosas muy distintas. Pregunta cuál:
 | Lo que puede querer decir | Qué implica |
 |---|---|
 | El socio registra su peso y ve su evolución | Sencillo. Ya está contemplado. |
-| Peso + medidas corporales + IMC + metas | Módulo de control de peso y medidas. Incluido en el plan Avanzado; $950 + $25/mes como complemento en los otros. |
+| Peso + medidas corporales + IMC + metas | Control de peso incluido desde Intermedia ($4.500). |
 | % de grasa, masa muscular, fotos de progreso, evaluaciones del entrenador | Evaluación corporal avanzada: $780 + $19/mes. |
 | Que se conecte a la balanza de bioimpedancia (InBody, Tanita) | Integración: $650 + $19/mes, y hay que confirmar qué equipo tiene y si expone datos. |
 
@@ -67,7 +67,7 @@ Adjunta `../presentacion/ReservasGym-Presentacion.pdf` en el mismo envío.
 
 **Antes de marcar (5 minutos):** busca el gimnasio en Instagram. Mira el horario de clases, cuántas salas tienen, si hay piscina, cuántos instructores aparecen. Entrar a la llamada sabiendo que dan spinning a las 19:00 cambia por completo la conversación.
 
-**Objetivo de la llamada:** entender el tamaño y el rol de William, y salir con una segunda reunión de demo agendada. **No es cerrar la venta ni dar el precio final.**
+**Objetivo de la llamada:** entender el tamaño y el rol de William, y salir con una segunda reunión para revisar la propuesta. **No es cerrar la venta ni dar el precio final.**
 
 ### Minuto 0 a 3 — Contexto
 
@@ -95,17 +95,18 @@ Adjunta `../presentacion/ReservasGym-Presentacion.pdf` en el mismo envío.
 13. ¿Quién más participa en la decisión?
 14. ¿Para cuándo lo quisieran tener funcionando?
 15. ¿Tienen un presupuesto pensado para esto?
-16. **Cierre:** "Con lo que me contaste te preparo una propuesta con alcance y precio. Y algo mejor: cargo el horario real del gimnasio y en 30 minutos te muestro la app funcionando con tus propias clases. ¿Te va bien el [día]?"
+16. **Cierre:** "Con lo que me contaste te preparo una propuesta con alcance y precio. ¿Te va bien el [día] para revisarla?"
 
 ### Rangos que puedes manejar en la llamada
 
 Si te presionan por un número antes de tiempo, da un **rango amplio y condicionado**, nunca un precio cerrado:
 
-- Gimnasio de una sede: "arranca en el orden de los $900 de implementación y $69 al mes".
-- Con membresías, reportes y control de peso: "estaría alrededor de $1.900 y $149 al mes".
+- Solo reservas por link: "arranca desde $2.000 pago único".
+- Con app en tiendas y control de peso: "estaría alrededor de $4.500".
+- Con membresías y cobros: "hacia $6.500"; con facturación y tienda online: "$9.500".
 - Si pide tiendas o varias sedes: "ahí ya se va a otro rango, déjame armarlo bien y te lo mando por escrito".
 
-Y remata siempre igual: **"Hay 30 días de prueba gratis, así que puedes verlo funcionando antes de decidir."**
+Y remata siempre igual: **"Te dejo el alcance por escrito y lo vemos juntos."**
 
 ### Lo que NO debes hacer
 
@@ -130,5 +131,5 @@ Si aparecen dos o más, califica el prospecto como frío y no le dediques horas 
 
 1. **Mismo día:** mensaje de agradecimiento con el resumen en tres líneas de lo que entendiste. Confirma que se entendió bien y te compra tiempo.
 2. **Dentro de 48 horas:** propuesta por escrito con alcance, precio, tiempos y qué queda fuera.
-3. **Demo con sus datos:** carga el horario real del gimnasio antes de la segunda reunión. Es lo que más convierte de todo el proceso.
+3. **Propuesta por escrito:** alcance, precio y tiempos. La app aún se va a desarrollar; no prometas una demo funcionando.
 4. **Si es intermediario:** propón el acuerdo de referidor (Nivel 1) y pídele por escrito qué gimnasios va a presentar, para registrar la oportunidad.

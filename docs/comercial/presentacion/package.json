@@ -8,6 +8,7 @@
     "render": "node render.mjs"
   },
   "devDependencies": {
+    "pdf-lib": "^1.17.1",
     "puppeteer-core": "^24.10.0"
   }
 }

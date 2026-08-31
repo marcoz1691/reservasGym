@@ -266,9 +266,9 @@
   .tr .cap{justify-self:start;font-size:7px}
 
   /* ---------- Table ---------- */
-  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .plans{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
   .plan{
-    border:1px solid var(--line);border-radius:var(--r-l);padding:22px 20px;
+    border:1px solid var(--line);border-radius:var(--r-l);padding:18px 14px 16px;
     background:var(--surface);display:flex;flex-direction:column;position:relative;
   }
   .plan.best{
@@ -276,18 +276,19 @@
     border-color:rgba(201,255,61,.4);
     box-shadow:0 0 0 1px rgba(201,255,61,.12), 0 20px 46px rgba(201,255,61,.09);
   }
-  .plan .tag{position:absolute;top:-11px;left:20px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;background:linear-gradient(150deg,var(--acc),var(--acc-deep));color:#0A0D06;padding:5px 11px;border-radius:999px}
-  .plan .nm{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+  .plan .tag{position:absolute;top:-11px;left:14px;font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;background:linear-gradient(150deg,var(--acc),var(--acc-deep));color:#0A0D06;padding:4px 9px;border-radius:999px}
+  .plan .nm{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
   .plan.best .nm{color:var(--acc)}
-  .plan .who{font-size:12px;color:var(--ink-3);margin-top:6px;line-height:1.35;min-height:32px}
-  .plan .price{margin:11px 0 3px;display:flex;align-items:baseline;gap:5px}
-  .plan .price b{font-size:36px;font-weight:800;letter-spacing:-.035em}
-  .plan .price s{font-size:12.5px;color:var(--ink-3);text-decoration:none;font-weight:600}
-  .plan .setup{font-size:11.5px;color:var(--ink-2);font-weight:500;padding-bottom:11px;border-bottom:1px solid var(--line-2);margin-bottom:12px}
+  .plan .who{font-size:11px;color:var(--ink-3);margin-top:5px;line-height:1.3;min-height:28px}
+  .plan .price{margin:10px 0 2px;display:flex;align-items:baseline;gap:4px;flex-wrap:wrap}
+  .plan .price b{font-size:28px;font-weight:800;letter-spacing:-.035em}
+  .plan .price .from{font-size:11px;color:var(--ink-3);font-weight:700;margin-right:2px}
+  .plan .price s{font-size:11.5px;color:var(--ink-3);text-decoration:none;font-weight:600}
+  .plan .setup{font-size:11px;color:var(--ink-2);font-weight:500;padding-bottom:10px;border-bottom:1px solid var(--line-2);margin-bottom:10px}
   .plan .setup b{color:var(--ink);font-weight:700}
-  .plan ul{list-style:none;display:flex;flex-direction:column;gap:6.5px}
-  .plan ul .tick{font-size:13px;line-height:1.35}
-  .plan ul .tick .ico{width:15px;height:15px;margin-top:2px}
+  .plan ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+  .plan ul .tick{font-size:11.5px;line-height:1.3}
+  .plan ul .tick .ico{width:13px;height:13px;margin-top:2px}
 
   /* ---------- Misc blocks ---------- */
   .flow{display:flex;align-items:stretch;gap:12px}
@@ -361,7 +362,7 @@
 
 <div class="deck">
 
-<!-- ============ 01 · PORTADA ============ -->
+<!-- 01 PORTADA -->
 <section class="slide" style="justify-content:space-between">
   <div class="logo">
     <div class="logo-mark"><svg class="ico"><use href="#i-bolt"/></svg></div>
@@ -373,13 +374,13 @@
       <div class="eyebrow">Presentación ejecutiva</div>
       <h1 style="margin-top:20px">Tus socios<br>reservan solos.<br><span class="grad">Tú controlas todo.</span></h1>
       <p class="lead" style="margin-top:24px;max-width:520px">
-        La aplicación de reservas, aforo y asistencia para tu gimnasio.
-        Sin cupos sobrevendidos, sin filas en recepción y sin perder horas en WhatsApp.
+        App de reservas, aforo y seguimiento para tu centro.
+        Sin cupos sobrevendidos y sin saturar recepción con WhatsApp.
       </p>
       <div style="display:flex;gap:10px;margin-top:28px;flex-wrap:wrap">
-        <span class="pill acc"><svg class="ico" style="width:15px;height:15px"><use href="#i-checkc"/></svg> Prueba 30 días gratis</span>
-        <span class="pill"><svg class="ico" style="width:15px;height:15px"><use href="#i-clock"/></svg> Operativo en 2 semanas</span>
-        <span class="pill"><svg class="ico" style="width:15px;height:15px"><use href="#i-globe"/></svg> Soporte en Ecuador</span>
+        <span class="pill acc"><svg class="ico" style="width:15px;height:15px"><use href="#i-tag"/></svg> Pago único</span>
+        <span class="pill"><svg class="ico" style="width:15px;height:15px"><use href="#i-shield"/></svg> Aforo en tiempo real</span>
+        <span class="pill"><svg class="ico" style="width:15px;height:15px"><use href="#i-phone"/></svg> Link o app en tiendas</span>
       </div>
     </div>
 
@@ -389,7 +390,7 @@
           <div class="notch"></div>
           <div class="sbar"><span>7:41</span><div class="r"><span>Gym</span><i></i></div></div>
           <div class="scr-body">
-            <div class="scr-title">Hola, Andrea 👋</div>
+            <div class="scr-title">Hola, Andrea</div>
             <div class="scr-sub">Martes 13 de enero</div>
             <div class="card tight" style="margin-top:11px;padding:11px;border-radius:13px;background:linear-gradient(150deg,rgba(201,255,61,.17),rgba(255,255,255,.03));border-color:rgba(201,255,61,.3)">
               <div style="font-size:8px;font-weight:800;letter-spacing:.1em;color:var(--acc);text-transform:uppercase">Tu próxima clase</div>
@@ -415,625 +416,236 @@
 
   <div class="foot">
     <div class="brand"><span class="dot"></span> ReservasGym</div>
-    <div>Propuesta preparada para tu gimnasio · Ecuador</div>
+    <div>Propuesta preparada para William Ramirez</div>
   </div>
 </section>
 
-<!-- ============ 02 · EL PROBLEMA ============ -->
+<!-- 02 PROBLEMA -->
 <section class="slide">
   <div class="head">
     <div class="eyebrow">El punto de partida</div>
-    <h2>Lo que está pasando hoy<br>en tu gimnasio</h2>
+    <h2>Lo que está pasando hoy</h2>
   </div>
-
   <div class="grid g2 fill" style="gap:20px">
     <div class="card" style="display:flex;gap:18px">
       <div class="chip red"><svg class="ico ico-lg"><use href="#i-msg"/></svg></div>
-      <div>
-        <h3>El WhatsApp no da abasto</h3>
-        <p class="p" style="margin-top:9px">Recepción contesta decenas de mensajes al día para agendar, mover y cancelar. Nadie tiene el horario claro y siempre se cuela un error.</p>
-      </div>
+      <div><h3>WhatsApp saturado</h3><p class="p" style="margin-top:9px">Recepción vive agendando, moviendo y cancelando por chat. Errores y demoras constantes.</p></div>
     </div>
-
     <div class="card" style="display:flex;gap:18px">
       <div class="chip warn"><svg class="ico ico-lg"><use href="#i-alert"/></svg></div>
-      <div>
-        <h3>Clases sobrevendidas</h3>
-        <p class="p" style="margin-top:9px">Llegan 22 personas a una sala de 15. El socio que sí avisó se queda afuera, se molesta y esa queja te cuesta la renovación.</p>
-      </div>
+      <div><h3>Cupos sobrevendidos</h3><p class="p" style="margin-top:9px">Llega más gente de la que cabe. Quien sí avisó se queda afuera y eso cuesta renovaciones.</p></div>
     </div>
-
     <div class="card" style="display:flex;gap:18px">
       <div class="chip red"><svg class="ico ico-lg"><use href="#i-x"/></svg></div>
-      <div>
-        <h3>1 de cada 5 no aparece</h3>
-        <p class="p" style="margin-top:9px">Apartan el cupo y no vienen. Ese lugar pudo ser de otro socio, pero nadie se enteró de que quedó libre.</p>
-      </div>
+      <div><h3>Ausencias sin control</h3><p class="p" style="margin-top:9px">Reservan y no aparecen. El cupo pudo ser de otro socio, pero nadie lo liberó a tiempo.</p></div>
     </div>
-
     <div class="card" style="display:flex;gap:18px">
       <div class="chip warn"><svg class="ico ico-lg"><use href="#i-chart"/></svg></div>
-      <div>
-        <h3>Decides a ciegas</h3>
-        <p class="p" style="margin-top:9px">No sabes qué horarios se llenan, cuáles están vacíos ni qué clase conviene mantener, mover o cerrar. Se decide por intuición.</p>
-      </div>
+      <div><h3>Decisiones a ciegas</h3><p class="p" style="margin-top:9px">No sabes qué horarios se llenan ni cuáles conviene mantener, mover o cerrar.</p></div>
     </div>
   </div>
-
   <div class="card glow" style="margin-top:20px;padding:18px 24px;display:flex;align-items:center;gap:16px">
     <svg class="ico ico-lg" style="color:var(--acc);flex:none"><use href="#i-trend"/></svg>
     <p style="font-size:17px;font-weight:600;letter-spacing:-.015em">
-      Ninguno de estos problemas es de tecnología. <span class="acc">Todos son de dinero:</span> cupos que no se venden y socios que no renuevan.
+      No es un problema de tecnología. <span class="acc">Es de ocupación y dinero:</span> cupos perdidos y socios que no renuevan.
     </p>
   </div>
-
   <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>02</div></div>
 </section>
 
-<!-- ============ 03 · LA SOLUCIÓN ============ -->
+<!-- 03 SOLUCIÓN -->
 <section class="slide">
   <div class="head">
     <div class="eyebrow">La propuesta</div>
-    <h2>Una sola app para tu gimnasio</h2>
-    <p class="lead">Tus socios reservan desde su celular. Tú ves en tiempo real quién viene, a qué clase y cuánto cupo queda. Nada más.</p>
+    <h2>Una sola app para tu operación</h2>
+    <p class="lead">Tus socios reservan. Tú ves aforo, asistencia y ocupación en tiempo real.</p>
   </div>
-
   <div class="grid g3 fill">
     <div class="card" style="display:flex;flex-direction:column">
       <div class="chip"><svg class="ico ico-lg"><use href="#i-phone"/></svg></div>
       <h3 style="margin-top:20px">Reservas sin fricción</h3>
-      <p class="p" style="margin-top:11px">En dos toques, a cualquier hora, sin llamar ni escribirle a nadie. El socio ve los cupos reales antes de confirmar.</p>
+      <p class="p" style="margin-top:11px">Registrar, cancelar y reagendar desde el celular, con cupo real antes de confirmar.</p>
       <div style="margin-top:auto;padding-top:18px;display:flex;flex-direction:column;gap:9px">
-        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Reservar, cancelar y reagendar</div>
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Todas las áreas del centro</div>
         <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Lista de espera automática</div>
       </div>
     </div>
-
     <div class="card" style="display:flex;flex-direction:column">
       <div class="chip blue"><svg class="ico ico-lg"><use href="#i-shield"/></svg></div>
       <h3 style="margin-top:20px">Aforo bajo control</h3>
-      <p class="p" style="margin-top:11px">Nunca más una sala con más gente de la que cabe. El cupo se cierra solo y el check-in con QR confirma quién entró de verdad.</p>
+      <p class="p" style="margin-top:11px">El cupo se cierra solo. Check-in con QR para saber quién entró de verdad.</p>
       <div style="margin-top:auto;padding-top:18px;display:flex;flex-direction:column;gap:9px">
-        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Cupo exacto por sala y clase</div>
-        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Control real de asistencia</div>
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Sin sobreventa</div>
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Menos carga en recepción</div>
       </div>
     </div>
-
     <div class="card" style="display:flex;flex-direction:column">
       <div class="chip violet"><svg class="ico ico-lg"><use href="#i-chart"/></svg></div>
-      <h3 style="margin-top:20px">Datos para decidir</h3>
-      <p class="p" style="margin-top:11px">Qué horarios se llenan, cuáles están vacíos y quién no está viniendo. Con eso rediseñas la parrilla y recuperas horas muertas.</p>
+      <h3 style="margin-top:20px">Crece con tu plan</h3>
+      <p class="p" style="margin-top:11px">Desde reservas hasta peso, membresías, cobros, facturación y tienda online.</p>
       <div style="margin-top:auto;padding-top:18px;display:flex;flex-direction:column;gap:9px">
-        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Ocupación por clase y por zona</div>
-        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Reportes en Excel y PDF</div>
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> 4 paquetes de pago único</div>
+        <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Link web o app iOS/Android</div>
       </div>
     </div>
   </div>
-
   <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>03</div></div>
 </section>
 
-<!-- ============ 04 · RECORRIDO DEL SOCIO ============ -->
+<!-- 04 ÁREAS -->
 <section class="slide">
-  <div class="head" style="margin-bottom:24px">
-    <div class="eyebrow">Experiencia del socio</div>
-    <h2>Así de simple lo vive tu socio</h2>
+  <div class="head" style="margin-bottom:22px">
+    <div class="eyebrow">Alcance</div>
+    <h2>Reservas para todas tus áreas</h2>
+    <p class="lead">Registro, cancelación y reagenda desde el plan Básica.</p>
   </div>
-
-  <div style="display:flex;gap:26px;align-items:flex-start;flex:1;min-height:0">
-    <div style="display:flex;gap:16px;flex:none">
-      <div class="phone" style="width:212px;height:442px">
-        <div class="screen">
-          <div class="notch"></div>
-          <div class="sbar"><span>7:41</span><div class="r"><i></i></div></div>
-          <div class="scr-body">
-            <div class="scr-title">Explorar</div>
-            <div class="fake-search"><svg class="ico"><use href="#i-search"/></svg> Buscar clase, zona o instructor</div>
-            <div class="chips">
-              <span class="mini-chip on">Hoy</span><span class="mini-chip">Tarde</span><span class="mini-chip">Cardio</span>
-            </div>
-            <div class="cls"><div class="t"><b>17:00</b><s>50 min</s></div><div class="m"><b>HIIT</b><s>Sala 3</s></div><span class="cap ok">9 cupos</span></div>
-            <div class="cls"><div class="t"><b>18:00</b><s>60 min</s></div><div class="m"><b>Funcional</b><s>Sala 2</s></div><span class="cap ok">6 cupos</span></div>
-            <div class="cls"><div class="t"><b>19:00</b><s>45 min</s></div><div class="m"><b>Spinning</b><s>Cycle</s></div><span class="cap low">2 cupos</span></div>
-            <div class="cls"><div class="t"><b>20:00</b><s>50 min</s></div><div class="m"><b>Yoga flow</b><s>Sala 1</s></div><span class="cap full">Llena</span></div>
-          </div>
-          <div class="tabbar">
-            <div><svg class="ico"><use href="#i-home"/></svg>Inicio</div>
-            <div class="on"><svg class="ico"><use href="#i-search"/></svg>Explorar</div>
-            <div><svg class="ico"><use href="#i-cal"/></svg>Agenda</div>
-            <div><svg class="ico"><use href="#i-user"/></svg>Perfil</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="phone" style="width:212px;height:442px">
-        <div class="screen">
-          <div class="notch"></div>
-          <div class="sbar"><span>7:41</span><div class="r"><i></i></div></div>
-          <div class="scr-body" style="display:flex;flex-direction:column">
-            <div class="scr-title" style="margin-top:8px">Tu acceso</div>
-            <div class="scr-sub">Spinning · Hoy 19:00</div>
-            <div style="margin-top:16px">
-              <div class="qr-box">
-                <i></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i></i>
-                <i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i>
-                <i></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i></i>
-                <i class="o"></i><i class="o"></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i>
-                <i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i>
-                <i class="o"></i><i></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i>
-                <i></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i></i><i></i>
-                <i></i><i class="o"></i><i></i><i></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i></i>
-                <i></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i></i><i></i>
-              </div>
-            </div>
-            <div style="text-align:center;margin-top:14px">
-              <div style="font-size:10px;font-weight:800;color:var(--acc);letter-spacing:.05em">RESERVA CONFIRMADA</div>
-              <div style="font-size:9px;color:var(--ink-3);margin-top:5px;font-weight:500;line-height:1.4">Muestra este código<br>en la entrada</div>
-            </div>
-            <div style="margin-top:auto;padding-bottom:10px;display:flex;gap:6px">
-              <div style="flex:1;text-align:center;padding:9px;border-radius:11px;background:rgba(255,255,255,.07);border:1px solid var(--line);font-size:9.5px;font-weight:700;color:var(--ink-2)">Reagendar</div>
-              <div style="flex:1;text-align:center;padding:9px;border-radius:11px;background:rgba(255,95,86,.13);border:1px solid rgba(255,95,86,.3);font-size:9.5px;font-weight:700;color:#FF8A82">Cancelar</div>
-            </div>
-          </div>
-          <div class="tabbar">
-            <div><svg class="ico"><use href="#i-home"/></svg>Inicio</div>
-            <div><svg class="ico"><use href="#i-search"/></svg>Explorar</div>
-            <div class="on"><svg class="ico"><use href="#i-ticket"/></svg>Reservas</div>
-            <div><svg class="ico"><use href="#i-user"/></svg>Perfil</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div style="flex:1;display:flex;flex-direction:column;gap:12px;padding-top:2px">
-      <div class="card tight step-card">
-        <div class="num">1</div>
-        <div><h3>Busca su clase</h3><p class="p">Por tipo, horario, instructor, intensidad o duración. También reserva la piscina, el sauna o la cancha.</p></div>
-      </div>
-      <div class="card tight step-card">
-        <div class="num">2</div>
-        <div><h3>Reserva en dos toques</h3><p class="p">Ve cuántos cupos quedan antes de confirmar. Si va siempre al mismo horario, lo deja agendado de una sola vez.</p></div>
-      </div>
-      <div class="card tight step-card">
-        <div class="num">3</div>
-        <div><h3>Recibe su recordatorio</h3><p class="p">Un aviso automático antes de la clase. Si ya no puede venir, cancela y libera el cupo para otro socio.</p></div>
-      </div>
-      <div class="card tight glow step-card">
-        <div class="num">4</div>
-        <div><h3>Entra con su código QR</h3><p class="p">Check-in en segundos en la entrada. Sin filas y sin que recepción tenga que buscar el nombre en una lista.</p></div>
-      </div>
-    </div>
+  <div class="grid g4 fill feat" style="gap:13px">
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-dumb"/></svg></div><h3>Gimnasio</h3><p class="p-sm">Áreas con mayor seguimiento y reserva de cupo.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-heart"/></svg></div><h3>Fisioterapia</h3><p class="p-sm">Citas con cupo, cancelación y reagenda.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-flame"/></svg></div><h3>Nutrición</h3><p class="p-sm">Consultas con disponibilidad controlada.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-users"/></svg></div><h3>Bailoterapia</h3><p class="p-sm">Clases con aforo y lista de espera.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-globe"/></svg></div><h3>Áreas comunes</h3><p class="p-sm">Zonas compartidas por franja.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-bolt"/></svg></div><h3>Hyrox</h3><p class="p-sm">Clases y preparación.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-dumb"/></svg></div><h3>Musculación</h3><p class="p-sm">Cupos por zona o sesión.</p></div>
+    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-trend"/></svg></div><h3>CrossFit</h3><p class="p-sm">Clases y preparación.</p></div>
   </div>
-
   <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>04</div></div>
 </section>
 
-<!-- ============ 05 · LISTA DE ESPERA ============ -->
+<!-- 05 PLANES -->
 <section class="slide">
-  <div class="head">
-    <div class="eyebrow">La función que más se nota</div>
-    <h2>¿Clase llena? Nadie se queda por fuera</h2>
-    <p class="lead">Cuando una clase se llena, el socio no se va con las manos vacías: entra automáticamente a la lista de espera.</p>
+  <div class="head" style="margin-bottom:18px">
+    <div class="eyebrow">Inversión</div>
+    <h2>Elige el plan de tu centro</h2>
   </div>
-
-  <div class="flow" style="margin-bottom:22px">
-    <div class="step">
-      <div class="chip warn chip-sm"><svg class="ico"><use href="#i-users"/></svg></div>
-      <h3 style="margin-top:15px;font-size:17px">Se anota en la lista</h3>
-      <p class="p" style="margin-top:8px">Ve su posición exacta: "eres el número 2 de 4". Sin llamar a preguntar si se liberó algo.</p>
+  <div class="plans fill">
+    <div class="plan">
+      <div class="nm">Básica</div>
+      <div class="who">Reservas de todas las áreas</div>
+      <div class="price"><span class="from">desde</span><b>$2.000</b></div>
+      <div class="setup">Pago único · link responsive</div>
+      <ul>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Todas las áreas listadas</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Registrar, cancelar y reagendar</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Panel de administración</li>
+        <li class="tick mut"><svg class="ico"><use href="#i-check"/></svg> Web responsive</li>
+      </ul>
     </div>
-    <div class="arrow"><svg class="ico"><use href="#i-arrow"/></svg></div>
-    <div class="step">
-      <div class="chip blue chip-sm"><svg class="ico"><use href="#i-bell"/></svg></div>
-      <h3 style="margin-top:15px;font-size:17px">Alguien cancela</h3>
-      <p class="p" style="margin-top:8px">En ese instante el sistema avisa al primero de la lista. Automático, sin que nadie del equipo intervenga.</p>
+    <div class="plan">
+      <div class="nm">Intermedia</div>
+      <div class="who">App en tiendas + control de peso</div>
+      <div class="price"><b>$4.500</b></div>
+      <div class="setup">Pago único · iOS y Android</div>
+      <ul>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> <span class="em">Todo lo de Básica</span></li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> App Store y Google Play</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Control de peso por cliente</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Crear, editar, actualizar, eliminar</li>
+      </ul>
     </div>
-    <div class="arrow"><svg class="ico"><use href="#i-arrow"/></svg></div>
-    <div class="step" style="background:linear-gradient(155deg,rgba(201,255,61,.14),rgba(255,255,255,.03));border-color:rgba(201,255,61,.3)">
-      <div class="chip chip-sm"><svg class="ico"><use href="#i-checkc"/></svg></div>
-      <h3 style="margin-top:15px;font-size:17px">Su cupo queda listo</h3>
-      <p class="p" style="margin-top:8px">Confirma y ya tiene su lugar. La clase vuelve a salir llena en lugar de quedar con sillas vacías.</p>
+    <div class="plan best">
+      <div class="tag">Recomendado</div>
+      <div class="nm">Avanzada</div>
+      <div class="who">Membresías y renovaciones</div>
+      <div class="price"><b>$6.500</b></div>
+      <div class="setup">Pago único · cobros incluidos</div>
+      <ul>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> <span class="em">Todo lo de Intermedia</span></li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Seguimiento de membresías</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Pagos y renovaciones</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Avisos de vencimiento</li>
+      </ul>
+    </div>
+    <div class="plan">
+      <div class="nm">Completa</div>
+      <div class="who">Facturación + tienda online</div>
+      <div class="price"><b>$9.500</b></div>
+      <div class="setup">Pago único · todo incluido</div>
+      <ul>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> <span class="em">Todo lo de Avanzada</span></li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Sistema de facturación</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Links de pago para productos</li>
+        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Compra en línea integrada</li>
+      </ul>
     </div>
   </div>
-
-  <div class="grid g3" style="gap:16px">
-    <div class="card tight" style="display:flex;gap:13px;align-items:center">
-      <div class="chip chip-sm"><svg class="ico"><use href="#i-clock"/></svg></div>
-      <div><div style="font-size:14.5px;font-weight:700;letter-spacing:-.01em">Política de cancelación</div><p class="p-sm" style="margin-top:3px">Tú decides con cuántas horas se puede cancelar sin penalidad.</p></div>
-    </div>
-    <div class="card tight" style="display:flex;gap:13px;align-items:center">
-      <div class="chip chip-sm"><svg class="ico"><use href="#i-x"/></svg></div>
-      <div><div style="font-size:14.5px;font-weight:700;letter-spacing:-.01em">Control de ausencias</div><p class="p-sm" style="margin-top:3px">Quien reserva y no viene queda marcado. Tú defines la consecuencia.</p></div>
-    </div>
-    <div class="card tight" style="display:flex;gap:13px;align-items:center">
-      <div class="chip chip-sm"><svg class="ico"><use href="#i-repeat"/></svg></div>
-      <div><div style="font-size:14.5px;font-weight:700;letter-spacing:-.01em">Sin doble reserva</div><p class="p-sm" style="margin-top:3px">El sistema impide que un socio aparte dos clases a la misma hora.</p></div>
-    </div>
+  <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
+    <span class="pill acc"><svg class="ico" style="width:14px;height:14px"><use href="#i-tag"/></svg> Un solo pago · sin mensualidad de plan</span>
+    <span class="pill">Valores en dólares, no incluyen IVA</span>
   </div>
-
-  <div class="quote" style="margin-top:auto;font-size:22px">
-    El resultado: tus clases se llenan al <span class="acc">100%</span>,<br>incluso cuando hay cancelaciones de último minuto.
-  </div>
-
   <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>05</div></div>
 </section>
 
-<!-- ============ 06 · PANEL DE CONTROL ============ -->
+<!-- 06 DETALLE -->
 <section class="slide">
-  <div class="head" style="margin-bottom:26px">
-    <div class="eyebrow">Para ti y tu equipo</div>
-    <h2>Tu centro de control</h2>
+  <div class="head" style="margin-bottom:22px">
+    <div class="eyebrow">En detalle</div>
+    <h2>Qué recibe tu gimnasio</h2>
+    <p class="lead">Más allá del precio: cómo opera el sistema día a día.</p>
   </div>
 
-  <div style="display:flex;gap:30px;flex:1;min-height:0">
-    <div class="win" style="flex:1.35">
-      <div class="win-bar"><u></u><u></u><u></u><span>Panel de administración · Mi Gimnasio</span></div>
-      <div class="win-body">
-        <div class="side">
-          <a class="on"><svg class="ico"><use href="#i-chart"/></svg> Resumen</a>
-          <a><svg class="ico"><use href="#i-cal"/></svg> Horarios</a>
-          <a><svg class="ico"><use href="#i-dumb"/></svg> Clases y zonas</a>
-          <a><svg class="ico"><use href="#i-users"/></svg> Instructores</a>
-          <a><svg class="ico"><use href="#i-ticket"/></svg> Reservas</a>
-          <a><svg class="ico"><use href="#i-wrench"/></svg> Mantenimiento</a>
-          <a><svg class="ico"><use href="#i-card"/></svg> Membresías</a>
-          <a><svg class="ico"><use href="#i-slid"/></svg> Ajustes</a>
-        </div>
-        <div class="main">
-          <div class="kpis">
-            <div class="kpi"><s>Ocupación hoy</s><b>87%<em>+12</em></b></div>
-            <div class="kpi"><s>Reservas</s><b>214</b></div>
-            <div class="kpi"><s>Check-in</s><b>191</b></div>
-            <div class="kpi"><s>Ausencias</s><b>23</b></div>
-          </div>
-          <div class="chart">
-            <h4>Ocupación por franja horaria · esta semana</h4>
-            <div class="bars">
-              <div><u style="height:34%"></u><s>06h</s></div>
-              <div><u style="height:52%"></u><s>08h</s></div>
-              <div><u class="b" style="height:26%"></u><s>10h</s></div>
-              <div><u class="b" style="height:19%"></u><s>12h</s></div>
-              <div><u class="b" style="height:31%"></u><s>15h</s></div>
-              <div><u style="height:72%"></u><s>17h</s></div>
-              <div><u style="height:96%"></u><s>19h</s></div>
-              <div><u style="height:81%"></u><s>20h</s></div>
-              <div><u style="height:44%"></u><s>21h</s></div>
-            </div>
-            <div style="display:flex;gap:14px;margin-top:11px;font-size:8.5px;color:var(--ink-3);font-weight:600">
-              <span style="display:flex;align-items:center;gap:5px"><u style="width:8px;height:8px;border-radius:2px;background:var(--acc);display:block"></u> Alta demanda</span>
-              <span style="display:flex;align-items:center;gap:5px"><u style="width:8px;height:8px;border-radius:2px;background:var(--blue);display:block"></u> Horas valle · oportunidad</span>
-            </div>
-          </div>
-
-          <div class="chart" style="margin-top:10px">
-            <h4>Clases de hoy</h4>
-            <div class="tbl">
-              <div class="tr th"><span>Hora</span><span>Clase</span><span>Instructor</span><span>Cupo</span><span>Estado</span></div>
-              <div class="tr"><span>17:00</span><span>Cardio HIIT</span><span>Luis Mora</span><span>21 / 30</span><span class="cap ok">Abierta</span></div>
-              <div class="tr"><span>18:00</span><span>Funcional</span><span>Luis Mora</span><span>18 / 24</span><span class="cap ok">Abierta</span></div>
-              <div class="tr"><span>19:00</span><span>Spinning</span><span>Carla Díaz</span><span>28 / 30</span><span class="cap low">Casi llena</span></div>
-              <div class="tr"><span>20:00</span><span>Yoga flow</span><span>Ana Paredes</span><span>20 / 20</span><span class="cap full">5 en espera</span></div>
-            </div>
-          </div>
-        </div>
+  <div class="grid g2 fill" style="gap:16px">
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="chip chip-sm"><svg class="ico"><use href="#i-user"/></svg></div>
+        <h3 style="margin:0;font-size:18px">Para el socio</h3>
       </div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Ve el cupo real y reserva, cancela o reagenda solo</div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Entra a lista de espera si la clase está llena</div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Check-in con código QR desde el celular</div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Desde Intermedia: historial de peso con alta, edición y baja</div>
     </div>
 
-    <div style="flex:1;display:flex;flex-direction:column;gap:13px;justify-content:center">
-      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Ocupación en vivo</span> por clase, por sala y por zona.</span></div>
-      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Horarios, cupos e instructores</span> se cambian en un clic, sin llamar a nadie.</span></div>
-      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Quién vino y quién no.</span> Se acabó la lista impresa.</span></div>
-      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Cierre por mantenimiento:</span> bloqueas la piscina y el sistema avisa solo a los afectados.</span></div>
-      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Reportes descargables</span> en Excel y PDF para tu reunión mensual.</span></div>
-      <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Permisos por rol:</span> recepción ve lo suyo, gerencia lo ve todo.</span></div>
-
-      <div class="card glow" style="margin-top:8px;padding:16px 18px">
-        <p style="font-size:14.5px;line-height:1.5;font-weight:500;color:var(--ink)">
-          Las <span class="acc">horas valle</span> del gráfico son plata sobre la mesa: ahí es donde metes una clase nueva o una promoción y llenas la sala.
-        </p>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="chip chip-sm blue"><svg class="ico"><use href="#i-monitor"/></svg></div>
+        <h3 style="margin:0;font-size:18px">Para tu equipo</h3>
       </div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Panel con ocupación por área, clase y franja</div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Recepción puede reservar por quien no usa la app</div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Horarios, cupos e instructores editables sin depender de nadie</div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Desde Avanzada: membresías, cobros y renovaciones</div>
+    </div>
+
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="chip chip-sm violet"><svg class="ico"><use href="#i-globe"/></svg></div>
+        <h3 style="margin:0;font-size:18px">Cómo se entrega</h3>
+      </div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Básica:</span> link responsive en celular, tablet o computador</span></div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Intermedia en adelante:</span> app publicada en App Store y Google Play</span></div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Marca del gimnasio: logo y colores en la experiencia del socio</div>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> <span><span class="em">Completa:</span> facturación y links de pago para vender productos online</span></div>
+    </div>
+
+    <div class="card glow" style="display:flex;flex-direction:column;gap:12px;justify-content:center">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--acc)">Para William</div>
+      <p style="font-size:16px;line-height:1.55;font-weight:500;color:var(--ink)">
+        Arrancas ordenando cupos y áreas. Si quieres app en tiendas y control de peso, Intermedia.
+        Si además cobras y renuevas membresías, Avanzada. Facturación y tienda online van en Completa.
+      </p>
+      <div class="tick"><svg class="ico"><use href="#i-check"/></svg> Un solo pago por paquete · sin mensualidad de plan</div>
     </div>
   </div>
 
   <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>06</div></div>
 </section>
 
-<!-- ============ 07 · TODO LO QUE INCLUYE ============ -->
-<section class="slide">
-  <div class="head" style="margin-bottom:22px">
-    <div class="eyebrow">Alcance</div>
-    <h2>Todo lo que hace la app</h2>
-  </div>
-
-  <div class="grid g4 fill feat" style="gap:13px">
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-dumb"/></svg></div><h3>Clases y zonas</h3><p class="p-sm">Pesas, cardio, funcional, spinning, piscina, sauna, cancha y personal.</p></div>
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-search"/></svg></div><h3>Buscador y filtros</h3><p class="p-sm">Por tipo, instructor, día, horario, intensidad y duración.</p></div>
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-cal"/></svg></div><h3>Agenda completa</h3><p class="p-sm">Vista de día, semana y mes, con el cupo siempre a la vista.</p></div>
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-ticket"/></svg></div><h3>Mis reservas</h3><p class="p-sm">Próximas, historial y estado de cada una. Reagenda en un toque.</p></div>
-
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-repeat"/></svg></div><h3>Reservas fijas</h3><p class="p-sm">"Spinning los martes y jueves" queda agendado de una vez.</p></div>
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-users"/></svg></div><h3>Lista de espera</h3><p class="p-sm">Automática, con aviso instantáneo al liberarse un cupo.</p></div>
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-qr"/></svg></div><h3>Check-in con QR</h3><p class="p-sm">Entrada en segundos desde el celular o el tótem.</p></div>
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-bell"/></svg></div><h3>Recordatorios</h3><p class="p-sm">Antes de la clase, al liberarse un cupo y si algo se cancela.</p></div>
-
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-card"/></svg></div><h3>Membresías</h3><p class="p-sm">Planes, vigencias, avisos de vencimiento y acceso por plan.</p></div>
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-star"/></svg></div><h3>Entrenadores</h3><p class="p-sm">Perfil de cada instructor y valoraciones de tus socios.</p></div>
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-flame"/></svg></div><h3>Peso y progreso</h3><p class="p-sm">Peso, medidas, IMC y metas del socio, con rutinas y racha.</p></div>
-    <div class="card tight"><div class="chip chip-sm"><svg class="ico"><use href="#i-news"/></svg></div><h3>Noticias del club</h3><p class="p-sm">Avisos, promociones y novedades directo en la app.</p></div>
-  </div>
-
-  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>07</div></div>
-</section>
-
-<!-- ============ 08 · FUNCIONA EN TODO ============ -->
-<section class="slide">
-  <div class="head">
-    <div class="eyebrow">Sin comprar nada</div>
-    <h2>Funciona en lo que ya tienes</h2>
-    <p class="lead">No necesitas equipos nuevos ni instalar programas. Se abre en cualquier celular, tablet o computador.</p>
-  </div>
-
-  <div class="grid g4 fill" style="gap:16px">
-    <div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div class="chip" style="width:58px;height:58px;border-radius:18px"><svg class="ico" style="width:30px;height:30px"><use href="#i-phone"/></svg></div>
-      <h3 style="margin-top:18px">Celular del socio</h3>
-      <p class="p-sm" style="margin-top:9px">Se instala como app con un ícono en su pantalla de inicio. Sin pasar por tiendas ni descargar nada.</p>
-    </div>
-    <div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div class="chip blue" style="width:58px;height:58px;border-radius:18px"><svg class="ico" style="width:30px;height:30px"><use href="#i-monitor"/></svg></div>
-      <h3 style="margin-top:18px">Recepción</h3>
-      <p class="p-sm" style="margin-top:9px">En la tablet o el computador que ya usan. Tu equipo reserva por el socio que prefiere hacerlo en persona.</p>
-    </div>
-    <div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div class="chip violet" style="width:58px;height:58px;border-radius:18px"><svg class="ico" style="width:30px;height:30px"><use href="#i-scan"/></svg></div>
-      <h3 style="margin-top:18px">Tótem de entrada</h3>
-      <p class="p-sm" style="margin-top:9px">Una tablet en la puerta lee el QR y registra la entrada sola. Recepción deja de hacer de portero.</p>
-    </div>
-    <div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div class="chip warn" style="width:58px;height:58px;border-radius:18px"><svg class="ico" style="width:30px;height:30px"><use href="#i-cloud"/></svg></div>
-      <h3 style="margin-top:18px">Siempre disponible</h3>
-      <p class="p-sm" style="margin-top:9px">Respaldos diarios, actualizaciones incluidas y tus datos siempre a salvo. Nosotros nos encargamos.</p>
-    </div>
-  </div>
-
-  <div class="grid g3" style="margin-top:20px;gap:16px">
-    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-globe"/></svg></div><div><div style="font-size:14px;font-weight:700">Todo en español</div><p class="p-sm" style="margin-top:2px">Fechas, horas y precios en formato de Ecuador.</p></div></div>
-    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-bolt"/></svg></div><div><div style="font-size:14px;font-weight:700">Modo claro y oscuro</div><p class="p-sm" style="margin-top:2px">Se adapta al gusto y al horario de cada socio.</p></div></div>
-    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-heart"/></svg></div><div><div style="font-size:14px;font-weight:700">Fácil para todos</div><p class="p-sm" style="margin-top:2px">Textos grandes y alto contraste para quien ve poco.</p></div></div>
-  </div>
-
-  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>08</div></div>
-</section>
-
-<!-- ============ 09 · LOS NÚMEROS ============ -->
-<section class="slide">
-  <div class="head">
-    <div class="eyebrow">El caso de negocio</div>
-    <h2>Se paga solo</h2>
-    <p class="lead">Ejemplo real de un gimnasio de <span class="em">400 socios</span> con mensualidad de <span class="em">$35</span>, es decir <span class="em">$14.000</span> de facturación al mes.</p>
-  </div>
-
-  <div class="grid g4" style="gap:16px;margin-bottom:20px">
-    <div class="card" style="display:flex;flex-direction:column;justify-content:center">
-      <div class="stat acc">1,1%</div>
-      <p class="p-sm" style="margin-top:11px;line-height:1.45">de tu facturación mensual es lo que cuesta el plan recomendado.</p>
-    </div>
-    <div class="card" style="display:flex;flex-direction:column;justify-content:center">
-      <div class="stat">5</div>
-      <p class="p-sm" style="margin-top:11px;line-height:1.45">socios retenidos al mes ya cubren el costo, y sobran <span style="color:var(--acc);font-weight:700">$26</span>.</p>
-    </div>
-    <div class="card" style="display:flex;flex-direction:column;justify-content:center">
-      <div class="stat">~20%</div>
-      <p class="p-sm" style="margin-top:11px;line-height:1.45">de cupos hoy se pierden por gente que reserva y no aparece.</p>
-    </div>
-    <div class="card" style="display:flex;flex-direction:column;justify-content:center">
-      <div class="stat">$550</div>
-      <p class="p-sm" style="margin-top:11px;line-height:1.45">cuesta al mes una persona más en recepción. El plan cuesta <span style="color:var(--acc);font-weight:700">$149</span>.</p>
-    </div>
-  </div>
-
-  <div class="grid g3" style="gap:16px;margin-bottom:20px">
-    <div class="card tight" style="display:flex;gap:13px;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-trend"/></svg></div><div><div style="font-size:14.5px;font-weight:700">Más ocupación</div><p class="p-sm" style="margin-top:4px">Los recordatorios y la lista de espera vuelven a llenar los cupos que hoy se pierden.</p></div></div>
-    <div class="card tight" style="display:flex;gap:13px;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-heart"/></svg></div><div><div style="font-size:14.5px;font-weight:700">Mejor retención</div><p class="p-sm" style="margin-top:4px">El socio que consigue su clase sin pelear por el cupo es el que renueva.</p></div></div>
-    <div class="card tight" style="display:flex;gap:13px;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-clock"/></svg></div><div><div style="font-size:14.5px;font-weight:700">Menos tiempo perdido</div><p class="p-sm" style="margin-top:4px">Tu equipo deja de agendar por chat y vuelve a atender a la gente que está adentro.</p></div></div>
-  </div>
-
-  <div class="quote">
-    No es un gasto de tecnología.<br>Es <span class="acc">ocupación, retención y tiempo</span> de tu equipo.
-  </div>
-
-  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>09</div></div>
-</section>
-
-<!-- ============ 10 · PLANES ============ -->
-<section class="slide">
-  <div class="head" style="margin-bottom:24px">
-    <div class="eyebrow">Inversión</div>
-    <h2>Elige el plan de tu gimnasio</h2>
-  </div>
-
-  <div class="plans fill">
-    <div class="plan">
-      <div class="nm">Básico</div>
-      <div class="who">Una sede que necesita ordenar sus cupos</div>
-      <div class="price"><b>$69</b><s>/ mes</s></div>
-      <div class="setup">Implementación única <b>$890</b></div>
-      <ul>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Hasta 300 socios · 3 usuarios</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Clases, zonas, buscador y filtros</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Agenda de día y semana</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Reservar, cancelar y lista de espera</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Check-in con código QR</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Panel de administración</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Tu logo y tus colores</li>
-        <li class="tick mut"><svg class="ico"><use href="#i-check"/></svg> Soporte por correo</li>
-      </ul>
-    </div>
-
-    <div class="plan best">
-      <div class="tag">Recomendado</div>
-      <div class="nm">Intermedio</div>
-      <div class="who">Gimnasio o box con clases, membresías y equipo</div>
-      <div class="price"><b>$149</b><s>/ mes</s></div>
-      <div class="setup">Implementación única <b>$1.890</b></div>
-      <ul>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Hasta 1.000 socios · 2 sedes · 10 usuarios</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> <span class="em">Todo lo del plan Básico</span></li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Vista de mes y reservas fijas</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Reagendar en un toque</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Control de ausencias y penalidades</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Membresías con avisos de vencimiento</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Recordatorios automáticos</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Reportes en Excel y PDF</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Carga de tus socios desde Excel</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Soporte por correo y WhatsApp</li>
-      </ul>
-    </div>
-
-    <div class="plan">
-      <div class="nm">Avanzado</div>
-      <div class="who">Cadena de varias sedes o centro deportivo completo</div>
-      <div class="price"><b>$299</b><s>/ mes</s></div>
-      <div class="setup">Implementación única <b>$3.900</b></div>
-      <ul>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Socios, sedes y usuarios ilimitados</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> <span class="em">Todo lo del plan Intermedio</span></li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Reportes consolidados por sede</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Control de peso, medidas y rutinas</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Agenda de entrenamiento personal</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Tótem de entrada y permisos por rol</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Tablero de indicadores para gerencia</li>
-        <li class="tick"><svg class="ico"><use href="#i-check"/></svg> Recordatorios por WhatsApp</li>
-        <li class="tick mut"><svg class="ico"><use href="#i-check"/></svg> Soporte prioritario</li>
-      </ul>
-    </div>
-  </div>
-
-  <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center">
-    <span class="pill acc"><svg class="ico" style="width:14px;height:14px"><use href="#i-tag"/></svg> Pago anual: 2 meses gratis</span>
-    <span class="pill">Sin entrada: implementación en $0 con contrato a 18 meses</span>
-    <span class="pill">Valores en dólares, no incluyen IVA</span>
-  </div>
-
-  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>10</div></div>
-</section>
-
-<!-- ============ 11 · COMPLEMENTOS ============ -->
-<section class="slide">
-  <div class="head" style="margin-bottom:24px">
-    <div class="eyebrow">Cuando lo necesites</div>
-    <h2>La app crece contigo</h2>
-    <p class="lead">Nada de esto hace falta para arrancar. Se suma cuando tu operación lo pida.</p>
-  </div>
-
-  <div class="grid g3 fill addon" style="gap:14px">
-    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-card"/></svg></div><span class="pill" style="font-size:11px">Fase 2</span></div><h3 style="margin-top:14px;font-size:16.5px">Cobro en línea</h3><p class="p-sm" style="margin-top:6px">Tus socios pagan la mensualidad desde la app y se renueva sola. Compatible con los medios de pago del país.</p></div>
-
-    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-phone"/></svg></div><span class="pill" style="font-size:11px">Opcional</span></div><h3 style="margin-top:14px;font-size:16.5px">App en las tiendas</h3><p class="p-sm" style="margin-top:6px">Tu gimnasio con app propia publicada en App Store y Google Play, con tu nombre y tu ícono.</p></div>
-
-    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-msg"/></svg></div><span class="pill" style="font-size:11px">Opcional</span></div><h3 style="margin-top:14px;font-size:16.5px">Avisos por WhatsApp</h3><p class="p-sm" style="margin-top:6px">Los recordatorios llegan al canal que tus socios sí revisan, de forma automática.</p></div>
-
-    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-lock"/></svg></div><span class="pill" style="font-size:11px">Opcional</span></div><h3 style="margin-top:14px;font-size:16.5px">Control de acceso</h3><p class="p-sm" style="margin-top:6px">Conectamos la app al torniquete o al lector de huella. Solo entra quien tiene su plan al día.</p></div>
-
-    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-news"/></svg></div><span class="pill" style="font-size:11px">Fase 2</span></div><h3 style="margin-top:14px;font-size:16.5px">Facturación electrónica</h3><p class="p-sm" style="margin-top:6px">Emisión automática de comprobantes al SRI cada vez que un socio paga.</p></div>
-
-    <div class="card tight"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="chip chip-sm"><svg class="ico"><use href="#i-globe"/></svg></div><span class="pill" style="font-size:11px">Opcional</span></div><h3 style="margin-top:14px;font-size:16.5px">Sedes adicionales</h3><p class="p-sm" style="margin-top:6px">Abres un local nuevo y lo sumas al mismo sistema, con reportes comparativos entre sedes.</p></div>
-  </div>
-
-  <div class="card" style="margin-top:16px;padding:15px 22px;display:flex;align-items:center;gap:15px">
-    <svg class="ico ico-lg" style="color:var(--ink-3);flex:none"><use href="#i-shield"/></svg>
-    <p class="p" style="font-size:14px">
-      <span class="em">Importante:</span> la versión que contratas hoy <span class="em">no procesa cobros</span>. Gestiona planes, vigencias y comprobantes, pero el dinero lo sigues recibiendo como lo haces hoy. Así arrancamos rápido y sin trámites.
-    </p>
-  </div>
-
-  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>11</div></div>
-</section>
-
-<!-- ============ 12 · IMPLEMENTACIÓN ============ -->
-<section class="slide">
-  <div class="head">
-    <div class="eyebrow">Puesta en marcha</div>
-    <h2>En dos semanas estás operando</h2>
-    <p class="lead">Nosotros hacemos la carga y la configuración. Tu equipo solo recibe la capacitación.</p>
-  </div>
-
-  <div class="grid g4 fill" style="gap:16px">
-    <div class="card" style="display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;gap:12px"><div class="num">1</div><span class="pill" style="font-size:11px">Días 1 a 3</span></div>
-      <h3 style="margin-top:18px">Configuramos tu gym</h3>
-      <p class="p-sm" style="margin-top:9px">Creamos tus salas y zonas, aplicamos tu logo y tus colores, y definimos contigo las reglas: cupos, horas mínimas para cancelar y política de ausencias.</p>
-    </div>
-    <div class="card" style="display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;gap:12px"><div class="num">2</div><span class="pill" style="font-size:11px">Días 4 a 7</span></div>
-      <h3 style="margin-top:18px">Cargamos tus datos</h3>
-      <p class="p-sm" style="margin-top:9px">Tu parrilla completa de clases, tus instructores y tu lista de socios desde el Excel que ya tienes. Tú solo revisas y apruebas.</p>
-    </div>
-    <div class="card" style="display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;gap:12px"><div class="num">3</div><span class="pill" style="font-size:11px">Días 8 a 10</span></div>
-      <h3 style="margin-top:18px">Capacitamos al equipo</h3>
-      <p class="p-sm" style="margin-top:9px">Sesiones prácticas con recepción, instructores y gerencia. Cada uno aprende solo lo que necesita para su rol.</p>
-    </div>
-    <div class="card glow" style="display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;gap:12px"><div class="num">4</div><span class="pill acc" style="font-size:11px">Días 11 a 14</span></div>
-      <h3 style="margin-top:18px">Lanzamos con tus socios</h3>
-      <p class="p-sm" style="margin-top:9px">Te entregamos el afiche con el código QR para la recepción y los textos listos para tus redes. Acompañamos todo el primer mes.</p>
-    </div>
-  </div>
-
-  <div class="grid g3" style="margin-top:20px;gap:16px">
-    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-users"/></svg></div><div><div style="font-size:14px;font-weight:700">Sin parar la operación</div><p class="p-sm" style="margin-top:2px">El gimnasio sigue funcionando normal durante todo el proceso.</p></div></div>
-    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-shield"/></svg></div><div><div style="font-size:14px;font-weight:700">Tus datos son tuyos</div><p class="p-sm" style="margin-top:2px">Te los entregamos completos cuando los pidas, sin condiciones.</p></div></div>
-    <div class="card tight" style="display:flex;gap:12px;align-items:center"><div class="chip chip-sm"><svg class="ico"><use href="#i-checkc"/></svg></div><div><div style="font-size:14px;font-weight:700">Garantía de 90 días</div><p class="p-sm" style="margin-top:2px">Cualquier falla se corrige sin costo adicional.</p></div></div>
-  </div>
-
-  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>12</div></div>
-</section>
-
-<!-- ============ 13 · PREGUNTAS FRECUENTES ============ -->
-<section class="slide">
-  <div class="head" style="margin-bottom:28px">
-    <div class="eyebrow">Antes de que lo preguntes</div>
-    <h2>Preguntas frecuentes</h2>
-  </div>
-
-  <div class="grid g2 fill" style="gap:18px">
-    <div class="card faq"><b>¿Y mis socios mayores, van a poder usarla?</b><p>Sí, la app está pensada para que cualquiera la use. Y si alguno prefiere no hacerlo, recepción le reserva en cinco segundos desde el panel. Nadie se queda afuera.</p></div>
-    <div class="card faq"><b>¿Tengo que cambiar mi forma de cobrar?</b><p>No. La versión que contratas hoy no toca tus cobros. Sigues cobrando como siempre; la app solo controla reservas, aforo y asistencia.</p></div>
-    <div class="card faq"><b>¿Necesito comprar equipos o programas?</b><p>No. Funciona con los celulares de tus socios y con la tablet o computador que ya tienes en recepción. Nosotros ponemos todo lo demás.</p></div>
-    <div class="card faq"><b>¿Qué pasa si se cae el internet?</b><p>El check-in tiene respaldo manual y la lista del día se puede descargar. Tu clase nunca se detiene por un problema de conexión.</p></div>
-    <div class="card faq"><b>¿Los datos de mis socios son míos?</b><p>Siempre. Son tuyos y te los entregamos completos cuando los pidas, incluso si algún día decides dejar de trabajar con nosotros.</p></div>
-    <div class="card faq"><b>¿Y si no me convence?</b><p>Por eso existe la prueba de 30 días gratis, sin tarjeta y sin compromiso. Si no ves el resultado, no hay nada que cancelar.</p></div>
-  </div>
-
-  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>13</div></div>
-</section>
-
-<!-- ============ 14 · CIERRE ============ -->
+<!-- 07 CIERRE -->
 <section class="slide" style="justify-content:center">
   <div style="display:flex;gap:50px;align-items:center">
     <div style="flex:1.15">
       <div class="eyebrow">El siguiente paso</div>
-      <h1 style="font-size:56px;margin-top:20px">Pruébalo<br><span class="grad">30 días gratis.</span></h1>
+      <h1 style="font-size:52px;margin-top:20px">Hablemos de tu<br><span class="grad">gimnasio, William.</span></h1>
       <p class="lead" style="margin-top:22px;max-width:520px">
-        Sin tarjeta y sin compromiso. Configuramos una sala o tres de tus clases
-        con tu horario real y lo ves funcionando con tus propios socios.
+        Conversamos sobre tu operación y te proponemos el paquete que encaja con tu gimnasio.
       </p>
-
       <div style="display:flex;flex-direction:column;gap:11px;margin-top:26px">
-        <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> Te mostramos la app cargada con tu horario, no con ejemplos genéricos.</div>
-        <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> Si decides seguir, en dos semanas está operando el gimnasio completo.</div>
-        <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> Si no, cierras la prueba y no pagas absolutamente nada.</div>
-      </div>
-
-      <div class="card glow" style="margin-top:28px;padding:18px 22px">
-        <div style="font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--acc)">Oferta cliente fundador</div>
-        <p class="p" style="margin-top:8px;font-size:14.5px">
-          Para los primeros gimnasios que se suman: <span class="em">25% de descuento en la implementación</span> a cambio de tu testimonio y de poder mostrar tu caso.
-        </p>
+        <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> Entendemos tus áreas, clases y cómo trabajas hoy.</div>
+        <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> Propuesta clara de alcance y precio en un solo pago.</div>
+        <div class="tick" style="font-size:15.5px"><svg class="ico"><use href="#i-check"/></svg> Resolvemos dudas por WhatsApp o en una llamada corta.</div>
       </div>
     </div>
-
     <div style="flex:.85;display:flex;flex-direction:column;align-items:center;gap:22px">
       <div class="logo" style="flex-direction:column;gap:16px">
         <div class="logo-mark" style="width:76px;height:76px;border-radius:22px"><svg class="ico" style="width:40px;height:40px"><use href="#i-bolt"/></svg></div>
@@ -1041,17 +653,15 @@
       </div>
       <div class="card" style="width:100%;text-align:center;padding:24px">
         <div class="p-sm" style="font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:11px">Conversemos</div>
-        <div style="font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:12px">[Tu nombre]</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:12px">Marco Zurita</div>
         <div class="p" style="margin-top:10px;font-size:15px;line-height:1.75">
-          WhatsApp <span class="em">[09xx xxx xxx]</span><br>
-          Correo <span class="em">[tucorreo@dominio.com]</span><br>
-          <span class="p-sm">Quito · Guayaquil · Todo Ecuador</span>
+          WhatsApp <span class="em">+593 98 320 7754</span><br>
+          Correo <span class="em">marcoz1691@gmail.com</span>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>Gracias · 14</div></div>
+  <div class="foot"><div class="brand"><span class="dot"></span> ReservasGym</div><div>Gracias · 07</div></div>
 </section>
 
 </div>
