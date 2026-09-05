@@ -103,9 +103,9 @@ export function GoalModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-3xl border border-[#232B36] bg-[#161C24] p-6 shadow-2xl">
+      <div className="relative w-full max-w-md rounded-3xl border border-line bg-surface p-6 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#232B36] pb-4">
+        <div className="flex items-center justify-between border-b border-line pb-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/15 text-acc">
               <Target className="h-5 w-5" />
@@ -124,7 +124,7 @@ export function GoalModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-2 text-ink-3 transition hover:bg-[#1E2530] hover:text-ink"
+            className="rounded-xl p-2 text-ink-3 transition hover:bg-surface-elevated hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
@@ -132,7 +132,7 @@ export function GoalModal({
 
         {/* Live Goal Summary Card */}
         {diffInfo && (
-          <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-[#0E1117]/90 p-3.5 text-xs">
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-bg/90 p-3.5 text-xs">
             <div className="flex items-center gap-2">
               {diffInfo.isLoss ? (
                 <TrendingDown className="h-4 w-4 text-emerald-400" />
@@ -203,12 +203,12 @@ export function GoalModal({
           </Select>
 
           {/* Action buttons */}
-          <div className="mt-6 flex items-center justify-end gap-2 border-t border-[#232B36] pt-4">
+          <div className="mt-6 flex items-center justify-end gap-2 border-t border-line pt-4">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="rounded-2xl border border-line bg-transparent px-4 py-2.5 text-xs font-bold text-ink-2 hover:bg-[#1E2530]"
+              className="rounded-2xl border border-line bg-transparent px-4 py-2.5 text-xs font-bold text-ink-2 hover:bg-surface-elevated"
             >
               Cancelar
             </button>

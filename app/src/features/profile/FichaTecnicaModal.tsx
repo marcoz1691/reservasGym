@@ -41,6 +41,7 @@ export function FichaTecnicaModal({
   const refresh = useRefresh()
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
+  const [nowMs] = useState(() => Date.now())
   const [saving, setSaving] = useState(false)
   const [savedSuccess, setSavedSuccess] = useState(false)
 
@@ -72,10 +73,10 @@ export function FichaTecnicaModal({
   const bmiVal = calculateBmi(wNum, hNum)
   const bmiCategory = bmiVal ? getBmiCategory(bmiVal) : null
 
-  // Calculate age if birthDate is set
+  // Calculate age if birthDate is set (nowMs estable entre renders)
   const age = birthDate
     ? Math.floor(
-        (Date.now() - new Date(birthDate).getTime()) / (365.25 * 24 * 3600 * 1000),
+        (nowMs - new Date(birthDate).getTime()) / (365.25 * 24 * 3600 * 1000),
       )
     : null
 
@@ -166,9 +167,9 @@ export function FichaTecnicaModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-      <Card className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden border border-white/10 bg-[#12171E] p-0 shadow-2xl">
+      <Card className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden border border-white/10 bg-surface p-0 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 bg-[#161C24] p-5 sm:px-6">
+        <div className="flex items-center justify-between border-b border-white/10 bg-surface p-5 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/20 text-acc">
               <Activity className="h-5 w-5" />
@@ -196,7 +197,7 @@ export function FichaTecnicaModal({
         </div>
 
         {/* Progress Stepper */}
-        <div className="grid grid-cols-4 border-b border-white/5 bg-[#0E1117]/80 text-xs font-semibold">
+        <div className="grid grid-cols-4 border-b border-white/5 bg-bg/80 text-xs font-semibold">
           <button
             type="button"
             onClick={() => setStep(1)}
@@ -324,7 +325,7 @@ export function FichaTecnicaModal({
 
                   {/* Real-time BMI Display Card */}
                   {bmiVal && bmiCategory ? (
-                    <div className="rounded-2xl border border-white/10 bg-[#161C24] p-4">
+                    <div className="rounded-2xl border border-white/10 bg-surface p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
@@ -474,7 +475,7 @@ export function FichaTecnicaModal({
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-[#161C24] p-4 text-xs text-ink-3">
+                  <div className="rounded-2xl border border-white/10 bg-surface p-4 text-xs text-ink-3">
                     <p className="font-semibold text-ink">
                       🔒 Privacidad y protección de datos (LOPDP Ecuador)
                     </p>
@@ -504,7 +505,7 @@ export function FichaTecnicaModal({
                             className={`flex items-center gap-2 rounded-xl border p-3 text-left text-xs font-semibold transition-all ${
                               selected
                                 ? 'border-acc bg-acc/15 text-acc'
-                                : 'border-white/10 bg-[#161C24] text-ink-2 hover:border-white/20 hover:text-ink'
+                                : 'border-white/10 bg-surface text-ink-2 hover:border-white/20 hover:text-ink'
                             }`}
                           >
                             <div
@@ -569,7 +570,7 @@ export function FichaTecnicaModal({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#161C24] p-4">
+                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-surface p-4">
                     <div>
                       <span className="text-sm font-bold text-ink">
                         Habilitar Face ID / Huella en este teléfono

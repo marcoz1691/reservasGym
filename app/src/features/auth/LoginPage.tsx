@@ -28,9 +28,15 @@ export function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [forgotModalOpen, setForgotModalOpen] = useState(false)
 
-  // Login fields
-  const [loginEmail, setLoginEmail] = useState('socio@gym.local')
-  const [loginPassword, setLoginPassword] = useState('demo1234')
+  // Login fields — staging usa cuentas @zonacero.test (ver supabase/staging-users.sql)
+  const [loginEmail, setLoginEmail] = useState(
+    import.meta.env.MODE === 'staging'
+      ? 'socio.staging@zonacero.test'
+      : 'socio@gym.local',
+  )
+  const [loginPassword, setLoginPassword] = useState(
+    import.meta.env.MODE === 'staging' ? 'ZonaCero2026!' : 'demo1234',
+  )
 
   // Register fields: Simple initial account creation
   const [fullName, setFullName] = useState('')
@@ -64,7 +70,8 @@ export function LoginPage() {
       await repo.signIn({ email: loginEmail, password: loginPassword })
       await refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
+      const msg = err instanceof Error ? err.message : 'Error al iniciar sesión'
+      setError(msg.includes('recursion') ? `${msg} — ejecuta fix-is-staff-rls.sql en Supabase` : msg)
     } finally {
       setSubmitting(false)
     }

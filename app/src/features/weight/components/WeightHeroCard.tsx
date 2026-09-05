@@ -60,13 +60,13 @@ export function WeightHeroCard({
   }, [goal, currentWeight, initialWeightKg])
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-[#232B36] bg-gradient-to-br from-[#161C24] via-[#12180C]/80 to-[#0E1117] p-5 md:p-6 shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
+    <div className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-surface-elevated via-surface to-bg p-5 md:p-6 shadow-[var(--shadow-pop)]">
       {/* Background Accent Glow */}
       <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-acc/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
 
       {/* Header row with actions */}
-      <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-[#232B36]/80 pb-4">
+      <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line/80 pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-acc/15 text-acc border border-acc/20 shadow-[0_0_15px_rgba(201,255,61,0.2)]">
             <Scale className="h-5 w-5" />
@@ -87,7 +87,7 @@ export function WeightHeroCard({
           <button
             type="button"
             onClick={onOpenGoalModal}
-            className="focus-ring inline-flex items-center gap-1.5 rounded-2xl border border-line bg-[#1E2530]/80 px-3.5 py-2 text-xs font-bold text-ink-2 transition hover:border-acc/40 hover:text-ink hover:bg-[#1E2530]"
+            className="focus-ring inline-flex items-center gap-1.5 rounded-2xl border border-line bg-surface-elevated/80 px-3.5 py-2 text-xs font-bold text-ink-2 transition hover:border-acc/40 hover:text-ink hover:bg-surface-elevated"
           >
             <Target className="h-4 w-4 text-acc" />
             {goal ? 'Ajustar meta' : 'Definir meta'}
@@ -109,7 +109,7 @@ export function WeightHeroCard({
         <div className="space-y-4 lg:col-span-7">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {/* Current Weight */}
-            <div className="col-span-2 sm:col-span-1 rounded-2xl border border-[#232B36] bg-[#0E1117]/80 p-4 transition hover:border-acc/30">
+            <div className="col-span-2 sm:col-span-1 rounded-2xl border border-line bg-bg/80 p-4 transition hover:border-acc/30">
               <span className="text-[11px] font-bold uppercase tracking-wider text-ink-3">
                 Peso Actual
               </span>
@@ -128,7 +128,7 @@ export function WeightHeroCard({
             </div>
 
             {/* Initial Weight & Change */}
-            <div className="rounded-2xl border border-[#232B36] bg-[#0E1117]/80 p-4 transition hover:border-line">
+            <div className="rounded-2xl border border-line bg-bg/80 p-4 transition hover:border-line">
               <span className="text-[11px] font-bold uppercase tracking-wider text-ink-3">
                 Peso Inicial
               </span>
@@ -161,7 +161,7 @@ export function WeightHeroCard({
             </div>
 
             {/* Goal Weight */}
-            <div className="rounded-2xl border border-[#232B36] bg-[#0E1117]/80 p-4 transition hover:border-line">
+            <div className="rounded-2xl border border-line bg-bg/80 p-4 transition hover:border-line">
               <span className="text-[11px] font-bold uppercase tracking-wider text-ink-3">
                 Meta
               </span>
@@ -190,7 +190,7 @@ export function WeightHeroCard({
 
           {/* Goal Progress Bar Card (if goal is set) */}
           {goal && goalProgress && (
-            <div className="rounded-2xl border border-[#232B36] bg-[#0E1117]/80 p-4">
+            <div className="rounded-2xl border border-line bg-bg/80 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                 <span className="font-bold text-ink-2 flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-acc" />
@@ -204,7 +204,7 @@ export function WeightHeroCard({
               </div>
 
               {/* Progress Bar */}
-              <div className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-[#161C24] p-0.5">
+              <div className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-surface p-0.5">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-acc/80 to-acc transition-all duration-700 ease-out shadow-[0_0_12px_rgba(201,255,61,0.5)]"
                   style={{ width: `${goalProgress.progressPercent}%` }}

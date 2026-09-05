@@ -427,6 +427,7 @@ export class SupabaseRepository implements GymRepository {
       waitlistRes,
       checkInsRes,
       measurementsRes,
+      bodyGoalsRes,
       membershipPlansRes,
       membershipsRes,
       paymentsRes,
@@ -457,15 +458,53 @@ export class SupabaseRepository implements GymRepository {
 
   async load(): Promise<GymState> {
     const actor = await this.getCurrentUser()
+    if (!actor) {
+      return this.loadGuestState()
+    }
     const state = await this.fetchState()
     // Defense in depth: even if RLS misconfigured, do not ship peer PII to members.
     return scopeGymState(state, actor)
   }
 
+  /** Pre-login bootstrap: no RLS-protected queries (avoids infinite spinner on /). */
+  private loadGuestState(): GymState {
+    return scopeGymState(
+      {
+        settings: {
+          name: 'Zona Cero Performance Center',
+          logoUrl: null,
+          primaryColor: '#0B3D2E',
+          accentColor: '#2DD4A8',
+          bookingWindowHours: 168,
+          cancelWindowHours: 2,
+          checkInWindowMinutes: 15,
+        },
+        users: [],
+        trainers: [],
+        zones: [],
+        templates: [],
+        sessions: [],
+        bookings: [],
+        waitlist: [],
+        checkIns: [],
+        measurements: [],
+        bodyGoals: [],
+        membershipPlans: [],
+        memberships: [],
+        payments: [],
+      },
+      null,
+    )
+  }
+
   async getCurrentUser(): Promise<User | null> {
-    const { data: authData, error: authError } = await this.client.auth.getUser()
-    if (authError) throw new Error(authError.message)
-    const authUser = authData.user
+    const { data: sessionData, error: sessionError } =
+      await this.client.auth.getSession()
+    if (sessionError) {
+      await this.client.auth.signOut()
+      return null
+    }
+    const authUser = sessionData.session?.user
     if (!authUser) return null
     const { data, error } = await this.client
       .from('profiles')

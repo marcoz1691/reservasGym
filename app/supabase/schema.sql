@@ -174,9 +174,14 @@ create index if not exists idx_payments_status on payments(status);
 -- 3. FUNCIONES Y PROCEDURES
 -- ============================================================================
 
--- Helper para verificar si el usuario es staff o admin
+-- Helper para verificar si el usuario es staff o admin (SECURITY DEFINER evita recursión RLS)
 create or replace function public.is_staff()
-returns boolean language sql stable as $$
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
   select exists (
     select 1 from profiles p
     where p.id = auth.uid() and p.role in ('staff', 'admin')

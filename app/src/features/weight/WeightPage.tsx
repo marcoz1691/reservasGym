@@ -197,7 +197,7 @@ export function WeightPage() {
 
       {/* Staff View Bar: Member selector */}
       {isStaff && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-[#161C24] p-4 shadow-md">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 shadow-md">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-acc/15 text-acc">
               <Users className="h-4 w-4" />

@@ -7,6 +7,7 @@ coverage/
 .env
 .env.*
 !.env.example
+!.env.staging.example
 npm-debug.log*
 pnpm-debug.log*
 yarn-error.log*

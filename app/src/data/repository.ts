@@ -17,6 +17,12 @@ export function getRepository(): GymRepository {
     })
     singleton =
       backend === 'supabase' ? new SupabaseRepository() : new LocalRepository()
+    if (import.meta.env.DEV) {
+      console.info(
+        `[ReservasGym] ${backend === 'supabase' ? 'STAGING/Supabase' : 'LOCAL (demo)'} →`,
+        backend === 'supabase' ? import.meta.env.VITE_SUPABASE_URL : 'localStorage + socio@gym.local',
+      )
+    }
   }
   return singleton
 }

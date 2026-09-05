@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Outlet, Link } from 'react-router-dom'
 import {
+  CalendarClock,
   CalendarDays,
   CreditCard,
   Dumbbell,
@@ -39,6 +40,7 @@ const staffDesktopNav = [
   { to: '/admin', label: 'Dashboard Admin', icon: LayoutDashboard, end: true },
   { to: '/admin/cobros', label: 'Cobros POS', icon: CreditCard },
   { to: '/admin/planes', label: 'Planes', icon: Layers },
+  { to: '/admin/sesiones', label: 'Sesiones', icon: CalendarClock },
   { to: '/check-in', label: 'Escanear Check-In', icon: QrCode },
   { to: '/agenda', label: 'Agenda General', icon: CalendarDays },
   { to: '/explorar', label: 'Sesiones & Áreas', icon: Dumbbell },

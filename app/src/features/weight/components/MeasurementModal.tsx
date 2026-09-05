@@ -129,9 +129,9 @@ export function MeasurementModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-3xl border border-[#232B36] bg-[#161C24] p-6 shadow-2xl">
+      <div className="relative w-full max-w-lg rounded-3xl border border-line bg-surface p-6 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#232B36] pb-4">
+        <div className="flex items-center justify-between border-b border-line pb-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/15 text-acc">
               <Scale className="h-5 w-5" />
@@ -150,20 +150,20 @@ export function MeasurementModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-2 text-ink-3 transition hover:bg-[#1E2530] hover:text-ink"
+            className="rounded-xl p-2 text-ink-3 transition hover:bg-surface-elevated hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="mt-4 flex rounded-2xl bg-[#0E1117] p-1 border border-[#232B36]">
+        <div className="mt-4 flex rounded-2xl bg-bg p-1 border border-line">
           <button
             type="button"
             onClick={() => setActiveTab('basic')}
             className={`flex-1 rounded-xl py-2 text-xs font-bold transition ${
               activeTab === 'basic'
-                ? 'bg-[#1E2530] text-acc shadow'
+                ? 'bg-surface-elevated text-acc shadow'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
@@ -174,7 +174,7 @@ export function MeasurementModal({
             onClick={() => setActiveTab('circumferences')}
             className={`flex-1 rounded-xl py-2 text-xs font-bold transition ${
               activeTab === 'circumferences'
-                ? 'bg-[#1E2530] text-acc shadow'
+                ? 'bg-surface-elevated text-acc shadow'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
@@ -184,7 +184,7 @@ export function MeasurementModal({
 
         {/* Live Preview Box */}
         {liveBmi != null && liveCategory != null && (
-          <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-[#0E1117]/90 px-4 py-2.5 text-xs">
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-bg/90 px-4 py-2.5 text-xs">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-acc" />
               <span className="text-ink-3">IMC estimado:</span>
@@ -306,12 +306,12 @@ export function MeasurementModal({
           )}
 
           {/* Action buttons */}
-          <div className="mt-6 flex items-center justify-end gap-2 border-t border-[#232B36] pt-4">
+          <div className="mt-6 flex items-center justify-end gap-2 border-t border-line pt-4">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="rounded-2xl border border-line bg-transparent px-4 py-2.5 text-xs font-bold text-ink-2 hover:bg-[#1E2530]"
+              className="rounded-2xl border border-line bg-transparent px-4 py-2.5 text-xs font-bold text-ink-2 hover:bg-surface-elevated"
             >
               Cancelar
             </button>

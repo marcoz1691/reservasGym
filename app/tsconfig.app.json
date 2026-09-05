@@ -25,20 +25,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true
   },
-  "include": ["src"],
-  "exclude": [
-    "src/App.tsx",
-    "src/App.css",
-    "src/data/local/**",
-    "src/data/supabase/**",
-    "src/app/layouts/**",
-    "src/ui/Badge.tsx",
-    "src/ui/Button.tsx",
-    "src/ui/EmptyState.tsx",
-    "src/ui/Input.tsx",
-    "src/ui/Page.tsx",
-    "src/ui/PageHeader.tsx",
-    "src/ui/Surface.tsx",
-    "src/ui/index.ts"
-  ]
+  "include": ["src"]
 }

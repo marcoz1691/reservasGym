@@ -1118,6 +1118,7 @@
       <div class="note"><b>Publicación en tiendas.</b> Depende de que Zona Cero cree y pague sus cuentas Apple Developer y Google Play. El Proveedor configura y sube; el retraso en el alta de cuentas es el riesgo R1 y desplaza el envío.</div>
       <div class="note"><b>Pago online (Datafast Dataweb).</b> Fuera de la ruta crítica. Si Zona Cero activa la pasarela y entrega credenciales test/prod, el botón “Renovar / Pagar” se conecta como fase paralela, sin mover el resto del plan.</div>
       <div class="note"><b>Aprobaciones.</b> Cada Quality Gate tiene una ventana de revisión de <strong>10 días calendario</strong>; la fase siguiente no arranca sin la aprobación previa.</div>
+      <div class="note"><b>Supabase (infra).</b> Proyecto <code>zona-cero</code> = staging/QA en plan <strong>Free</strong> durante Sprints 1–6. Proyecto <code>zona-cero-prod</code> = producción; upgrade a <strong>Pro</strong> (~$25/mes) 1–2 semanas antes del Go-Live. El badge <code>main PRODUCTION</code> en el dashboard es la rama principal de Postgres, no el ambiente del gym.</div>
       <div class="note"><b>Días.</b> Duraciones en días calendario. Semana de proyecto = lunes a domingo. Zona horaria <code>America/Guayaquil</code> (UTC−5).</div>
     </div>
   </section>

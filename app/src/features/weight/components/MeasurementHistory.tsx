@@ -29,8 +29,8 @@ export function MeasurementHistory({
 
   if (history.length === 0) {
     return (
-      <div className="rounded-3xl border border-[#232B36] bg-[#161C24]/80 p-8 text-center shadow-lg">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1E2530] text-ink-3">
+      <div className="rounded-3xl border border-line bg-surface/80 p-8 text-center shadow-lg">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-elevated text-ink-3">
           <Calendar className="h-6 w-6" />
         </div>
         <h3 className="mt-3 text-base font-bold text-ink">Sin mediciones registradas</h3>
@@ -73,7 +73,7 @@ export function MeasurementHistory({
         return (
           <div
             key={m.id}
-            className="group relative overflow-hidden rounded-2xl border border-[#232B36] bg-[#161C24]/90 p-4 transition-all duration-200 hover:border-line hover:bg-[#161C24] shadow-md"
+            className="group relative overflow-hidden rounded-2xl border border-line bg-surface/90 p-4 transition-all duration-200 hover:border-line hover:bg-surface shadow-md"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               {/* Left: Date, Weight, Delta, BMI */}
@@ -152,7 +152,7 @@ export function MeasurementHistory({
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteId(null)}
-                      className="rounded-xl border border-line bg-transparent px-2.5 py-1.5 text-xs text-ink-2 hover:bg-[#1E2530]"
+                      className="rounded-xl border border-line bg-transparent px-2.5 py-1.5 text-xs text-ink-2 hover:bg-surface-elevated"
                     >
                       No
                     </button>
@@ -162,7 +162,7 @@ export function MeasurementHistory({
                     <button
                       type="button"
                       onClick={() => onEdit(m)}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl text-ink-3 transition hover:bg-[#1E2530] hover:text-ink"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl text-ink-3 transition hover:bg-surface-elevated hover:text-ink"
                       title="Editar registro"
                     >
                       <Edit3 className="h-4 w-4" />
@@ -182,33 +182,33 @@ export function MeasurementHistory({
 
             {/* Circumference detail pills (if recorded) */}
             {hasCircumferences && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#232B36]/60 pt-2.5 text-xs text-ink-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line/60 pt-2.5 text-xs text-ink-2">
                 <span className="flex items-center gap-1 text-[11px] font-bold text-ink-3 uppercase tracking-wider">
                   <Ruler className="h-3 w-3 text-acc" />
                   Medidas:
                 </span>
                 {m.waistCm != null && (
-                  <span className="rounded-lg bg-[#0E1117] px-2 py-0.5 border border-[#232B36] text-[11px]">
+                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-[11px]">
                     Cintura: <strong className="text-ink">{m.waistCm} cm</strong>
                   </span>
                 )}
                 {m.hipCm != null && (
-                  <span className="rounded-lg bg-[#0E1117] px-2 py-0.5 border border-[#232B36] text-[11px]">
+                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-[11px]">
                     Cadera: <strong className="text-ink">{m.hipCm} cm</strong>
                   </span>
                 )}
                 {m.chestCm != null && (
-                  <span className="rounded-lg bg-[#0E1117] px-2 py-0.5 border border-[#232B36] text-[11px]">
+                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-[11px]">
                     Pecho: <strong className="text-ink">{m.chestCm} cm</strong>
                   </span>
                 )}
                 {m.armCm != null && (
-                  <span className="rounded-lg bg-[#0E1117] px-2 py-0.5 border border-[#232B36] text-[11px]">
+                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-[11px]">
                     Brazo: <strong className="text-ink">{m.armCm} cm</strong>
                   </span>
                 )}
                 {m.thighCm != null && (
-                  <span className="rounded-lg bg-[#0E1117] px-2 py-0.5 border border-[#232B36] text-[11px]">
+                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-[11px]">
                     Muslo: <strong className="text-ink">{m.thighCm} cm</strong>
                   </span>
                 )}
