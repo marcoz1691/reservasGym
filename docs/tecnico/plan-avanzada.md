@@ -126,6 +126,17 @@ Guía general: [pasarelas-ecuador.md](./pasarelas-ecuador.md).
 
 **Flujo:** local → staging (QA + demo cliente) → prod tras checklist.
 
+#### Plan Supabase (Free vs Pro)
+
+| Fase | Proyecto | Plan |
+|------|----------|------|
+| Sprint 1–6 | `zona-cero` (staging) | **Free** |
+| Go-Live (Sprint 7) | `zona-cero-prod` | **Pro** (~$25/mes) |
+
+Detalle y triggers de upgrade: [cronograma-desarrollo-avanzada.md §8](./cronograma-desarrollo-avanzada.md#8-decisión-de-arquitectura--supabase-plan-free-vs-pro).
+
+**Nota:** el badge `main PRODUCTION` en Supabase es la rama principal de Postgres, no el ambiente del gym.
+
 ### 2.1 Capas
 
 ```

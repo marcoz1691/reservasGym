@@ -146,6 +146,48 @@ $$\text{Ruta Crítica: } \text{WBS 1.1.2} \rightarrow \text{1.1.3} \rightarrow \
 
 ---
 
-## 8. CONCLUSIÓN DEL PROJECT MANAGER
+## 8. DECISIÓN DE ARQUITECTURA — SUPABASE (PLAN FREE vs PRO)
+
+**Decisión (Sep 2026):** Mantener plan **Free** durante desarrollo y staging; evaluar upgrade a **Pro** solo en el proyecto de **producción**, 1–2 semanas antes del Go-Live.
+
+### Contexto
+
+| Proyecto Supabase | Rol | Plan acordado |
+|---|---|---|
+| `zona-cero` | Staging / QA (pruebas, demos William, Sprint 1–6) | **Free** |
+| `zona-cero-prod` *(por crear, Sprint 7)* | Producción — socios y staff reales | **Pro** (recomendado) |
+
+La etiqueta **main / PRODUCTION** en el dashboard de Supabase **no** indica el ambiente del gym: es el nombre de la rama principal de Postgres. Staging y producción se separan por **proyecto Supabase distinto**, no por cambiar ese badge.
+
+El plan Free permite **2 proyectos** — suficiente para staging + prod sin costo extra durante la construcción.
+
+### Por qué Free ahora
+
+- Desarrollo Sprint 1–5 no requiere branching ni backups diarios en staging.
+- Auth, RLS, SQL y API están incluidos en Free.
+- Límites iniciales (~500 MB BD, 50k MAU auth/mes) superan con holgura la marcha blanca.
+
+### Cuándo activar Pro (solo prod)
+
+| Trigger | Acción |
+|---|---|
+| **Sprint 6** (29 Oct) | Crear proyecto `zona-cero-prod`; mantener staging en Free |
+| **1–2 semanas antes Go-Live** (≈ 05 Dic) | Upgrade **Pro** en prod: backups diarios, sin pausa por inactividad |
+| Socios reales operando | Monitorear uso; Pro en prod como baseline operativa |
+
+### Costo estimado infra
+
+| Ítem | Costo |
+|---|---|
+| Supabase staging (Free) | $0/mes |
+| Supabase prod (Pro) | ~$25 USD/mes *(desde Go-Live)* |
+| Apple Developer | $99/año *(cliente, R1)* |
+| Google Play Console | $25 único *(cliente, R1)* |
+
+**Responsable decisión:** PM (Marco) · **Informado:** PO (William) al QG2 (15 Nov).
+
+---
+
+## 9. CONCLUSIÓN DEL PROJECT MANAGER
 
 El presente plan establece una **gestión de ingeniería predecible, trazable y blindada contra riesgos**. Al desacoplar el desarrollo técnico (finalizado el **20 de Noviembre**) del hito contractual final (**31 de Diciembre**), garantizamos la entrega de un producto premium, de alto desempeño y completamente operativo para el inicio de temporada de **Zona Cero Performance Center**.

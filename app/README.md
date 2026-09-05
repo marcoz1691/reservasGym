@@ -23,11 +23,29 @@ Cuentas demo (solo `npm run dev`, contraseña `demo1234`):
 Sin `VITE_SUPABASE_*` en desarrollo usa `LocalRepository` (localStorage + seed).
 En build de producción **exige** Supabase (`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`).
 
+### Staging (QA con Supabase real)
+
+```bash
+cd app
+copy .env.staging.example .env.staging   # Windows
+# Editar .env.staging con credenciales del proyecto zona-cero-staging
+npm run dev:staging
+```
+
+Usuarios staging (crear en Supabase Auth; ver `supabase/staging-users.sql`):
+
+- `socio.staging@zonacero.test` — socio
+- `staff.staging@zonacero.test` — recepción
+- `admin.staging@zonacero.test` — admin
+
+Guía completa: [`docs/tecnico/staging-setup.md`](../docs/tecnico/staging-setup.md)
+
 ## Scripts
 
 | Script | Uso |
 |---|---|
 | `npm run dev` | Servidor local |
+| `npm run dev:staging` | Local apuntando a Supabase staging (`.env.staging`) |
 | `npm run build` | Build producción |
 | `npm test` | Tests de dominio |
 | `npm run preview` | Preview del build |

@@ -53,10 +53,25 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
-    const [s, u] = await Promise.all([repo.load(), repo.getCurrentUser()])
-    setState(s)
-    setUser(u)
-    setLoading(false)
+    try {
+      setLoading(true)
+      const u = await repo.getCurrentUser()
+      const s = await repo.load()
+      setUser(u)
+      setState(s)
+    } catch (err) {
+      console.error('[ReservasGym] refresh failed:', err)
+      try {
+        const u = await repo.getCurrentUser()
+        setUser(u)
+        if (!u) setState(null)
+      } catch {
+        setUser(null)
+        setState(null)
+      }
+    } finally {
+      setLoading(false)
+    }
   }, [repo])
 
   useEffect(() => {
