@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 980 },
+    { "file": "Login.dc.html", "x": 1580, "y": 0, "w": 1280, "h": 860 },
+    { "file": "MiPlan.dc.html", "x": 0, "y": 1120, "w": 1440, "h": 1360 },
+    { "file": "Ficha.dc.html", "x": 1580, "y": 1120, "w": 960, "h": 760 }
+  ],
+  "annotations": [
+    { "id": "direction-note", "x": 0, "y": -140, "w": 420, "text": "Dirección: naranja #F47920 + carbón #231F20 del imagotipo real de Zona Cero (docs/tipografia). Esquinas redondeadas en superficies de datos; cortes diagonales de marca solo en 2-3 puntos (header, hero). Crosers solo en momentos de marca (nombre, título del plan)." },
+    { "id": "ficha-gaps-note", "x": 2560, "y": 1120, "w": 300, "text": "Paso 1 (Personales) ya cubre cédula/pasaporte, ciudad/sector y foto de perfil — mostrado en el mockup.\n\nBrechas frente a detalles formularios.txt (no construidas aún):\n\n- Contacto de emergencia (sección completa)\n- Nivel de entrenamiento, días/horario\n- Cuestionario de seguridad PAR-Q estructurado (5 preguntas Sí/No + detalle condicional)\n- Checkboxes de consentimiento y documentos\n\nMembresía (plan/fechas/pago): ya cubierta por Mi Plan, sin brecha." }
+  ],
+  "launch": { "view": "canvas" }
+}
