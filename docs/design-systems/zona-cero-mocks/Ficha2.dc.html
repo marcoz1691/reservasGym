@@ -40,58 +40,77 @@
   </style>
 </helmet>
 
-<div style="width:920px; height:740px; background:var(--bg); display:flex; align-items:center; justify-content:center;">
+<div style="width:920px; height:780px; background:var(--bg); display:flex; align-items:center; justify-content:center;">
   <div style="width:820px; border-radius:16px; border:1px solid var(--line); background:var(--surface); overflow:hidden; box-shadow:var(--shadow);">
 
     <div style="padding:22px 28px 0;">
       <div style="display:flex; align-items:flex-start; justify-content:space-between;">
         <div>
-          <p class="mono" style="margin:0; font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3);">Paso 1 de 3</p>
-          <h2 style="margin:6px 0 0; font-size:20px; font-weight:700;">Datos del socio</h2>
-          <p style="margin:4px 0 0; font-size:12.5px; color:var(--ink-3);">Lo básico para crear tu ficha y tu credencial de acceso</p>
+          <p class="mono" style="margin:0; font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3);">Paso 2 de 3</p>
+          <h2 style="margin:6px 0 0; font-size:20px; font-weight:700;">Tu entrenamiento</h2>
+          <p style="margin:4px 0 0; font-size:12.5px; color:var(--ink-3);">Nos ayuda a recomendarte clases y a medir tu progreso</p>
         </div>
         <span style="color:var(--ink-3); font-size:20px; line-height:1;">&times;</span>
       </div>
       <div style="margin-top:18px; height:3px; border-radius:999px; background:var(--surface-2); overflow:hidden;">
-        <div style="width:33%; height:100%; background:var(--acc); border-radius:999px;"></div>
+        <div style="width:67%; height:100%; background:var(--acc); border-radius:999px;"></div>
       </div>
     </div>
 
     <div style="padding:24px 28px 8px;">
-      <div style="display:flex; gap:16px; align-items:center; margin-bottom:22px;">
-        <div style="height:60px; width:60px; flex-shrink:0; border-radius:999px; border:1.5px dashed var(--line); background:var(--surface-2); display:flex; align-items:center; justify-content:center; color:var(--ink-3);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
-        </div>
-        <div>
-          <p style="margin:0; font-size:13px; font-weight:600;">Foto de perfil <span class="opt">— opcional</span></p>
-          <p style="margin:3px 0 0; font-size:12px; color:var(--ink-3);">Aparece en tu credencial y en el check-in de recepción.</p>
-        </div>
-        <span class="btn-2" style="margin-left:auto;">Subir foto</span>
+      <span class="sec">Objetivo principal</span>
+      <div style="display:flex; gap:7px; flex-wrap:wrap; margin-bottom:24px;">
+        <span class="chip">Pérdida de grasa</span>
+        <span class="chip">Ganancia muscular</span>
+        <span class="chip on">Acondicionamiento Hyrox / CrossFit</span>
+        <span class="chip">Fuerza</span>
+        <span class="chip">Rendimiento deportivo</span>
+        <span class="chip">Salud y bienestar</span>
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-        <div><span class="lbl">Nombres y apellidos</span><div class="inp">María Fernanda Íñiguez</div></div>
-        <div><span class="lbl">Cédula / pasaporte</span><div class="inp">1723456789</div></div>
-        <div><span class="lbl">Fecha de nacimiento</span><div class="inp">15 / 06 / 1995</div></div>
-        <div><span class="lbl">Celular</span><div class="inp">+593 98 765 4321</div></div>
-        <div><span class="lbl">Correo electrónico</span><div class="inp">maria.iniguez@correo.com</div></div>
-        <div><span class="lbl">Ciudad / sector</span><div class="inp">Quito — Pomasqui</div></div>
+        <div>
+          <span class="lbl">Nivel de entrenamiento</span>
+          <div style="display:flex; gap:6px;">
+            <span class="chip" style="flex:1; justify-content:center;">Principiante</span>
+            <span class="chip on" style="flex:1; justify-content:center;">Intermedio</span>
+            <span class="chip" style="flex:1; justify-content:center;">Avanzado</span>
+          </div>
+        </div>
+        <div>
+          <span class="lbl">¿Has entrenado antes en un gimnasio?</span>
+          <div class="yn">
+            <span class="si" style="flex:1; text-align:center;">Sí</span>
+            <span style="flex:1; text-align:center;">No</span>
+          </div>
+        </div>
+        <div><span class="lbl">Días por semana</span><div class="inp">4 días</div></div>
+        <div><span class="lbl">Horario habitual</span><div class="inp">Tarde (17:00 – 20:00)</div></div>
       </div>
 
       <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--line);">
-        <span class="sec">Contacto de emergencia</span>
-        <div style="display:grid; grid-template-columns:1.4fr 1fr 1.2fr; gap:14px;">
-          <div><span class="lbl">Nombre completo</span><div class="inp">Luis Íñiguez</div></div>
-          <div><span class="lbl">Parentesco</span><div class="inp">Padre</div></div>
-          <div><span class="lbl">Celular</span><div class="inp">+593 99 111 2233</div></div>
+        <span class="sec">Evaluación inicial</span>
+        <div style="display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px;">
+          <div><span class="lbl">Estatura (cm)</span><div class="inp">172</div></div>
+          <div><span class="lbl">Peso (kg)</span><div class="inp">80.2</div></div>
+          <div>
+            <span class="lbl">IMC</span>
+            <div class="inp" style="background:var(--ok-bg); border-color:transparent; color:var(--ok-tx); font-weight:700; display:flex; align-items:center; justify-content:space-between;">
+              <span>27.1</span><span style="font-size:11px; font-weight:600;">Sobrepeso</span>
+            </div>
+          </div>
+          <div><span class="lbl">Cintura (cm) <span class="opt">opc.</span></span><div class="inp ghost">—</div></div>
         </div>
+        <p style="margin:12px 0 0; font-size:11.5px; color:var(--ink-3); line-height:1.5;">
+          El IMC se calcula solo. Si el gimnasio toma tu medición con InBody, recepción puede completar el resto después.
+        </p>
       </div>
     </div>
 
     <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 28px; border-top:1px solid var(--line); margin-top:18px;">
       <span style="font-size:12px; color:var(--ink-3);">Puedes editar todo esto luego desde tu perfil</span>
       <div style="display:flex; gap:8px;">
-        
+        <span class="btn-2">Atrás</span>
         <span class="btn">Continuar</span>
       </div>
     </div>
