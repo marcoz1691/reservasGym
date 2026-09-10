@@ -11,3 +11,6 @@ coverage/
 npm-debug.log*
 pnpm-debug.log*
 yarn-error.log*
+
+# Archivos temporales de Word / Office
+~$*
