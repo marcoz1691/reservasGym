@@ -1,43 +1,374 @@
 {
   "pages": [
-    { "id": "page-1", "name": "Socio" },
-    { "id": "page-2", "name": "Staff / Admin" },
-    { "id": "page-3", "name": "Ficha de ingreso" }
+    {
+      "id": "page-1",
+      "name": "Opción 1 · App del socio"
+    },
+    {
+      "id": "page-2",
+      "name": "Opción 1 · Panel del personal"
+    },
+    {
+      "id": "page-3",
+      "name": "Opción 1 · Ficha de ingreso"
+    },
+    {
+      "id": "page-4",
+      "name": "Opción 2 · App del socio (Black)"
+    },
+    {
+      "id": "page-5",
+      "name": "Opción 2 · Panel del personal (Black)"
+    },
+    {
+      "id": "page-6",
+      "name": "Opción 2 · Ficha de ingreso (Black)"
+    }
   ],
   "artboards": [
-    { "file": "Login.dc.html",       "page": "page-1", "x": 0,    "y": 0,    "w": 1280, "h": 820 },
-    { "file": "Main.dc.html",        "page": "page-1", "x": 1420, "y": 0,    "w": 1440, "h": 940 },
-    { "file": "Agenda.dc.html",      "page": "page-1", "x": 3000, "y": 0,    "w": 1440, "h": 960 },
-    { "file": "MisReservas.dc.html", "page": "page-1", "x": 0,    "y": 1120, "w": 1440, "h": 900 },
-    { "file": "MiPlan.dc.html",      "page": "page-1", "x": 1580, "y": 1120, "w": 1440, "h": 1180 },
-    { "file": "Explorar.dc.html",    "page": "page-1", "x": 3160, "y": 1120, "w": 1440, "h": 900 },
-    { "file": "Peso.dc.html",        "page": "page-1", "x": 0,    "y": 2460, "w": 1440, "h": 980 },
-    { "file": "Perfil.dc.html",      "page": "page-1", "x": 1580, "y": 2460, "w": 1440, "h": 900 },
-    { "file": "CheckIn.dc.html",     "page": "page-1", "x": 3160, "y": 2460, "w": 1100, "h": 820 },
-
-    { "file": "Admin.dc.html",       "page": "page-2", "x": 0,    "y": 0,    "w": 1440, "h": 900 },
-    { "file": "Cobros.dc.html",      "page": "page-2", "x": 1580, "y": 0,    "w": 1440, "h": 960 },
-    { "file": "Planes.dc.html",      "page": "page-2", "x": 0,    "y": 1120, "w": 1440, "h": 860 },
-    { "file": "Sesiones.dc.html",    "page": "page-2", "x": 1580, "y": 1120, "w": 1440, "h": 880 },
-    { "file": "Marca.dc.html",       "page": "page-2", "x": 0,    "y": 2140, "w": 1200, "h": 800 },
-
-    { "file": "Ficha.dc.html",       "page": "page-3", "x": 0,    "y": 0,    "w": 920,  "h": 740 },
-    { "file": "Ficha2.dc.html",      "page": "page-3", "x": 1060, "y": 0,    "w": 920,  "h": 780 },
-    { "file": "Ficha3.dc.html",      "page": "page-3", "x": 2120, "y": 0,    "w": 920,  "h": 900 }
+    {
+      "file": "Login.dc.html",
+      "title": "Login",
+      "page": "page-1",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Inicio",
+      "page": "page-1",
+      "x": 510,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Agenda.dc.html",
+      "title": "Agenda",
+      "page": "page-1",
+      "x": 1020,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "MisReservas.dc.html",
+      "title": "Mis reservas",
+      "page": "page-1",
+      "x": 1530,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "MiPlan.dc.html",
+      "title": "Mi plan",
+      "page": "page-1",
+      "x": 2040,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Explorar.dc.html",
+      "title": "Explorar",
+      "page": "page-1",
+      "x": 0,
+      "y": 1024,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Peso.dc.html",
+      "title": "Control de peso",
+      "page": "page-1",
+      "x": 510,
+      "y": 1024,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Perfil.dc.html",
+      "title": "Perfil",
+      "page": "page-1",
+      "x": 1020,
+      "y": 1024,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "CheckIn.dc.html",
+      "title": "Check-in QR",
+      "page": "page-1",
+      "x": 1530,
+      "y": 1024,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Admin.dc.html",
+      "title": "Panel admin",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Cobros.dc.html",
+      "title": "Cobros POS",
+      "page": "page-2",
+      "x": 1580,
+      "y": 0,
+      "w": 1440,
+      "h": 960
+    },
+    {
+      "file": "Planes.dc.html",
+      "title": "Planes",
+      "page": "page-2",
+      "x": 3160,
+      "y": 0,
+      "w": 1440,
+      "h": 860
+    },
+    {
+      "file": "Sesiones.dc.html",
+      "title": "Sesiones",
+      "page": "page-2",
+      "x": 0,
+      "y": 1120,
+      "w": 1440,
+      "h": 880
+    },
+    {
+      "file": "Marca.dc.html",
+      "title": "Marca",
+      "page": "page-2",
+      "x": 1580,
+      "y": 1120,
+      "w": 1200,
+      "h": 800
+    },
+    {
+      "file": "Ficha.dc.html",
+      "title": "Ficha · paso 1",
+      "page": "page-3",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Ficha2.dc.html",
+      "title": "Ficha · paso 2",
+      "page": "page-3",
+      "x": 510,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Ficha3.dc.html",
+      "title": "Ficha · paso 3",
+      "page": "page-3",
+      "x": 1020,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "LoginBlack.dc.html",
+      "title": "Login",
+      "page": "page-4",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "MainBlack.dc.html",
+      "title": "Inicio",
+      "page": "page-4",
+      "x": 510,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "AgendaBlack.dc.html",
+      "title": "Agenda",
+      "page": "page-4",
+      "x": 1020,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "MisReservasBlack.dc.html",
+      "title": "Mis reservas",
+      "page": "page-4",
+      "x": 1530,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "MiPlanBlack.dc.html",
+      "title": "Mi plan",
+      "page": "page-4",
+      "x": 2040,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "ExplorarBlack.dc.html",
+      "title": "Explorar",
+      "page": "page-4",
+      "x": 0,
+      "y": 1024,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PesoBlack.dc.html",
+      "title": "Control de peso",
+      "page": "page-4",
+      "x": 510,
+      "y": 1024,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PerfilBlack.dc.html",
+      "title": "Perfil",
+      "page": "page-4",
+      "x": 1020,
+      "y": 1024,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "CheckInBlack.dc.html",
+      "title": "Check-in QR",
+      "page": "page-4",
+      "x": 1530,
+      "y": 1024,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "AdminBlack.dc.html",
+      "title": "Panel admin",
+      "page": "page-5",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "CobrosBlack.dc.html",
+      "title": "Cobros POS",
+      "page": "page-5",
+      "x": 1580,
+      "y": 0,
+      "w": 1440,
+      "h": 960
+    },
+    {
+      "file": "PlanesBlack.dc.html",
+      "title": "Planes",
+      "page": "page-5",
+      "x": 3160,
+      "y": 0,
+      "w": 1440,
+      "h": 860
+    },
+    {
+      "file": "SesionesBlack.dc.html",
+      "title": "Sesiones",
+      "page": "page-5",
+      "x": 0,
+      "y": 1120,
+      "w": 1440,
+      "h": 880
+    },
+    {
+      "file": "MarcaBlack.dc.html",
+      "title": "Marca",
+      "page": "page-5",
+      "x": 1580,
+      "y": 1120,
+      "w": 1200,
+      "h": 800
+    },
+    {
+      "file": "FichaBlack.dc.html",
+      "title": "Ficha · paso 1",
+      "page": "page-6",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Ficha2Black.dc.html",
+      "title": "Ficha · paso 2",
+      "page": "page-6",
+      "x": 510,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Ficha3Black.dc.html",
+      "title": "Ficha · paso 3",
+      "page": "page-6",
+      "x": 1020,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    }
   ],
   "annotations": [
     {
-      "id": "direction-note", "page": "page-1", "x": -560, "y": 0, "w": 460,
-      "text": "Dirección minimalista, siguiendo el login real de GYM-One: fondo claro con puntos sutiles, tarjetas blancas con sombra suave, radios 8-16px, una sola familia tipográfica.\n\nEl naranja #F26D17 aparece SOLO en: botón primario, item activo del sidebar, borde de la tarjeta del plan actual y links. Estados en verde/ámbar/rojo desaturado (patrón .bg-label-* de GYM-One).\n\nSin cortes diagonales, glows ni tipografía display: el logo ya carga la personalidad angular de la marca."
+      "id": "op1-note",
+      "page": "page-1",
+      "x": -560,
+      "y": 0,
+      "w": 470,
+      "text": "OPCIÓN 1 · Claro\n\nApp del socio en 390×844 (iPhone 14/15). Segun la clausula 5.1 del contrato, la app de socios se entrega SOLO por App Store y Google Play — no hay version web para socios.\n\nEstructura real de la app: header compacto arriba y barra de 5 tabs abajo (Inicio, Agenda, Reservas, Mi Plan, Peso). Explorar, Perfil y Check-in se llegan desde otras pantallas, no desde los tabs.\n\nSin barra de estado dibujada: en el telefono la pinta el sistema encima.\n\nAcento naranja de marca solo en boton primario, tab activo y links."
     },
     {
-      "id": "ficha-note", "page": "page-3", "x": 3180, "y": 0, "w": 330,
-      "text": "FORMULARIO: de 6 pasos a 3.\n\nLas 8 secciones del documento se agrupan en 3 pasos, porque una ficha se llena UNA vez y 6 pantallas se sienten interminables en el celular:\n\n1. Datos del socio + contacto de emergencia\n2. Entrenamiento + evaluación inicial (IMC se calcula solo)\n3. Salud (PAR-Q) + autorizaciones\n\nClave minimalista del PAR-Q: las 5 preguntas son filas Sí/No y SOLO la que responde \"Sí\" despliega el campo de detalle. Si hay un \"Sí\" relevante, aparece el aviso de certificado médico.\n\nProgreso = barra fina, no 6 pestañas numeradas."
+      "id": "op2-note",
+      "page": "page-4",
+      "x": -560,
+      "y": 0,
+      "w": 470,
+      "text": "OPCIÓN 2 · Black premium\n\nMismas pantallas y mismo layout que la Opción 1, para comparar 1 a 1.\n\nMonocroma: el color de accion es BLANCO (boton blanco, texto negro) en vez del naranja, que sobre negro se ve estridente. El logo va en blanco puro.\n\nEstados en tonos desaturados —salvia, arena, terracota— para que sigan siendo legibles sin colorear la pantalla.\n\nEl QR del check-in se mantiene oscuro sobre tarjeta blanca: invertirlo lo haria no escaneable."
     },
     {
-      "id": "pendientes-note", "page": "page-2", "x": 1320, "y": 2140, "w": 330,
-      "text": "Pendiente de definir con el cliente:\n\n- Reglas exactas de acceso por plan (qué plan entra a qué disciplina). En Planes se muestra como chips seleccionables; las combinaciones reales las define el cliente en el kickoff.\n- Nombres definitivos de los planes (aquí: Mensual / Trimestral / 10 Visitas / Estudiante).\n- Si recepción puede editar la ficha de un socio o solo consultarla."
+      "id": "staff-note",
+      "page": "page-2",
+      "x": -560,
+      "y": 0,
+      "w": 470,
+      "text": "PANEL DEL PERSONAL · escritorio\n\nSe mantiene en 1440px porque la clausula 5.2 entrega \"un panel de administración web, de uso exclusivo del personal del centro\", pensado para tablet o computador en recepcion.\n\nA definir con el cliente:\n- Reglas exactas de acceso por plan (que plan entra a que disciplina). En Planes se muestran como chips seleccionables.\n- Nombres definitivos de los planes.\n- Si recepcion puede editar la ficha de un socio o solo consultarla."
+    },
+    {
+      "id": "ficha-note",
+      "page": "page-3",
+      "x": 1650,
+      "y": 0,
+      "w": 350,
+      "text": "FORMULARIO: de 6 pasos a 3.\n\nLas 8 secciones del documento se agrupan en 3, porque la ficha se llena UNA vez y seis pantallas numeradas se sienten interminables en el celular:\n\n1. Datos del socio + contacto de emergencia\n2. Entrenamiento + evaluación inicial (IMC calculado)\n3. Salud (PAR-Q) + autorizaciones\n\nEn movil NO es un modal sino un flujo a pantalla completa: un modal de 390px de ancho solo roba espacio.\n\nClave del paso 3: las 5 preguntas son filas Sí/No y SOLO la que responde \"Sí\" abre su campo de detalle. Si aplica, aparece el aviso de certificado medico.\n\nProgreso = barra fina, no 6 pestañas."
     }
   ],
-  "launch": { "view": "canvas", "page": "page-1" }
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
 }

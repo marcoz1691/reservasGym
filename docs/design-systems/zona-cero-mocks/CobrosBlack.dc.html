@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0A0A0B; --surface:#141415; --surface-2:#1B1B1D; --line:#27272A;
+      --ink:#F4F4F3; --ink-2:#A19E9A; --ink-3:#6C6966;
+      --acc:#FFFFFF; --acc-contrast:#0A0A0B; --acc-soft:rgba(255,255,255,.07);
+      --ok-bg:rgba(126,169,139,.13); --ok-tx:#7EA98B; --wa-bg:rgba(196,163,90,.13); --wa-tx:#C4A35A; --da-bg:rgba(199,120,110,.13); --da-tx:#C7786E;
+      --shadow:0 1px 2px rgba(0,0,0,.6), 0 10px 28px -10px rgba(0,0,0,.5);
+      --font-sans:'IBM Plex Sans',-apple-system,sans-serif; --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:var(--font-sans); background:var(--bg); color:var(--ink); }
+    .mono { font-family:var(--font-mono); }
+    .nav { display:flex; align-items:center; gap:10px; border-radius:8px; padding:9px 10px; color:var(--ink-2); font-size:14px; font-weight:500; }
+    .nav.on { background:var(--acc-soft); color:var(--acc-contrast); font-weight:700; }
+    .card { border-radius:14px; border:1px solid var(--line); background:var(--surface); box-shadow:var(--shadow); }
+    .pill { border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; }
+    .chip { display:inline-flex; align-items:center; border-radius:999px; border:1px solid var(--line); background:var(--surface); padding:6px 13px; font-size:12.5px; font-weight:500; color:var(--ink-2); }
+    .chip.on { background:var(--acc); border-color:var(--acc); color:var(--acc-contrast); font-weight:700; }
+    .btn { border-radius:10px; background:var(--acc); color:var(--acc-contrast); padding:9px 18px; font-size:13px; font-weight:700; display:inline-block; }
+    .btn-2 { border-radius:10px; border:1px solid var(--line); padding:9px 16px; font-size:13px; font-weight:600; color:var(--ink-2); display:inline-block; }
+    .lbl { font-size:12px; font-weight:600; color:var(--ink-2); display:block; margin-bottom:5px; }
+    .inp { border-radius:10px; border:1.5px solid var(--line); background:var(--surface-2); padding:10px 12px; font-size:13.5px; color:var(--ink); }
+    .eyebrow { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); }
+    th { text-align:left; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-3); padding:10px 14px; border-bottom:1px solid var(--line); }
+    td { padding:12px 14px; font-size:13px; border-bottom:1px solid var(--line); }
+  </style>
+</helmet>
+
+<div style="width:1440px; height:960px; background:var(--bg); display:flex; overflow:hidden;">
+
+  <aside style="width:240px; flex-shrink:0; border-right:1px solid var(--line); background:var(--surface); padding:20px; display:flex; flex-direction:column; justify-content:space-between;">
+    <div style="display:flex; flex-direction:column; gap:20px;">
+      <div style="display:flex; align-items:center; gap:9px; padding:4px 4px 12px; border-bottom:1px solid var(--line);">
+        <img src="mark-white.png" alt="Zona Cero" style="height:24px; width:auto; display:block;" />
+        <div style="font-size:14px; font-weight:700; letter-spacing:-.01em;">Zona Cero</div>
+      </div>
+      <nav style="display:flex; flex-direction:column; gap:2px;">
+        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Panel</div>
+        <div class="nav on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Cobros POS</div>
+        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 12h16M4 19h16"/></svg>Planes</div>
+        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3M9 14h6"/></svg>Sesiones</div>
+        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 19h2v2h-2z"/></svg>Check-in</div>
+        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>Agenda</div>
+        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18"/></svg>Marca</div>
+      </nav>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 6px 0; border-top:1px solid var(--line);">
+      <div style="display:flex; height:32px; width:32px; align-items:center; justify-content:center; border-radius:999px; background:var(--surface-2); border:1px solid var(--line); font-size:11px; font-weight:700; color:var(--ink-2);">RC</div>
+      <div><p style="margin:0; font-size:12px; font-weight:600;">Recepción</p><p style="margin:0; font-size:11px; color:var(--ink-3);">Staff</p></div>
+    </div>
+  </aside>
+
+  <main style="flex:1; min-width:0; padding:32px 40px; display:flex; flex-direction:column; gap:18px;">
+    <div>
+      <h1 style="margin:0; font-size:24px; font-weight:700;">Cobros y POS</h1>
+      <p style="margin:5px 0 0; font-size:13px; color:var(--ink-3);">Cobros presenciales en caja, renovaciones y control de vencidos</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1.1fr; gap:14px;">
+
+      <!-- Buscar socio y cobrar -->
+      <div class="card" style="padding:22px 24px;">
+        <p style="margin:0 0 14px; font-size:15px; font-weight:700;">Registrar cobro</p>
+
+        <span class="lbl">Buscar socio</span>
+        <div class="inp" style="display:flex; align-items:center; gap:8px; color:var(--ink-3);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          Nombre, cédula o correo…
+        </div>
+
+        <!-- Socio seleccionado -->
+        <div style="margin-top:12px; border-radius:10px; border:1.5px solid var(--acc); background:var(--surface-2); padding:14px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:11px;">
+              <div style="height:36px; width:36px; border-radius:999px; background:var(--surface); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--ink-2);">AS</div>
+              <div>
+                <p style="margin:0; font-size:13.5px; font-weight:700;">Ana Sofía Socio</p>
+                <p class="mono" style="margin:1px 0 0; font-size:11px; color:var(--ink-3);">1723456789 · Nº 0142</p>
+              </div>
+            </div>
+            <span class="pill" style="background:var(--wa-bg); color:var(--wa-tx);">Vence en 3 días</span>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <span class="lbl">Plan a cobrar</span>
+          <div class="inp" style="display:flex; align-items:center; justify-content:space-between;">
+            <span>Plan Mensual Ilimitado — 30 días</span>
+            <span style="font-weight:700;">$45.00</span>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <span class="lbl">Método de pago</span>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+            <div style="border-radius:10px; border:1.5px solid var(--acc); background:var(--acc-soft); padding:11px 8px; text-align:center;">
+              <p style="margin:0; font-size:12.5px; font-weight:700;">Datafast POS</p>
+              <p style="margin:2px 0 0; font-size:10.5px; color:var(--ink-3);">Débito / crédito</p>
+            </div>
+            <div style="border-radius:10px; border:1.5px solid var(--line); background:var(--surface-2); padding:11px 8px; text-align:center;">
+              <p style="margin:0; font-size:12.5px; font-weight:600;">Efectivo</p>
+              <p style="margin:2px 0 0; font-size:10.5px; color:var(--ink-3);">En caja</p>
+            </div>
+            <div style="border-radius:10px; border:1.5px solid var(--line); background:var(--surface-2); padding:11px 8px; text-align:center;">
+              <p style="margin:0; font-size:12.5px; font-weight:600;">Transferencia</p>
+              <p style="margin:2px 0 0; font-size:10.5px; color:var(--ink-3);">Bancos locales</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <p class="eyebrow" style="margin:0;">Total a cobrar</p>
+            <p style="margin:3px 0 0; font-size:26px; font-weight:700; line-height:1;">$45.00</p>
+          </div>
+          <span class="btn" style="padding:12px 26px; font-size:14px;">Registrar cobro</span>
+        </div>
+        <p style="margin:10px 0 0; font-size:11.5px; color:var(--ink-3); line-height:1.5;">
+          Al registrar, la membresía se extiende automáticamente 30 días desde hoy.
+        </p>
+      </div>
+
+      <!-- Vencidos y últimos cobros -->
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="card" style="overflow:hidden;">
+          <div style="padding:16px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;">
+            <p style="margin:0; font-size:15px; font-weight:700;">Por vencer y vencidos</p>
+            <div style="display:flex; gap:6px;">
+              <span class="chip on" style="padding:4px 10px; font-size:11.5px;">Todos</span>
+              <span class="chip" style="padding:4px 10px; font-size:11.5px;">En gracia</span>
+              <span class="chip" style="padding:4px 10px; font-size:11.5px;">Vencidos</span>
+            </div>
+          </div>
+          <table style="width:100%; border-collapse:collapse;">
+            <thead><tr><th>Socio</th><th>Plan</th><th>Vence</th><th>Estado</th></tr></thead>
+            <tbody>
+              <tr><td style="font-weight:600;">Ana Sofía Socio</td><td style="color:var(--ink-3);">Mensual</td><td class="mono">12 sep</td><td><span class="pill" style="background:var(--wa-bg); color:var(--wa-tx);">En 3 días</span></td></tr>
+              <tr><td style="font-weight:600;">Luis Ramírez</td><td style="color:var(--ink-3);">Trimestral</td><td class="mono">07 sep</td><td><span class="pill" style="background:var(--wa-bg); color:var(--wa-tx);">En gracia</span></td></tr>
+              <tr><td style="font-weight:600;">Carla Mejía</td><td style="color:var(--ink-3);">Mensual</td><td class="mono">31 ago</td><td><span class="pill" style="background:var(--da-bg); color:var(--da-tx);">Vencida</span></td></tr>
+              <tr><td style="font-weight:600;">Jorge Paredes</td><td style="color:var(--ink-3);">10 visitas</td><td class="mono">28 ago</td><td><span class="pill" style="background:var(--da-bg); color:var(--da-tx);">Vencida</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card" style="overflow:hidden;">
+          <div style="padding:16px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;">
+            <p style="margin:0; font-size:15px; font-weight:700;">Cobros de hoy</p>
+            <span style="font-size:13px; font-weight:700;">$385.00</span>
+          </div>
+          <table style="width:100%; border-collapse:collapse;">
+            <thead><tr><th>Hora</th><th>Socio</th><th>Método</th><th>Monto</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">11:42</td><td style="font-weight:600;">Karla Suárez</td><td style="color:var(--ink-3);">Datafast POS</td><td style="font-weight:600;">$45.00</td></tr>
+              <tr><td class="mono">10:15</td><td style="font-weight:600;">Andrés Nieto</td><td style="color:var(--ink-3);">Efectivo</td><td style="font-weight:600;">$120.00</td></tr>
+              <tr><td class="mono">09:30</td><td style="font-weight:600;">Paola Ruiz</td><td style="color:var(--ink-3);">Transferencia</td><td style="font-weight:600;">$45.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+</body>
+</html>

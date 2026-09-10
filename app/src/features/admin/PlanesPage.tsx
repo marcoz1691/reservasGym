@@ -22,6 +22,7 @@ import {
 } from '@/data/RepositoryProvider'
 import type { MembershipPlan, Zone } from '@/domain/models'
 import { ZONE_LABELS } from '@/domain/models'
+import { validateMembershipPlanInput } from '@/domain/rules/membershipPlan'
 import { formatCurrency } from '@/lib/format'
 import { Badge, Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
 
@@ -180,31 +181,23 @@ export function PlanesPage() {
     e.preventDefault()
     setFormError(null)
 
-    if (!formData.name.trim()) {
-      setFormError('El nombre del plan es requerido.')
-      return
-    }
-
     const priceNum = parseFloat(formData.priceUsd)
-    if (isNaN(priceNum) || priceNum < 0) {
-      setFormError('Ingresa un precio válido en USD.')
-      return
-    }
-
     const daysNum = parseInt(formData.durationDays, 10)
-    if (isNaN(daysNum) || daysNum <= 0) {
-      setFormError('La duración debe ser de al menos 1 día.')
-      return
-    }
-
     let quotaNum: number | null = null
     if (!formData.isUnlimitedVisits) {
       const parsed = parseInt(formData.visitQuota, 10)
-      if (isNaN(parsed) || parsed <= 0) {
-        setFormError('Ingresa un cupo de visitas válido.')
-        return
-      }
       quotaNum = parsed
+    }
+
+    const validation = validateMembershipPlanInput({
+      name: formData.name,
+      priceCents: Math.round((Number.isFinite(priceNum) ? priceNum : NaN) * 100),
+      durationDays: daysNum,
+      visitQuota: quotaNum,
+    })
+    if (!validation.ok) {
+      setFormError(validation.error)
+      return
     }
 
     // Determine allowedZoneIds
@@ -223,10 +216,10 @@ export function PlanesPage() {
     try {
       await repo.upsertMembershipPlan({
         id: formData.id,
-        name: formData.name.trim(),
-        priceCents: Math.round(priceNum * 100),
-        durationDays: daysNum,
-        visitQuota: quotaNum,
+        name: validation.value.name,
+        priceCents: validation.value.priceCents,
+        durationDays: validation.value.durationDays,
+        visitQuota: validation.value.visitQuota ?? null,
         allowedZoneIds: finalZones,
         active: formData.active,
       })
@@ -423,8 +416,9 @@ export function PlanesPage() {
 
       {/* CREATE / EDIT PLAN MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl border border-line bg-bg-2 p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-4 backdrop-blur-xs">
+          <div className="mx-auto flex min-h-full max-w-xl items-center justify-center py-4">
+          <div className="relative w-full max-h-[90vh] min-h-0 overflow-y-auto rounded-3xl border border-line bg-bg-2 p-6 shadow-2xl">
             <button
               type="button"
               onClick={() => !submitting && setIsModalOpen(false)}
@@ -665,6 +659,7 @@ export function PlanesPage() {
                 </Button>
               </div>
             </form>
+          </div>
           </div>
         </div>
       )}

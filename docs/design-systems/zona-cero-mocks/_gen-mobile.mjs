@@ -1,0 +1,125 @@
+import fs from 'node:fs'
+
+/*
+ * Shell movil del socio. Reproduce la estructura real de AppLayout.tsx:
+ * header compacto arriba, contenido scrolleable, barra de 5 tabs abajo.
+ *
+ * Sin barra de estado falsa (hora/bateria): en el telefono real la pinta
+ * el sistema encima, y dibujarla se ve duplicado.
+ *
+ * 390x844 = iPhone 14/15. Lo que no entra, no entra: es lo que el socio
+ * ve sin hacer scroll, y obliga a priorizar de verdad.
+ */
+
+const HEAD = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#F6F5F2; --surface:#FFFFFF; --surface-2:#FAFAF8; --line:#E7E4DF;
+      --ink:#1C1917; --ink-2:#6B6560; --ink-3:#9C9690;
+      --acc:#F26D17; --acc-contrast:#231F20; --acc-soft:rgba(242,109,23,.10);
+      --ok-bg:#E8F6EE; --ok-tx:#1E8E5A; --wa-bg:#FDF2DC; --wa-tx:#B7791F; --da-bg:#FBEAEA; --da-tx:#D64545;
+      --shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 20px -8px rgba(15,23,42,.10);
+      --font-sans:'IBM Plex Sans',-apple-system,sans-serif; --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:var(--font-sans); background:var(--bg); color:var(--ink); }
+    .mono { font-family:var(--font-mono); }
+    .card { border-radius:14px; border:1px solid var(--line); background:var(--surface); box-shadow:var(--shadow); }
+    .pill { border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; white-space:nowrap; }
+    .chip { display:inline-flex; align-items:center; border-radius:999px; border:1px solid var(--line); background:var(--surface); padding:8px 14px; font-size:13px; font-weight:500; color:var(--ink-2); white-space:nowrap; }
+    .chip.on { background:var(--acc); border-color:var(--acc); color:var(--acc-contrast); font-weight:700; }
+    /* 48px de alto: por encima del minimo de 44px para tocar comodo */
+    .btn { border-radius:12px; background:var(--acc); color:var(--acc-contrast); padding:14px 20px; font-size:15px; font-weight:700; text-align:center; display:block; }
+    .btn-2 { border-radius:12px; border:1px solid var(--line); background:var(--surface); padding:13px 18px; font-size:14px; font-weight:600; color:var(--ink-2); text-align:center; display:block; }
+    .lbl { font-size:12.5px; font-weight:600; color:var(--ink-2); display:block; margin-bottom:6px; }
+    .inp { border-radius:12px; border:1.5px solid var(--line); background:var(--surface-2); padding:13px 14px; font-size:15px; color:var(--ink); }
+    .eyebrow { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  </style>
+</helmet>
+`
+
+const ICONS = {
+  inicio: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>',
+  agenda: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/>',
+  reservas: '<path d="M4 8h11l4 4-4 4H4z"/>',
+  plan: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/>',
+  peso: '<path d="M3 17l6-6 4 4 7-8"/><path d="M15 7h5v5"/>',
+}
+const TABS = [
+  ['inicio', 'Inicio'], ['agenda', 'Agenda'], ['reservas', 'Reservas'],
+  ['plan', 'Mi Plan'], ['peso', 'Peso'],
+]
+
+function header(title) {
+  return `  <header style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--line); background:var(--surface);">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <img src="mark-color.png" alt="Zona Cero" style="height:21px; width:auto; display:block;" />
+      <span style="font-size:14px; font-weight:700; letter-spacing:-.01em;">${title}</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="height:32px; width:32px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--ink-2);">AS</div>
+    </div>
+  </header>`
+}
+
+function tabbar(active) {
+  const items = TABS.map(([k, label]) => {
+    const on = k === active
+    return `      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 0 3px; color:${on ? 'var(--acc)' : 'var(--ink-3)'};">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${on ? 2.1 : 1.7}" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>
+        <span style="font-size:10px; font-weight:${on ? 700 : 500};">${label}</span>
+        ${on ? '<span style="width:18px; height:2.5px; border-radius:999px; background:var(--acc); margin-top:1px;"></span>' : '<span style="height:3.5px;"></span>'}
+      </div>`
+  }).join('\n')
+  return `  <nav style="flex-shrink:0; border-top:1px solid var(--line); background:var(--surface); padding-bottom:8px;">
+    <div style="display:flex; align-items:stretch;">
+${items}
+    </div>
+  </nav>`
+}
+
+export function mobile({ file, title, tab, body, pad = '16px' }) {
+  const html = `${HEAD}
+<div style="width:390px; height:844px; background:var(--bg); display:flex; flex-direction:column; overflow:hidden;">
+
+${header(title)}
+
+  <main style="flex:1; min-height:0; overflow:hidden; padding:${pad};">
+${body}
+  </main>
+
+${tabbar(tab)}
+</div>
+</x-dc>
+</body>
+</html>
+`
+  fs.writeFileSync(file, html)
+  console.log('→', file)
+}
+
+/* Pantalla movil sin tabs (login, ficha): ocupa todo el alto. */
+export function plain({ file, body }) {
+  const html = `${HEAD}
+<div style="width:390px; height:844px; background:var(--bg); display:flex; flex-direction:column; overflow:hidden;">
+${body}
+</div>
+</x-dc>
+</body>
+</html>
+`
+  fs.writeFileSync(file, html)
+  console.log('→', file)
+}

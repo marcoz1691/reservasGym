@@ -165,6 +165,7 @@ export const canDeleteWeight = canManageWeight
 export const countActiveBookingsForSession = confirmedCount
 
 export * from './membership'
+export * from './membershipPlan'
 export * from './zoneAccess'
 export * from './anthropometrics'
 
