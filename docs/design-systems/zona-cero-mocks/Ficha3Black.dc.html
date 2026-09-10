@@ -15,139 +15,120 @@
       --bg:#0A0A0B; --surface:#141415; --surface-2:#1B1B1D; --line:#27272A;
       --ink:#F4F4F3; --ink-2:#A19E9A; --ink-3:#6C6966;
       --acc:#FFFFFF; --acc-contrast:#0A0A0B; --acc-soft:rgba(255,255,255,.07);
-      --ok-bg:rgba(126,169,139,.13); --ok-tx:#7EA98B; --wa-bg:rgba(196,163,90,.13); --wa-tx:#C4A35A;
-      --shadow:0 1px 2px rgba(0,0,0,.6), 0 16px 40px -12px rgba(0,0,0,.55);
+      --ok-bg:rgba(126,169,139,.13); --ok-tx:#7EA98B; --wa-bg:rgba(196,163,90,.13); --wa-tx:#C4A35A; --da-bg:rgba(199,120,110,.13); --da-tx:#C7786E;
+      --shadow:0 1px 2px rgba(0,0,0,.6), 0 8px 20px -8px rgba(0,0,0,.5);
       --font-sans:'IBM Plex Sans',-apple-system,sans-serif; --font-mono:'IBM Plex Mono',ui-monospace,monospace;
     }
     * { box-sizing:border-box; }
     body { margin:0; font-family:var(--font-sans); background:var(--bg); color:var(--ink); }
     .mono { font-family:var(--font-mono); }
-    .lbl { font-size:12px; font-weight:600; color:var(--ink-2); display:block; margin-bottom:5px; }
-    .opt { font-weight:400; color:var(--ink-3); }
-    .inp { border-radius:10px; border:1.5px solid var(--line); background:var(--surface-2); padding:10px 12px; font-size:13.5px; color:var(--ink); }
-    .inp.ghost { color:var(--ink-3); }
-    .btn { border-radius:10px; background:var(--acc); color:var(--acc-contrast); padding:10px 22px; font-size:13px; font-weight:700; display:inline-block; }
-    .btn-2 { border-radius:10px; border:1px solid var(--line); padding:10px 18px; font-size:13px; font-weight:600; color:var(--ink-2); display:inline-block; }
-    .sec { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); display:block; margin-bottom:12px; }
-    .yn { display:flex; gap:6px; }
-    .yn span { border-radius:8px; border:1.5px solid var(--line); background:var(--surface-2); padding:6px 16px; font-size:12.5px; font-weight:600; color:var(--ink-2); }
-    .yn span.no { background:var(--surface); border-color:var(--ink-3); color:var(--ink); }
-    .yn span.si { background:var(--wa-bg); border-color:var(--wa-tx); color:var(--wa-tx); }
-    .chip { display:inline-flex; border-radius:999px; border:1px solid var(--line); background:var(--surface); padding:7px 14px; font-size:12.5px; font-weight:500; color:var(--ink-2); }
+    .card { border-radius:14px; border:1px solid var(--line); background:var(--surface); box-shadow:var(--shadow); }
+    .pill { border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; white-space:nowrap; }
+    .chip { display:inline-flex; align-items:center; border-radius:999px; border:1px solid var(--line); background:var(--surface); padding:8px 14px; font-size:13px; font-weight:500; color:var(--ink-2); white-space:nowrap; }
     .chip.on { background:var(--acc); border-color:var(--acc); color:var(--acc-contrast); font-weight:700; }
-    .cbx { width:17px; height:17px; border-radius:5px; border:1.5px solid var(--line); background:var(--surface-2); flex-shrink:0; }
-    .cbx.on { background:var(--acc); border-color:var(--acc); display:flex; align-items:center; justify-content:center; }
+    /* 48px de alto: por encima del minimo de 44px para tocar comodo */
+    .btn { border-radius:12px; background:var(--acc); color:var(--acc-contrast); padding:14px 20px; font-size:15px; font-weight:700; text-align:center; display:block; }
+    .btn-2 { border-radius:12px; border:1px solid var(--line); background:var(--surface); padding:13px 18px; font-size:14px; font-weight:600; color:var(--ink-2); text-align:center; display:block; }
+    .lbl { font-size:12.5px; font-weight:600; color:var(--ink-2); display:block; margin-bottom:6px; }
+    .inp { border-radius:12px; border:1.5px solid var(--line); background:var(--surface-2); padding:13px 14px; font-size:15px; color:var(--ink); }
+    .eyebrow { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   </style>
 </helmet>
 
-<div style="width:920px; height:900px; background:var(--bg); display:flex; align-items:center; justify-content:center;">
-  <div style="width:820px; border-radius:16px; border:1px solid var(--line); background:var(--surface); overflow:hidden; box-shadow:var(--shadow);">
-
-    <div style="padding:22px 28px 0;">
-      <div style="display:flex; align-items:flex-start; justify-content:space-between;">
-        <div>
-          <p class="mono" style="margin:0; font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3);">Paso 3 de 3</p>
-          <h2 style="margin:6px 0 0; font-size:20px; font-weight:700;">Salud y autorizaciones</h2>
-          <p style="margin:4px 0 0; font-size:12.5px; color:var(--ink-3);">Responde con calma: solo se expande lo que marques como "Sí"</p>
-        </div>
-        <span style="color:var(--ink-3); font-size:20px; line-height:1;">&times;</span>
-      </div>
-      <div style="margin-top:18px; height:3px; border-radius:999px; background:var(--surface-2); overflow:hidden;">
-        <div style="width:100%; height:100%; background:var(--acc); border-radius:999px;"></div>
-      </div>
+<div style="width:390px; height:844px; background:var(--bg); display:flex; flex-direction:column; overflow:hidden;">
+  <header style="flex-shrink:0; padding:16px 18px 14px; border-bottom:1px solid var(--line); background:var(--surface);">
+    <div class="row" style="margin-bottom:12px;">
+      <span style="font-size:22px; color:var(--ink-3); line-height:1;">←</span>
+      <p class="mono" style="margin:0; font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3);">Paso 3 de 3</p>
+      <span style="font-size:13px; font-weight:600; color:var(--ink-3);">Salir</span>
     </div>
+    <div style="height:3px; border-radius:999px; background:var(--surface-2); overflow:hidden;">
+      <div style="width:100%; height:100%; background:var(--acc); border-radius:999px;"></div>
+    </div>
+    <h1 style="margin:14px 0 0; font-size:20px; font-weight:700;">Salud y permisos</h1>
+    <p style="margin:4px 0 0; font-size:12.5px; color:var(--ink-3); line-height:1.45;">Solo se abre el detalle de lo que marques como "Sí"</p>
+  </header>
 
-    <div style="padding:24px 28px 8px;">
-      <span class="sec">Cuestionario de seguridad</span>
-      <div style="display:flex; flex-direction:column; gap:10px;">
-        <div style="border-radius:10px; border:1px solid var(--line); background:var(--surface-2); padding:13px 15px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
-            <span style="font-size:13px; font-weight:500;">¿Tienes alguna lesión actual o pasada?</span>
-            <div class="yn" style="flex-shrink:0;">
-              <span class="si">Sí</span>
-              <span class="">No</span>
-            </div>
-          </div>
-          <div style="margin-top:11px; padding-top:11px; border-top:1px solid var(--line);">
-            <span class="lbl">Cuéntanos brevemente</span>
-            <div class="inp" style="background:var(--surface);">Lesión de menisco derecho, operada en 2023. Sin dolor actual.</div>
-          </div>
+  <main style="flex:1; min-height:0; overflow:hidden; padding:18px;">
+    <div style="display:flex; flex-direction:column; gap:9px;">
+      <div style="border-radius:12px; border:1px solid var(--line); background:var(--surface-2); padding:12px 13px;">
+        <p style="margin:0 0 9px; font-size:13px; font-weight:500; line-height:1.4;">¿Tienes alguna lesión actual o pasada?</p>
+        <div style="display:flex; gap:7px;">
+          <span style="flex:1; text-align:center; border-radius:9px; border:1.5px solid var(--wa-tx); background:var(--wa-bg); color:var(--wa-tx); padding:8px 0; font-size:13px; font-weight:600;">Sí</span>
+          <span style="flex:1; text-align:center; border-radius:9px; border:1.5px solid var(--line); background:var(--surface-2); color:var(--ink-2); padding:8px 0; font-size:13px; font-weight:600;">No</span>
         </div>
-        <div style="border-radius:10px; border:1px solid var(--line); background:var(--surface); padding:13px 15px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
-            <span style="font-size:13px; font-weight:500;">¿Te han hecho alguna cirugía relevante?</span>
-            <div class="yn" style="flex-shrink:0;">
-              <span class="">Sí</span>
-              <span class="no">No</span>
-            </div>
-          </div>
-        </div>
-        <div style="border-radius:10px; border:1px solid var(--line); background:var(--surface); padding:13px 15px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
-            <span style="font-size:13px; font-weight:500;">¿Tienes alguna condición médica diagnosticada?</span>
-            <div class="yn" style="flex-shrink:0;">
-              <span class="">Sí</span>
-              <span class="no">No</span>
-            </div>
-          </div>
-        </div>
-        <div style="border-radius:10px; border:1px solid var(--line); background:var(--surface); padding:13px 15px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
-            <span style="font-size:13px; font-weight:500;">¿Tomas medicación de forma habitual?</span>
-            <div class="yn" style="flex-shrink:0;">
-              <span class="">Sí</span>
-              <span class="no">No</span>
-            </div>
-          </div>
-        </div>
-        <div style="border-radius:10px; border:1px solid var(--line); background:var(--surface); padding:13px 15px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
-            <span style="font-size:13px; font-weight:500;">¿Un médico te ha restringido la actividad física?</span>
-            <div class="yn" style="flex-shrink:0;">
-              <span class="">Sí</span>
-              <span class="no">No</span>
-            </div>
-          </div>
+        <div style="margin-top:10px;">
+          <div class="inp" style="background:var(--surface); font-size:13px;">Menisco derecho, operado en 2023.</div>
         </div>
       </div>
-
-      <div style="margin-top:14px; border-radius:10px; background:var(--wa-bg); padding:12px 15px; display:flex; gap:10px; align-items:flex-start;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4A35A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px;"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
-        <p style="margin:0; font-size:12.5px; color:var(--wa-tx); line-height:1.5;">
-          Marcaste una lesión. Recepción te pedirá un certificado médico antes de tu primera sesión de alta intensidad.
-        </p>
+      <div style="border-radius:12px; border:1px solid var(--line); background:var(--surface); padding:12px 13px;">
+        <p style="margin:0 0 9px; font-size:13px; font-weight:500; line-height:1.4;">¿Te han hecho alguna cirugía relevante?</p>
+        <div style="display:flex; gap:7px;">
+          <span style="flex:1; text-align:center; border-radius:9px; border:1.5px solid var(--line); background:var(--surface-2); color:var(--ink-2); padding:8px 0; font-size:13px; font-weight:600;">Sí</span>
+          <span style="flex:1; text-align:center; border-radius:9px; border:1.5px solid var(--ink-3); background:var(--surface); color:var(--ink); padding:8px 0; font-size:13px; font-weight:600;">No</span>
+        </div>
       </div>
-
-      <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--line);">
-        <span class="sec">Autorizaciones</span>
-        <div style="display:flex; flex-direction:column; gap:11px;">
-          <div style="display:flex; gap:11px; align-items:flex-start;">
-            <div class="cbx on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0A0A0B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
-            <span style="font-size:13px; line-height:1.45;">Acepto el <strong style="font-weight:600;">reglamento interno</strong> del centro</span>
-          </div>
-          <div style="display:flex; gap:11px; align-items:flex-start;">
-            <div class="cbx on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0A0A0B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
-            <span style="font-size:13px; line-height:1.45;">Autorizo el <strong style="font-weight:600;">tratamiento de mis datos personales</strong> y declaro que la información es veraz</span>
-          </div>
-          <div style="display:flex; gap:11px; align-items:flex-start;">
-            <div class="cbx on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0A0A0B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
-            <span style="font-size:13px; line-height:1.45;">Doy mi <strong style="font-weight:600;">consentimiento informado</strong> para realizar actividad física</span>
-          </div>
-          <div style="display:flex; gap:11px; align-items:flex-start;">
-            <div class="cbx"></div>
-            <span style="font-size:13px; line-height:1.45; color:var(--ink-2);">Autorizo el uso de <strong style="font-weight:600;">fotografías</strong> en redes sociales <span class="opt">— opcional, puedes revocarlo cuando quieras</span></span>
-          </div>
+      <div style="border-radius:12px; border:1px solid var(--line); background:var(--surface); padding:12px 13px;">
+        <p style="margin:0 0 9px; font-size:13px; font-weight:500; line-height:1.4;">¿Tienes alguna condición médica?</p>
+        <div style="display:flex; gap:7px;">
+          <span style="flex:1; text-align:center; border-radius:9px; border:1.5px solid var(--line); background:var(--surface-2); color:var(--ink-2); padding:8px 0; font-size:13px; font-weight:600;">Sí</span>
+          <span style="flex:1; text-align:center; border-radius:9px; border:1.5px solid var(--ink-3); background:var(--surface); color:var(--ink); padding:8px 0; font-size:13px; font-weight:600;">No</span>
+        </div>
+      </div>
+      <div style="border-radius:12px; border:1px solid var(--line); background:var(--surface); padding:12px 13px;">
+        <p style="margin:0 0 9px; font-size:13px; font-weight:500; line-height:1.4;">¿Tomas medicación habitual?</p>
+        <div style="display:flex; gap:7px;">
+          <span style="flex:1; text-align:center; border-radius:9px; border:1.5px solid var(--line); background:var(--surface-2); color:var(--ink-2); padding:8px 0; font-size:13px; font-weight:600;">Sí</span>
+          <span style="flex:1; text-align:center; border-radius:9px; border:1.5px solid var(--ink-3); background:var(--surface); color:var(--ink); padding:8px 0; font-size:13px; font-weight:600;">No</span>
+        </div>
+      </div>
+      <div style="border-radius:12px; border:1px solid var(--line); background:var(--surface); padding:12px 13px;">
+        <p style="margin:0 0 9px; font-size:13px; font-weight:500; line-height:1.4;">¿Un médico te ha restringido el ejercicio?</p>
+        <div style="display:flex; gap:7px;">
+          <span style="flex:1; text-align:center; border-radius:9px; border:1.5px solid var(--line); background:var(--surface-2); color:var(--ink-2); padding:8px 0; font-size:13px; font-weight:600;">Sí</span>
+          <span style="flex:1; text-align:center; border-radius:9px; border:1.5px solid var(--ink-3); background:var(--surface); color:var(--ink); padding:8px 0; font-size:13px; font-weight:600;">No</span>
         </div>
       </div>
     </div>
 
-    <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 28px; border-top:1px solid var(--line); margin-top:18px;">
-      <span style="font-size:12px; color:var(--ink-3);">Puedes editar todo esto luego desde tu perfil</span>
-      <div style="display:flex; gap:8px;">
-        <span class="btn-2">Atrás</span>
-        <span class="btn">Crear ficha</span>
+    <div style="margin-top:12px; border-radius:12px; background:var(--wa-bg); padding:12px 13px; display:flex; gap:9px; align-items:flex-start;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4A35A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px;"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+      <p style="margin:0; font-size:12.5px; color:var(--wa-tx); line-height:1.45;">
+        Recepción te pedirá un certificado médico antes de tu primera sesión de alta intensidad.
+      </p>
+    </div>
+
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; gap:11px; align-items:flex-start;">
+        <div style="width:19px; height:19px; flex-shrink:0; border-radius:6px; border:1.5px solid var(--acc); background:var(--acc); display:flex; align-items:center; justify-content:center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0A0A0B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <span style="font-size:13px; line-height:1.4; color:var(--ink);">Acepto el <strong style="font-weight:600;">reglamento interno</strong></span>
+      </div>
+      <div style="display:flex; gap:11px; align-items:flex-start;">
+        <div style="width:19px; height:19px; flex-shrink:0; border-radius:6px; border:1.5px solid var(--acc); background:var(--acc); display:flex; align-items:center; justify-content:center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0A0A0B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <span style="font-size:13px; line-height:1.4; color:var(--ink);">Autorizo el <strong style="font-weight:600;">tratamiento de mis datos</strong></span>
+      </div>
+      <div style="display:flex; gap:11px; align-items:flex-start;">
+        <div style="width:19px; height:19px; flex-shrink:0; border-radius:6px; border:1.5px solid var(--acc); background:var(--acc); display:flex; align-items:center; justify-content:center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0A0A0B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <span style="font-size:13px; line-height:1.4; color:var(--ink);">Doy mi <strong style="font-weight:600;">consentimiento</strong> para actividad física</span>
+      </div>
+      <div style="display:flex; gap:11px; align-items:flex-start;">
+        <div style="width:19px; height:19px; flex-shrink:0; border-radius:6px; border:1.5px solid var(--line); background:var(--surface-2); display:flex; align-items:center; justify-content:center;">
+          
+        </div>
+        <span style="font-size:13px; line-height:1.4; color:var(--ink-2);">Autorizo el uso de <strong style="font-weight:600;">fotografías</strong> <span style="color:var(--ink-3);">— opcional</span></span>
       </div>
     </div>
+  </main>
+
+  <div style="flex-shrink:0; padding:14px 18px 20px; border-top:1px solid var(--line); background:var(--surface);">
+    <div class="btn">Crear mi ficha</div>
   </div>
 </div>
 </x-dc>

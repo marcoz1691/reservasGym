@@ -16,132 +16,126 @@
       --ink:#F4F4F3; --ink-2:#A19E9A; --ink-3:#6C6966;
       --acc:#FFFFFF; --acc-contrast:#0A0A0B; --acc-soft:rgba(255,255,255,.07);
       --ok-bg:rgba(126,169,139,.13); --ok-tx:#7EA98B; --wa-bg:rgba(196,163,90,.13); --wa-tx:#C4A35A; --da-bg:rgba(199,120,110,.13); --da-tx:#C7786E;
-      --shadow:0 1px 2px rgba(0,0,0,.6), 0 10px 28px -10px rgba(0,0,0,.5);
+      --shadow:0 1px 2px rgba(0,0,0,.6), 0 8px 20px -8px rgba(0,0,0,.5);
       --font-sans:'IBM Plex Sans',-apple-system,sans-serif; --font-mono:'IBM Plex Mono',ui-monospace,monospace;
     }
     * { box-sizing:border-box; }
     body { margin:0; font-family:var(--font-sans); background:var(--bg); color:var(--ink); }
     .mono { font-family:var(--font-mono); }
-    .nav { display:flex; align-items:center; gap:10px; border-radius:8px; padding:9px 10px; color:var(--ink-2); font-size:14px; font-weight:500; }
-    .nav.on { background:var(--acc-soft); color:var(--acc-contrast); font-weight:700; }
     .card { border-radius:14px; border:1px solid var(--line); background:var(--surface); box-shadow:var(--shadow); }
-    .pill { border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; }
-    .chip { display:inline-flex; align-items:center; border-radius:999px; border:1px solid var(--line); background:var(--surface); padding:6px 13px; font-size:12.5px; font-weight:500; color:var(--ink-2); }
+    .pill { border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; white-space:nowrap; }
+    .chip { display:inline-flex; align-items:center; border-radius:999px; border:1px solid var(--line); background:var(--surface); padding:8px 14px; font-size:13px; font-weight:500; color:var(--ink-2); white-space:nowrap; }
     .chip.on { background:var(--acc); border-color:var(--acc); color:var(--acc-contrast); font-weight:700; }
-    .btn { border-radius:10px; background:var(--acc); color:var(--acc-contrast); padding:9px 18px; font-size:13px; font-weight:700; display:inline-block; }
-    .btn-2 { border-radius:10px; border:1px solid var(--line); padding:9px 16px; font-size:13px; font-weight:600; color:var(--ink-2); display:inline-block; }
-    .lbl { font-size:12px; font-weight:600; color:var(--ink-2); display:block; margin-bottom:5px; }
-    .inp { border-radius:10px; border:1.5px solid var(--line); background:var(--surface-2); padding:10px 12px; font-size:13.5px; color:var(--ink); }
+    /* 48px de alto: por encima del minimo de 44px para tocar comodo */
+    .btn { border-radius:12px; background:var(--acc); color:var(--acc-contrast); padding:14px 20px; font-size:15px; font-weight:700; text-align:center; display:block; }
+    .btn-2 { border-radius:12px; border:1px solid var(--line); background:var(--surface); padding:13px 18px; font-size:14px; font-weight:600; color:var(--ink-2); text-align:center; display:block; }
+    .lbl { font-size:12.5px; font-weight:600; color:var(--ink-2); display:block; margin-bottom:6px; }
+    .inp { border-radius:12px; border:1.5px solid var(--line); background:var(--surface-2); padding:13px 14px; font-size:15px; color:var(--ink); }
     .eyebrow { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); }
-    th { text-align:left; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-3); padding:10px 14px; border-bottom:1px solid var(--line); }
-    td { padding:12px 14px; font-size:13px; border-bottom:1px solid var(--line); }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   </style>
 </helmet>
 
-<div style="width:1440px; height:980px; background:var(--bg); display:flex; overflow:hidden;">
+<div style="width:390px; height:844px; background:var(--bg); display:flex; flex-direction:column; overflow:hidden;">
 
-  <aside style="width:240px; flex-shrink:0; border-right:1px solid var(--line); background:var(--surface); padding:20px; display:flex; flex-direction:column; justify-content:space-between;">
-    <div style="display:flex; flex-direction:column; gap:20px;">
-      <div style="display:flex; align-items:center; gap:9px; padding:4px 4px 12px; border-bottom:1px solid var(--line);">
-        <img src="mark-white.png" alt="Zona Cero" style="height:24px; width:auto; display:block;" />
-        <div style="font-size:14px; font-weight:700; letter-spacing:-.01em;">Zona Cero</div>
-      </div>
-      <nav style="display:flex; flex-direction:column; gap:2px;">
-        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>Inicio</div>
-        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>Agenda</div>
-        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h11l4 4-4 4H4z"/></svg>Mis Reservas</div>
-        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>Mi Plan</div>
-        <div class="nav on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-8"/><path d="M15 7h5v5"/></svg>Control de Peso</div>
-        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Explorar Áreas</div>
-        <div class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Mi Perfil</div>
-      </nav>
+  <header style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--line); background:var(--surface);">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <img src="mark-white.png" alt="Zona Cero" style="height:21px; width:auto; display:block;" />
+      <span style="font-size:14px; font-weight:700; letter-spacing:-.01em;">Control de peso</span>
     </div>
-    <div style="display:flex; align-items:center; gap:10px; padding:12px 6px 0; border-top:1px solid var(--line);">
-      <div style="display:flex; height:32px; width:32px; align-items:center; justify-content:center; border-radius:999px; background:var(--surface-2); border:1px solid var(--line); font-size:11px; font-weight:700; color:var(--ink-2);">AS</div>
-      <div><p style="margin:0; font-size:12px; font-weight:600;">Ana Socio</p><p style="margin:0; font-size:11px; color:var(--ink-3);">Socio activo</p></div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="height:32px; width:32px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--ink-2);">AS</div>
     </div>
-  </aside>
+  </header>
 
-  <main style="flex:1; min-width:0; padding:32px 40px; display:flex; flex-direction:column; gap:18px;">
-    <div>
-      <h1 style="margin:0; font-size:24px; font-weight:700;">Control de peso</h1>
-      <p style="margin:5px 0 0; font-size:13px; color:var(--ink-3);">Progreso antropométrico, IMC e historial de medidas</p>
-    </div>
-
-    <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:14px;">
-      <div class="card" style="padding:22px 24px;">
-        <div style="display:flex; align-items:flex-end; justify-content:space-between;">
-          <div>
-            <p class="eyebrow" style="margin:0;">Peso actual</p>
-            <p style="margin:6px 0 0; font-size:38px; font-weight:700; line-height:1;">78.4 <span style="font-size:18px; font-weight:500; color:var(--ink-3);">kg</span></p>
-            <p style="margin:6px 0 0; font-size:12.5px; color:var(--ok-tx); font-weight:600;">−1.8 kg desde tu registro inicial</p>
-          </div>
-          <span class="btn">Registrar medida</span>
-        </div>
-
-        <!-- Gráfica de progreso -->
-        <div style="margin-top:24px;">
-          <svg viewBox="0 0 560 150" style="width:100%; height:150px; display:block;">
-            <line x1="0" y1="30" x2="560" y2="30" stroke="#27272A" stroke-width="1"/>
-            <line x1="0" y1="70" x2="560" y2="70" stroke="#27272A" stroke-width="1"/>
-            <line x1="0" y1="110" x2="560" y2="110" stroke="#27272A" stroke-width="1"/>
-            <path d="M20,42 L110,55 L200,50 L290,78 L380,88 L470,96 L540,104" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="20" cy="42" r="3.5" fill="#FFFFFF"/>
-            <circle cx="110" cy="55" r="3.5" fill="#FFFFFF"/>
-            <circle cx="200" cy="50" r="3.5" fill="#FFFFFF"/>
-            <circle cx="290" cy="78" r="3.5" fill="#FFFFFF"/>
-            <circle cx="380" cy="88" r="3.5" fill="#FFFFFF"/>
-            <circle cx="470" cy="96" r="3.5" fill="#FFFFFF"/>
-            <circle cx="540" cy="104" r="4.5" fill="#FFFFFF" stroke="#0A0A0B" stroke-width="2"/>
-          </svg>
-          <div class="mono" style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--ink-3); margin-top:6px;">
-            <span>Mar</span><span>Abr</span><span>May</span><span>Jun</span><span>Jul</span><span>Ago</span><span>Sep</span>
-          </div>
-        </div>
+  <main style="flex:1; min-height:0; overflow:hidden; padding:16px;">
+    <div class="card" style="padding:18px; margin-bottom:13px;">
+      <span class="eyebrow">Peso actual</span>
+      <div class="row" style="margin-top:5px; align-items:flex-end;">
+        <p style="margin:0; font-size:34px; font-weight:700; line-height:1;">78.4 <span style="font-size:16px; font-weight:500; color:var(--ink-3);">kg</span></p>
+        <span class="pill" style="background:var(--ok-bg); color:var(--ok-tx);">−1.8 kg</span>
       </div>
 
-      <div style="display:flex; flex-direction:column; gap:14px;">
-        <div class="card" style="padding:20px 22px;">
-          <p class="eyebrow" style="margin:0;">Índice de masa corporal</p>
-          <p style="margin:6px 0 0; font-size:30px; font-weight:700; line-height:1;">24.2</p>
-          <span class="pill" style="display:inline-block; margin-top:8px; background:var(--ok-bg); color:var(--ok-tx);">Peso normal</span>
-          <div style="margin-top:14px; display:flex; height:6px; border-radius:999px; overflow:hidden;">
-            <div style="flex:2; background:#3A4A55;"></div>
-            <div style="flex:3; background:#4A6B57;"></div>
-            <div style="flex:3; background:#6B5B3A;"></div>
-            <div style="flex:2; background:#6B4444;"></div>
-          </div>
-          <div class="mono" style="display:flex; justify-content:space-between; font-size:9.5px; color:var(--ink-3); margin-top:5px;">
-            <span>18.5</span><span>25.0</span><span>30.0</span><span>35+</span>
-          </div>
-        </div>
-        <div class="card" style="padding:20px 22px;">
-          <p class="eyebrow" style="margin:0;">Objetivo</p>
-          <p style="margin:6px 0 0; font-size:15px; font-weight:600;">Llegar a 75.0 kg</p>
-          <div style="margin-top:10px; height:6px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line); overflow:hidden;">
-            <div style="width:54%; height:100%; background:var(--acc);"></div>
-          </div>
-          <p style="margin:8px 0 0; font-size:12px; color:var(--ink-3);">Faltan 3.4 kg · 54% del camino</p>
-        </div>
+      <svg viewBox="0 0 320 90" style="width:100%; height:90px; display:block; margin-top:16px;">
+        <line x1="0" y1="20" x2="320" y2="20" stroke="#27272A" stroke-width="1"/>
+        <line x1="0" y1="50" x2="320" y2="50" stroke="#27272A" stroke-width="1"/>
+        <line x1="0" y1="80" x2="320" y2="80" stroke="#27272A" stroke-width="1"/>
+        <path d="M12,26 L64,34 L116,31 L168,49 L220,56 L272,61 L308,66" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="26" r="3" fill="#FFFFFF"/><circle cx="116" cy="31" r="3" fill="#FFFFFF"/>
+        <circle cx="220" cy="56" r="3" fill="#FFFFFF"/>
+        <circle cx="308" cy="66" r="4.5" fill="#FFFFFF" stroke="#0A0A0B" stroke-width="2"/>
+      </svg>
+      <div class="mono" style="display:flex; justify-content:space-between; font-size:10px; color:var(--ink-3); margin-top:4px;">
+        <span>Mar</span><span>May</span><span>Jul</span><span>Sep</span>
       </div>
     </div>
+
+    <div style="display:flex; gap:11px; margin-bottom:13px;">
+      <div class="card" style="flex:1; padding:15px;">
+        <span class="eyebrow">IMC</span>
+        <p style="margin:5px 0 0; font-size:24px; font-weight:700; line-height:1;">24.2</p>
+        <span class="pill" style="display:inline-block; margin-top:7px; background:var(--ok-bg); color:var(--ok-tx);">Normal</span>
+      </div>
+      <div class="card" style="flex:1; padding:15px;">
+        <span class="eyebrow">Objetivo</span>
+        <p style="margin:5px 0 0; font-size:24px; font-weight:700; line-height:1;">75.0</p>
+        <p style="margin:7px 0 0; font-size:11px; color:var(--ink-3);">Faltan 3.4 kg</p>
+      </div>
+    </div>
+
+    <div class="btn" style="margin-bottom:13px;">Registrar nueva medida</div>
 
     <div class="card" style="overflow:hidden;">
-      <div style="padding:16px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;">
-        <p style="margin:0; font-size:15px; font-weight:700;">Historial de medidas</p>
-        <span style="font-size:12px; font-weight:600; color:var(--acc);">Exportar</span>
+      <div style="padding:13px 15px; border-bottom:1px solid var(--line);">
+        <p style="margin:0; font-size:14px; font-weight:700;">Últimas medidas</p>
       </div>
-      <table style="width:100%; border-collapse:collapse;">
-        <thead><tr><th>Fecha</th><th>Peso</th><th>IMC</th><th>Cintura</th><th>Cadera</th><th>Registrado por</th></tr></thead>
-        <tbody>
-          <tr><td class="mono">05 sep 2026</td><td style="font-weight:600;">78.4 kg</td><td>24.2</td><td>84 cm</td><td>98 cm</td><td style="color:var(--ink-3);">Ana Socio</td></tr>
-          <tr><td class="mono">22 ago 2026</td><td style="font-weight:600;">79.1 kg</td><td>24.4</td><td>85 cm</td><td>98 cm</td><td style="color:var(--ink-3);">Recepción</td></tr>
-          <tr><td class="mono">08 ago 2026</td><td style="font-weight:600;">79.6 kg</td><td>24.6</td><td>86 cm</td><td>99 cm</td><td style="color:var(--ink-3);">Ana Socio</td></tr>
-          <tr><td class="mono">18 jul 2026</td><td style="font-weight:600;">80.2 kg</td><td>24.8</td><td>87 cm</td><td>99 cm</td><td style="color:var(--ink-3);">Recepción</td></tr>
-        </tbody>
-      </table>
+      <div class="row" style="padding:12px 15px; border-bottom:1px solid var(--line);">
+        <span class="mono" style="font-size:12.5px; color:var(--ink-3);">05 sep</span>
+        <span style="font-size:13.5px; font-weight:600;">78.4 kg</span>
+        <span style="font-size:12.5px; color:var(--ink-2);">IMC 24.2</span>
+      </div>
+      <div class="row" style="padding:12px 15px; border-bottom:1px solid var(--line);">
+        <span class="mono" style="font-size:12.5px; color:var(--ink-3);">22 ago</span>
+        <span style="font-size:13.5px; font-weight:600;">79.1 kg</span>
+        <span style="font-size:12.5px; color:var(--ink-2);">IMC 24.4</span>
+      </div>
+      <div class="row" style="padding:12px 15px; ">
+        <span class="mono" style="font-size:12.5px; color:var(--ink-3);">08 ago</span>
+        <span style="font-size:13.5px; font-weight:600;">79.6 kg</span>
+        <span style="font-size:12.5px; color:var(--ink-2);">IMC 24.6</span>
+      </div>
     </div>
   </main>
+
+  <nav style="flex-shrink:0; border-top:1px solid var(--line); background:var(--surface); padding-bottom:8px;">
+    <div style="display:flex; align-items:stretch;">
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 0 3px; color:var(--ink-3);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+        <span style="font-size:10px; font-weight:500;">Inicio</span>
+        <span style="height:3.5px;"></span>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 0 3px; color:var(--ink-3);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+        <span style="font-size:10px; font-weight:500;">Agenda</span>
+        <span style="height:3.5px;"></span>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 0 3px; color:var(--ink-3);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h11l4 4-4 4H4z"/></svg>
+        <span style="font-size:10px; font-weight:500;">Reservas</span>
+        <span style="height:3.5px;"></span>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 0 3px; color:var(--ink-3);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>
+        <span style="font-size:10px; font-weight:500;">Mi Plan</span>
+        <span style="height:3.5px;"></span>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 0 3px; color:var(--acc);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-8"/><path d="M15 7h5v5"/></svg>
+        <span style="font-size:10px; font-weight:700;">Peso</span>
+        <span style="width:18px; height:2.5px; border-radius:999px; background:var(--acc); margin-top:1px;"></span>
+      </div>
+    </div>
+  </nav>
 </div>
 </x-dc>
 </body>

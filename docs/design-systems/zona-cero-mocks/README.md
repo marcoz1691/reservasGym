@@ -17,7 +17,7 @@ prototipo clicable ni el código de la app.
 
 Las dos opciones tienen las **mismas 17 pantallas en el mismo layout**, para
 poder compararlas una a una. El canvas se divide en 6 páginas (3 por opción):
-Socio, Staff y Ficha.
+app del socio (móvil), panel del personal (escritorio) y ficha de ingreso (móvil).
 
 **Por qué el acento blanco en la Opción 2:** sobre negro, el naranja de marca se
 vuelve estridente y compite con el contenido. Un botón blanco sobre negro lee
@@ -27,35 +27,50 @@ como premium y deja que el logo sea el único portador del color de marca.
 
 ## Pantallas
 
-### Socio (9)
+Cada opción tiene 17 pantallas. **El socio va en móvil, el personal en
+escritorio** — así lo define el contrato:
 
-| Artboard | Ruta en la app | Contenido |
+> **5.1.** La aplicación para socios será entregada **exclusivamente mediante
+> publicación en App Store y Google Play**. No incluye una versión web.
+> **5.2.** Adicionalmente… un **panel de administración web**, de uso exclusivo
+> del personal del centro.
+
+### App del socio · 390 × 844 (iPhone 14/15) — 9 pantallas
+
+| Artboard | Ruta | Contenido |
 |---|---|---|
-| `Login.dc.html` | `/login` | Acceso + accesos demo |
-| `Main.dc.html` | `/` | Saludo, próxima clase, métricas, próximas sesiones |
-| `Agenda.dc.html` | `/agenda` | Grilla semanal, filtros por disciplina, detalle de sesión |
-| `MisReservas.dc.html` | `/reservas` | Confirmadas, lista de espera, cancelar/reagendar/QR |
-| `MiPlan.dc.html` | `/membresia` | Membresía, vigencia, métodos de pago, planes |
-| `Explorar.dc.html` | `/explorar` | Las 9 disciplinas con aforo y acceso por plan |
-| `Peso.dc.html` | `/peso` | Peso, gráfica de progreso, IMC, objetivo, historial |
+| `Login.dc.html` | `/login` | Acceso + entrada con huella |
+| `Main.dc.html` | `/` | Saludo, próxima clase, métricas, sesiones |
+| `Agenda.dc.html` | `/agenda` | Tira de días, sesiones del día, reservar / lista de espera |
+| `MisReservas.dc.html` | `/reservas` | Confirmadas, en espera, QR / cancelar / reagendar |
+| `MiPlan.dc.html` | `/membresia` | Membresía, vigencia, métodos de pago, otros planes |
+| `Explorar.dc.html` | `/explorar` | Las 9 disciplinas con aforo del día |
+| `Peso.dc.html` | `/peso` | Peso, gráfica, IMC, objetivo, últimas medidas |
 | `Perfil.dc.html` | `/perfil` | Datos, ficha técnica, biometría |
-| `CheckIn.dc.html` | `/check-in` | QR de asistencia con ventana de validez |
+| `CheckIn.dc.html` | `/check-in` | QR de asistencia |
 
-### Staff / Admin (5)
+Estructura tomada de `AppLayout.tsx`: header compacto arriba y **barra de 5 tabs
+abajo** (Inicio, Agenda, Reservas, Mi Plan, Peso). Explorar, Perfil y Check-in se
+alcanzan desde otras pantallas, no desde los tabs.
+
+Sin barra de estado dibujada (hora/batería): en el teléfono real la pinta el
+sistema encima y dibujarla se ve duplicada.
+
+### Ficha de ingreso · 390 × 844 — 3 pantallas
+
+`Ficha.dc.html` · `Ficha2.dc.html` · `Ficha3.dc.html` — ver sección siguiente.
+En móvil **no es un modal** sino un flujo a pantalla completa: un modal de 390 px
+de ancho solo roba espacio.
+
+### Panel del personal · escritorio — 5 pantallas
 
 | Artboard | Ruta | Contenido |
 |---|---|---|
 | `Admin.dc.html` | `/admin` | Ocupación del día, acciones rápidas, estado de membresías |
-| `Cobros.dc.html` | `/admin/cobros` | Buscar socio, cobrar (Datafast/efectivo/transferencia), vencidos, caja del día |
-| `Planes.dc.html` | `/admin/planes` | Tabla de planes + editor con acceso por disciplina |
-| `Sesiones.dc.html` | `/admin/sesiones` | Tabla de sesiones + editor con cupo y lista de espera |
-| `Marca.dc.html` | `/admin/marca` | Nombre, logo, color de acento y vista previa |
-
-### Ficha de ingreso (3)
-
-`Ficha.dc.html` · `Ficha2.dc.html` · `Ficha3.dc.html` — ver sección siguiente.
-
----
+| `Cobros.dc.html` | `/admin/cobros` | Buscar socio, cobrar, vencidos, caja del día |
+| `Planes.dc.html` | `/admin/planes` | Tabla + editor con acceso por disciplina |
+| `Sesiones.dc.html` | `/admin/sesiones` | Tabla + editor con cupo y lista de espera |
+| `Marca.dc.html` | `/admin/marca` | Nombre, logo, acento y vista previa |
 
 ## El formulario: de 6 pasos a 3
 
@@ -117,7 +132,8 @@ Referencia: `GYM-One/login/index.php` y `GYM-One/assets/css/dashboard.css`.
 |---|---|
 | Radios | 8–16px (GYM-One usa 13–18px) |
 | Tipografía | IBM Plex Sans (400/500/600/700) + IBM Plex Mono para etiquetas de dato |
-| Animación | Solo en el login (entrada de tarjeta + escalonado), con `prefers-reduced-motion` |
+| Animación | Solo la entrada de la tarjeta en el login, con `prefers-reduced-motion` |
+| Áreas táctiles | Botones de 48 px de alto, por encima del mínimo de 44 px |
 
 **Descartado** de una primera versión oscura anterior: cortes diagonales, glows,
 gradientes y la tipografía Crosers. El logo ya aporta la personalidad angular.
@@ -126,18 +142,19 @@ gradientes y la tipografía Crosers. El logo ya aporta la personalidad angular.
 
 ## Cómo regenerar
 
-Las pantallas con sidebar se generan con scripts para no repetir el shell:
+Las pantallas se generan con scripts para no repetir el shell en cada archivo:
 
 ```bash
-node _build-socio.mjs    # MisReservas, Explorar, Peso, Perfil, CheckIn
-node _build-admin.mjs    # Admin, Cobros, Planes, Sesiones, Marca
-node _build-ficha.mjs    # Ficha 1-3
-node _build-black.mjs    # deriva las 17 pantallas Black del set claro
-node _build-canvas.mjs   # arma canvas.json con las 6 páginas
+node _build-mobile.mjs        # 9 pantallas del socio (móvil)
+node _build-mobile-ficha.mjs  # los 3 pasos de la ficha (móvil)
+node _build-admin.mjs         # 5 del personal (escritorio)
+node _build-black.mjs         # deriva las 17 al tema Black
+node _build-canvas.mjs        # arma canvas.json con las 6 páginas
+node _build-viewer.mjs        # arma el visor del cliente (index.html)
 ```
 
-`_gen.mjs` contiene los tokens, el sidebar y los iconos compartidos.
-`Main`, `Login`, `MiPlan` y `Agenda` están escritos a mano (no se generan).
+`_gen-mobile.mjs` contiene el shell móvil (header + barra de tabs) y `_gen.mjs`
+el de escritorio (sidebar). Los iconos y tokens viven ahí.
 
 `_build-black.mjs` no reescribe pantallas: **remapea los valores del bloque
 `:root`** de cada archivo claro, porque todas usan los mismos nombres de token.

@@ -19,35 +19,35 @@ for (const f of IMG_FILES) {
 
 const GROUPS = [
   {
-    name: 'Socio',
+    name: 'App del socio · móvil',
     screens: [
-      ['Login', 'Iniciar sesión', 1280, 820],
-      ['Main', 'Inicio', 1440, 940],
-      ['Agenda', 'Agenda', 1440, 960],
-      ['MisReservas', 'Mis reservas', 1440, 900],
-      ['MiPlan', 'Mi plan', 1440, 1180],
-      ['Explorar', 'Explorar disciplinas', 1440, 900],
-      ['Peso', 'Control de peso', 1440, 980],
-      ['Perfil', 'Mi perfil', 1440, 900],
-      ['CheckIn', 'Check-in QR', 1100, 820],
+      ['Login', 'Iniciar sesión', 390, 844],
+      ['Main', 'Inicio', 390, 844],
+      ['Agenda', 'Agenda', 390, 844],
+      ['MisReservas', 'Mis reservas', 390, 844],
+      ['MiPlan', 'Mi plan', 390, 844],
+      ['Explorar', 'Explorar disciplinas', 390, 844],
+      ['Peso', 'Control de peso', 390, 844],
+      ['Perfil', 'Mi perfil', 390, 844],
+      ['CheckIn', 'Check-in QR', 390, 844],
     ],
   },
   {
-    name: 'Recepción y administración',
+    name: 'Ficha de ingreso · móvil',
+    screens: [
+      ['Ficha', 'Paso 1 · Datos del socio', 390, 844],
+      ['Ficha2', 'Paso 2 · Entrenamiento', 390, 844],
+      ['Ficha3', 'Paso 3 · Salud y permisos', 390, 844],
+    ],
+  },
+  {
+    name: 'Panel del personal · escritorio',
     screens: [
       ['Admin', 'Panel general', 1440, 900],
       ['Cobros', 'Cobros y POS', 1440, 960],
       ['Planes', 'Planes de membresía', 1440, 860],
       ['Sesiones', 'Sesiones y clases', 1440, 880],
       ['Marca', 'Marca del gimnasio', 1200, 800],
-    ],
-  },
-  {
-    name: 'Ficha de ingreso',
-    screens: [
-      ['Ficha', 'Paso 1 · Datos del socio', 920, 740],
-      ['Ficha2', 'Paso 2 · Entrenamiento', 920, 780],
-      ['Ficha3', 'Paso 3 · Salud y permisos', 920, 900],
     ],
   },
 ]
@@ -188,7 +188,7 @@ const html = `<!doctype html>
 
   <div class="zoom">
     <button id="zOut" title="Reducir">−</button>
-    <span id="zVal">75%</span>
+    <span id="zVal">100%</span>
     <button id="zIn" title="Ampliar">+</button>
   </div>
 </header>
@@ -216,7 +216,7 @@ const META = ${JSON.stringify(
 
 let opt = 'light';
 let current = 'Login';
-let zoom = 0.75;
+let zoom = 1;
 
 const view = document.getElementById('view');
 const wrap = document.getElementById('wrap');
