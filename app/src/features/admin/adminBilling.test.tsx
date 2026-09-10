@@ -196,8 +196,70 @@ describe('Admin Billing & Membership Plans UI', () => {
       expect(await screen.findByText('Plan Fisioterapia & Cross')).toBeInTheDocument()
     })
 
+    it('allows admin to edit a plan and delete a plan from the UI', async () => {
+      const user = userEvent.setup()
+      await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/planes']}>
+            <Routes>
+              <Route path="/admin/planes" element={<PlanesPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+
+      expect(await screen.findByText(/Plan Trimestral/i)).toBeInTheDocument()
+
+      const editButtons = screen.getAllByRole('button', { name: /Editar/i })
+      await user.click(editButtons[0]!)
+
+      const priceInput = screen.getByLabelText(/Precio en USD/i)
+      await user.clear(priceInput)
+      await user.type(priceInput, '99.00')
+
+      await user.click(screen.getByRole('button', { name: /Guardar Cambios/i }))
+      expect(await screen.findByText('$99.00')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: /Crear Nuevo Plan/i }))
+      await user.type(screen.getByLabelText(/Nombre del Plan/i), 'Plan Temp Delete')
+      await user.type(screen.getByLabelText(/Precio en USD/i), '10')
+      await user.click(screen.getByRole('button', { name: /Crear Plan/i }))
+      expect(await screen.findByText('Plan Temp Delete')).toBeInTheDocument()
+
+      const card = screen.getByText('Plan Temp Delete').closest('[class*="rounded"]')!
+      const deleteBtn = card.querySelector('button[class*="danger"]') as HTMLButtonElement
+      await user.click(deleteBtn)
+
+      expect(
+        screen.getByText(/¿Eliminar Plan de Membresía\?/i),
+      ).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: /Sí, Eliminar Plan/i }))
+
+      expect(screen.queryByText('Plan Temp Delete')).not.toBeInTheDocument()
+    })
+
     it('restricts non-admin users from accessing PlanesPage', async () => {
       await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/planes']}>
+            <Routes>
+              <Route path="/admin/planes" element={<PlanesPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+
+      expect(
+        await screen.findByText(/Acceso exclusivo para Administradores/i),
+      ).toBeInTheDocument()
+    })
+
+    it('restricts members from accessing PlanesPage', async () => {
+      await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
 
       render(
         <RepositoryProvider>

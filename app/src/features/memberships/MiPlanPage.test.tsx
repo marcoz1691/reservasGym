@@ -83,4 +83,31 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
     expect(screen.getByText('Planes disponibles')).toBeInTheDocument()
     expect(screen.getByText(/Sin registros de pago/i)).toBeInTheDocument()
   })
+
+  it('does not show inactive plans in PlansShowcase for members', async () => {
+    const adminRepo = new LocalRepository()
+    await adminRepo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    await adminRepo.upsertMembershipPlan({
+      id: 'plan-trimestral',
+      name: 'Plan Trimestral',
+      priceCents: 12000,
+      durationDays: 90,
+      active: false,
+    })
+
+    const memberRepo = new LocalRepository()
+    await memberRepo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <MiPlanPage />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
+    expect(screen.queryByText('Plan Trimestral')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Plan Mensual Ilimitado').length).toBeGreaterThan(0)
+  })
 })
