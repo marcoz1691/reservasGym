@@ -52,6 +52,7 @@ function createMockRepo(user: User, state: Partial<GymState>): GymRepository {
     signUp: vi.fn(),
     signOut: vi.fn(),
     resetPassword: vi.fn(),
+    updatePassword: vi.fn(),
     deleteAccount: vi.fn(),
     listBookingsForUser: vi.fn().mockResolvedValue([]),
     createBooking: vi.fn().mockResolvedValue({ id: 'bk_new', status: 'confirmed' }),

@@ -83,6 +83,10 @@ export function ForgotPasswordModal({
                 <p className="text-ink-2">
                   Si la cuenta <span className="font-semibold text-acc">{email}</span> existe, recibirás instrucciones para restablecer tu contraseña.
                 </p>
+                <p className="text-ink-3">
+                  Revisa también la carpeta de correo no deseado. El enlace
+                  caduca por seguridad.
+                </p>
               </div>
             </div>
             <Button

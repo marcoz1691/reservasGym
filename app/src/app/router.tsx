@@ -11,6 +11,11 @@ import { Spinner } from '@/ui/primitives'
 const LoginPage = lazy(() =>
   import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
+const ResetPasswordPage = lazy(() =>
+  import('@/features/auth/ResetPasswordPage').then((m) => ({
+    default: m.ResetPasswordPage,
+  })),
+)
 const HomePage = lazy(() =>
   import('@/features/catalog/HomePage').then((m) => ({ default: m.HomePage })),
 )
@@ -78,6 +83,8 @@ export function AppRouter() {
     <Suspense fallback={<Spinner />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* Pública: se llega desde el enlace del correo, sin sesión iniciada. */}
+        <Route path="/recuperar" element={<ResetPasswordPage />} />
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
             <Route index element={<HomePage />} />
