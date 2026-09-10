@@ -28,6 +28,51 @@ describe('LocalRepository memberships and billing', () => {
     await expect(repo.deleteMembershipPlan(plans[0]!.id)).rejects.toThrow(/solo admin/i)
   })
 
+  it('persists plan edits across repository reload (simulates page refresh)', async () => {
+    const repo = new LocalRepository()
+    await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+
+    await repo.upsertMembershipPlan({
+      id: 'plan-trimestral',
+      name: 'Plan Trimestral QA',
+      priceCents: 9999,
+      durationDays: 90,
+    })
+
+    const reloaded = new LocalRepository()
+    await reloaded.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    const plans = await reloaded.getMembershipPlans()
+    const updated = plans.find((p) => p.id === 'plan-trimestral')
+
+    expect(updated?.name).toBe('Plan Trimestral QA')
+    expect(updated?.priceCents).toBe(9999)
+  })
+
+  it('hides inactive plans from members but not from admin', async () => {
+    const adminRepo = new LocalRepository()
+    await adminRepo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+
+    await adminRepo.upsertMembershipPlan({
+      id: 'plan-trimestral',
+      name: 'Plan Trimestral',
+      priceCents: 12000,
+      durationDays: 90,
+      active: false,
+    })
+
+    const memberRepo = new LocalRepository()
+    await memberRepo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
+    const memberPlans = await memberRepo.getMembershipPlans()
+    expect(memberPlans.some((p) => p.id === 'plan-trimestral')).toBe(false)
+    expect(memberPlans.every((p) => p.active)).toBe(true)
+
+    const adminReload = new LocalRepository()
+    await adminReload.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    const adminPlans = await adminReload.getMembershipPlans()
+    const inactive = adminPlans.find((p) => p.id === 'plan-trimestral')
+    expect(inactive?.active).toBe(false)
+  })
+
   it('allows admin to manage membership plans (upsert and delete)', async () => {
     const repo = new LocalRepository()
     await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })

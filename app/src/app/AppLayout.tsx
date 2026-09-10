@@ -110,11 +110,11 @@ export function AppLayout() {
 
   return (
     <div
-      className="mx-auto flex min-h-dvh max-w-7xl flex-col bg-bg text-ink lg:flex-row"
+      className="mx-auto flex h-dvh min-h-0 max-w-7xl flex-col overflow-hidden bg-bg text-ink lg:flex-row"
       style={{ ['--color-acc' as string]: accent }}
     >
       {/* Desktop & Tablet Sidebar */}
-      <aside className="hidden w-64 shrink-0 border-r border-line bg-surface p-5 lg:flex lg:flex-col justify-between">
+      <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-line bg-surface p-5 lg:flex lg:max-h-dvh lg:flex-col lg:justify-between">
         <div className="space-y-6">
           {/* Brand Header */}
           <Link
@@ -213,10 +213,10 @@ export function AppLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Mobile Safe Area Top Header */}
         <header
-          className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-surface/90 px-4 py-3 backdrop-blur-md lg:hidden"
+          className="z-20 flex shrink-0 items-center justify-between border-b border-line bg-surface/90 px-4 py-3 backdrop-blur-md lg:hidden"
           style={{ paddingTop: 'max(env(safe-area-inset-top), 0.75rem)' }}
         >
           <Link
@@ -268,15 +268,15 @@ export function AppLayout() {
           </div>
         </header>
 
-        {/* Main Content with Safe Bottom Margin for Tab Bar */}
-        <main className="flex-1 p-4 pb-28 sm:p-6 lg:p-8 lg:pb-8">
+        {/* Main scroll area — height is viewport minus header + tab bar (flex, not fixed overlay) */}
+        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-4 sm:p-6 lg:p-8">
           <ExpiryBanner />
           <Outlet />
         </main>
 
-        {/* Mobile Safe Area Bottom Tab Bar (5 Tabs) */}
+        {/* Mobile bottom tab bar — in document flow so content is never hidden underneath */}
         <nav
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 backdrop-blur-lg shadow-2xl lg:hidden"
+          className="z-30 shrink-0 border-t border-line bg-surface/95 backdrop-blur-lg shadow-2xl lg:hidden"
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}
         >
           <div className="mx-auto flex max-w-md items-center justify-around px-2 pt-2">

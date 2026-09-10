@@ -383,6 +383,18 @@ export class SupabaseRepository implements GymRepository {
     return user
   }
 
+  private async requireStaff(): Promise<User> {
+    const user = await this.requireUser()
+    if (user.role === 'member') throw new Error('Sin permiso')
+    return user
+  }
+
+  private async requireAdmin(): Promise<User> {
+    const user = await this.requireUser()
+    if (user.role !== 'admin') throw new Error('Solo admin')
+    return user
+  }
+
   private async fetchState(): Promise<GymState> {
     const [
       settingsRes,
@@ -1251,18 +1263,23 @@ export class SupabaseRepository implements GymRepository {
   }
 
   async getMembershipPlans(): Promise<MembershipPlan[]> {
+    const actor = await this.getCurrentUser()
     const { data, error } = await this.client
       .from('membership_plans')
       .select('*')
       .order('price_cents', { ascending: true })
     if (error) throw new Error(error.message)
-    return (data ?? []).map(mapMembershipPlan)
+    const plans = (data ?? []).map(mapMembershipPlan)
+    if (actor && (actor.role === 'staff' || actor.role === 'admin')) {
+      return plans
+    }
+    return plans.filter((p) => p.active)
   }
 
   async upsertMembershipPlan(
     plan: Partial<MembershipPlan> & { name: string; priceCents: number; durationDays: number },
   ): Promise<MembershipPlan> {
-    await this.requireUser()
+    await this.requireStaff()
     const row: Record<string, unknown> = {
       name: plan.name,
       price_cents: plan.priceCents,
@@ -1283,7 +1300,7 @@ export class SupabaseRepository implements GymRepository {
   }
 
   async deleteMembershipPlan(planId: string): Promise<void> {
-    await this.requireUser()
+    await this.requireAdmin()
     const { error } = await this.client
       .from('membership_plans')
       .delete()
