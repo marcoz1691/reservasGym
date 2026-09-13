@@ -87,6 +87,19 @@ function createMockRepo(user: User, state: Partial<GymState>): GymRepository {
   }
 }
 
+/**
+ * AgendaPage pinta la semana de lunes a domingo (weekStartsOn: 1) y los
+ * fixtures de abajo crean la sesión "mañana". Corriendo un domingo, ese mañana
+ * cae en la semana siguiente: la agenda no lo muestra y no aparece el botón
+ * Reservar. El reloj se ancla a un miércoles para que la prueba no dependa del
+ * día en que se ejecute.
+ *
+ * Va antes del describe a propósito: los fixtures se evalúan al construirse el
+ * describe, así que congelarlo en un beforeEach llegaría tarde.
+ */
+vi.useFakeTimers({ shouldAdvanceTime: true })
+vi.setSystemTime(new Date('2026-09-09T10:00:00'))
+
 describe('Booking Gate in ExplorePage & AgendaPage', () => {
   const memberUser: User = {
     id: 'user_member_1',
