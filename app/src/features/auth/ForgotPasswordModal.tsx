@@ -54,7 +54,12 @@ export function ForgotPasswordModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs">
-      <div className="relative w-full max-w-md rounded-3xl border border-line bg-bg-2 p-6 shadow-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="forgot-password-title"
+        className="relative w-full max-w-md rounded-3xl border border-line bg-bg-2 p-6 shadow-2xl"
+      >
         <button
           type="button"
           onClick={handleClose}
@@ -69,7 +74,12 @@ export function ForgotPasswordModal({
             <KeyRound className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-lg font-extrabold text-ink">Recuperar contraseña</h2>
+            <h2
+              id="forgot-password-title"
+              className="text-lg font-extrabold text-ink"
+            >
+              Recuperar contraseña
+            </h2>
             <p className="text-xs text-ink-3">Te enviaremos un enlace a tu correo</p>
           </div>
         </div>
