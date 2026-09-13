@@ -52,15 +52,27 @@ regreso del enlace.
 - [ ] La contraseña **anterior** ya no sirve
 - [ ] Reutilizar el mismo enlace del correo → «enlace vencido o inválido»
 - [ ] Entrar a `/recuperar` directo, sin enlace → «enlace vencido o inválido»
-- [ ] `npm test` pasa (212 tests)
+- [ ] `npm test` pasa (227 tests)
 
 ## Cobertura automatizada
 
-| Archivo | Qué cubre |
-|---|---|
-| `app/src/domain/rules/password.test.ts` | 17 casos: largo mínimo, letras, números, acentos/ñ, coincidencia, fuerza |
-| `app/src/data/passwordRecovery.test.ts` | 11 casos: no enumerar correos, normalizar el email, invalidar la clave anterior, enlace de un solo uso, sesión tras el cambio |
-| `app/src/features/auth/ResetPasswordPage.test.tsx` | 5 casos: enlace inválido, validaciones en pantalla, guardado exitoso |
+**Unitarias e integración: 48 casos.**
+
+| Archivo | Nivel | Qué cubre |
+|---|---|---|
+| `app/src/domain/rules/password.test.ts` | Unitaria | 17 casos: largo mínimo, letras, números, acentos/ñ, coincidencia, fuerza |
+| `app/src/data/passwordRecovery.test.ts` | Repositorio | 11 casos: no enumerar correos, normalizar el email, invalidar la clave anterior, enlace de un solo uso, sesión tras el cambio |
+| `app/src/features/auth/ResetPasswordPage.test.tsx` | Componente | 5 casos: enlace inválido, validaciones en pantalla, guardado exitoso |
+| `app/src/test/passwordRecoveryFlow.test.tsx` | **Integración** | 15 casos (ver abajo) |
+
+### Integración — qué cubre que lo demás no
+
+| Grupo | Casos | Por qué importa |
+|---|---|---|
+| Recorrido por la UI | 5 | Cruza router y componentes: login → modal → `/recuperar` → contraseña nueva → entrar con ella. Incluye enlace de un solo uso y acceso directo sin enlace. |
+| Sesiones abiertas | 2 | Cambiar la contraseña invalida la sesión de otro dispositivo y ese deja de poder operar. |
+| **Contrato con Supabase** | 7 | Cliente inyectado, sin red. Verifica que el correo apunte a `/recuperar` y **no** a `/login` — el bug exacto que corrigió este ticket, que ninguna otra prueba habría detectado. Más: recorte del correo, propagación de errores del SDK, `updateUser`, detección de sesión. |
+| Repositorio activo | 1 | El error del backend se muestra tal cual, sin texto inventado. |
 
 ## Notas de implementación
 
