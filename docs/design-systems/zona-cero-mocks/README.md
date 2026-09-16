@@ -1,10 +1,14 @@
 # Zona Cero — Maquetas de la app
 
 Maquetas visuales de **todas** las pantallas de la app, en **dos opciones de
-diseño** sobre la misma estructura. Son maquetas estáticas para revisión — no un
-prototipo clicable ni el código de la app.
+diseño** sobre la misma estructura. Las HTML (`.dc.html`) son artboards
+estáticos; el entregable para revisión con cliente vive en Figma con prototipo
+clicable.
 
-**Ver publicado:** https://claude.ai/code/artifact/a4dac558-5871-4ae9-9ada-296b5b55a489
+**Figma (fuente de verdad para revisión):**
+[Zona Cero — Maquetas](https://www.figma.com/design/tOMAcDfv609HrEyR5zLiig)
+
+**Visor HTML (opcional):** https://claude.ai/artifact/MMhmNDe5Xc2ccMuwfWtmBE
 
 | | Opción 1 · Claro | Opción 2 · Black premium |
 |---|---|---|
@@ -180,6 +184,39 @@ El `.html` resultante (~6 MB, incluye el editor) no se versiona.
 
 Los monocromos se derivaron del lockup a color forzando todo píxel opaco al
 color destino y conservando el canal alfa.
+
+## Figma
+
+Archivo: [Zona Cero — Maquetas](https://www.figma.com/design/tOMAcDfv609HrEyR5zLiig)
+
+- **2 páginas:** Opción 1 · Claro · Opción 2 · Black  
+- **Secciones:** App del socio (móvil) · Ficha de ingreso · Panel del personal (escritorio)  
+- Pantalla extra en Figma (aún no en `.dc.html`): **Registro** — alta de cuenta antes de la ficha  
+
+### Prototipo (flujos de inicio)
+
+| Flujo | Arranque | Qué cubre |
+|---|---|---|
+| App · socio existente | Login | Login → Inicio + tabs + reservas / check-in / perfil |
+| App · alta de socio | Registro | Login → Registro → Ficha 1–3 → Inicio |
+| Panel del personal | Admin | Sidebar Panel / Cobros / Planes / Sesiones / Marca |
+
+Alta de socio: **Crear cuenta → Registro (correo/clave) → Ficha (datos → entrenamiento → salud) → Main**.
+
+### Re-capturar HTML → Figma (MCP)
+
+```bash
+# 1) Generar HTML plano servible (inyecta capture.js)
+node _serve-plain.mjs
+python -m http.server 8765 --directory _plain
+
+# 2) Pedir captureIds con generate_figma_design (MCP) y rellenar captures.json
+# 3) Opcional: automatizar apertura de URLs con Playwright
+npm i playwright   # local, no se versiona
+node _run-captures.mjs
+```
+
+`_plain/`, `index.html` del visor y `captures.json` no se versionan (ver `.gitignore`).
 
 ## Pendientes
 
