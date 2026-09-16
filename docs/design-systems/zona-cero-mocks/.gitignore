@@ -1,0 +1,14 @@
+# Generados / capturas Figma (no versionar)
+_plain/
+index.html
+captures.json
+node_modules/
+package-lock.json
+
+# Copias temporales de logos en la raíz (los canónicos viven en assets/)
+/logo-color.png
+/logo-white.png
+/logo-black.png
+/mark-color.png
+/mark-white.png
+/mark-black.png
