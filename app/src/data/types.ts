@@ -34,7 +34,16 @@ export interface GymRepository {
   signIn(creds: AuthCredentials): Promise<User>
   signUp(creds: AuthCredentials): Promise<User>
   signOut(): Promise<void>
+  /** Envía el correo con el enlace de recuperación. */
   resetPassword(email: string): Promise<void>
+  /**
+   * Fija una contraseña nueva para la sesión activa.
+   * Se usa tanto al volver del enlace de recuperación (Supabase abre una
+   * sesión temporal al validar el token) como al cambiarla desde el perfil.
+   */
+  updatePassword(newPassword: string): Promise<void>
+  /** True si hay una sesión abierta por un enlace de recuperación. */
+  hasRecoverySession?(): Promise<boolean>
   deleteAccount(): Promise<void>
   updateProfile?(patch: Partial<Omit<User, 'id' | 'email' | 'role' | 'createdAt'>>): Promise<User>
 

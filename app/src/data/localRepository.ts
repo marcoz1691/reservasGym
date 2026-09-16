@@ -40,6 +40,8 @@ import { scopeGymState } from './scopeGymState'
 const STORAGE_KEY = 'reservasgym.intermedia.v2'
 const SESSION_KEY = 'reservasgym.session.v2'
 const CREDS_KEY = 'reservasgym.creds.v1'
+/** Solo demo: simula el enlace de recuperación que en prod manda Supabase. */
+const RECOVERY_KEY = 'reservasgym.recovery.v1'
 /** Legacy key — cleared so plain user-id sessions cannot be forged. */
 const LEGACY_SESSION_KEY = 'reservasgym.sessionUserId'
 
@@ -309,11 +311,53 @@ export class LocalRepository implements GymRepository {
   async resetPassword(email: string): Promise<void> {
     await this.ensureReady()
     const normalized = email.trim().toLowerCase()
-    const exists = this.state.users.some((u) => u.email.toLowerCase() === normalized)
-    if (!exists) {
-      // For security and UX, resolve normally in mock
+    const user = this.state.users.find(
+      (u) => u.email.toLowerCase() === normalized,
+    )
+    if (!user) {
+      // Se resuelve igual aunque no exista: revelar qué correos están
+      // registrados permitiría enumerar socios.
       return
     }
+    // En demo no hay correo. Se marca al usuario como "en recuperación"
+    // para que /recuperar pueda simular el flujo completo sin Supabase.
+    localStorage.setItem(RECOVERY_KEY, user.id)
+  }
+
+  async updatePassword(newPassword: string): Promise<void> {
+    await this.ensureReady()
+
+    // Puede venir de una sesión normal (cambio desde el perfil) o de una
+    // sesión de recuperación (volviendo del enlace).
+    const recoveringId = localStorage.getItem(RECOVERY_KEY)
+    const session = readSession()
+    const userId = recoveringId ?? session?.userId
+
+    if (!userId) throw new Error('No hay sesión activa')
+
+    const user = this.state.users.find((u) => u.id === userId)
+    if (!user) throw new Error('Usuario no encontrado')
+
+    const creds = readCreds()
+    const passwordSalt = newSalt()
+    creds[userId] = {
+      passwordSalt,
+      passwordHash: await hashSecret(newPassword, passwordSalt),
+      // Invalida cualquier sesión abierta con la contraseña anterior:
+      // cambiar la clave debe cerrar las demás sesiones.
+      sessionToken: null,
+    }
+    writeCreds(creds)
+
+    localStorage.removeItem(RECOVERY_KEY)
+    // Deja la sesión abierta: tras fijar la contraseña el socio entra directo.
+    await this.setSession(userId)
+    this.persistState()
+  }
+
+  async hasRecoverySession(): Promise<boolean> {
+    await this.ensureReady()
+    return localStorage.getItem(RECOVERY_KEY) !== null
   }
 
   async deleteAccount(): Promise<void> {

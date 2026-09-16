@@ -366,6 +366,10 @@ export function createSupabaseClient(): SupabaseClient {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
+      // Canjea el token del enlace de recuperación (viene en el hash de la
+      // URL) por una sesión al cargar /recuperar. Es el default de
+      // supabase-js, pero se deja explícito porque ZCAPP-46 depende de esto.
+      detectSessionInUrl: true,
     },
   })
 }
@@ -608,13 +612,33 @@ export class SupabaseRepository implements GymRepository {
     const { error } = await this.client.auth.resetPasswordForEmail(
       email.trim(),
       {
+        // Apunta a la pantalla donde el socio escribe la contraseña nueva.
+        // Esta URL debe estar en Authentication → URL Configuration →
+        // Redirect URLs del proyecto Supabase, o el enlace del correo falla.
         redirectTo:
           typeof window !== 'undefined'
-            ? `${window.location.origin}/login`
+            ? `${window.location.origin}/recuperar`
             : undefined,
       },
     )
     if (error) throw new Error(error.message)
+  }
+
+  async updatePassword(newPassword: string): Promise<void> {
+    const { error } = await this.client.auth.updateUser({
+      password: newPassword,
+    })
+    if (error) throw new Error(error.message)
+  }
+
+  /**
+   * Al abrir el enlace del correo, supabase-js canjea el token del hash
+   * por una sesión (detectSessionInUrl). Si hay sesión al entrar a
+   * /recuperar, el enlace era válido.
+   */
+  async hasRecoverySession(): Promise<boolean> {
+    const { data } = await this.client.auth.getSession()
+    return Boolean(data.session)
   }
 
   async deleteAccount(): Promise<void> {
