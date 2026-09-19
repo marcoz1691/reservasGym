@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { AgendaPage } from '@/features/agenda/AgendaPage'
@@ -269,7 +269,7 @@ describe('QA ZCAPP-19 — Gate de Reservas', () => {
       return mockRepo
     }
 
-    it('[ZC19-09] Agenda bloquea al socio vencido y abre el modal de gate', async () => {
+    it('[ZC19-09] Agenda bloquea al socio vencido y lo dirige a renovar plan', async () => {
       const mockRepo = renderAgendaWith([
         buildMembership({
           status: 'expired',
@@ -279,22 +279,29 @@ describe('QA ZCAPP-19 — Gate de Reservas', () => {
         }),
       ])
 
-      await userEvent.click(await screen.findByRole('button', { name: /^reservar$/i }))
-
-      expect(mockRepo.createBooking).not.toHaveBeenCalled()
-      const modal = await screen.findByTestId('booking-gate-modal')
+      const renew = await screen.findByRole('link', {
+        name: /Renovar plan para reservar Functional Training/i,
+      })
+      expect(renew).toHaveAttribute('href', '/membresia')
       expect(
-        within(modal).getByText(/No puedes crear nuevas reservas/i),
-      ).toBeInTheDocument()
+        screen.queryByRole('button', { name: /^reservar$/i }),
+      ).not.toBeInTheDocument()
+      expect(mockRepo.createBooking).not.toHaveBeenCalled()
+      expect(screen.queryByTestId('booking-gate-modal')).toBeNull()
     })
 
-    it('[ZC19-10] Agenda bloquea al socio sin membresía', async () => {
+    it('[ZC19-10] Agenda bloquea al socio sin membresía y lo dirige a activar plan', async () => {
       const mockRepo = renderAgendaWith([])
 
-      await userEvent.click(await screen.findByRole('button', { name: /^reservar$/i }))
-
+      const activate = await screen.findByRole('link', {
+        name: /Activar plan para reservar Functional Training/i,
+      })
+      expect(activate).toHaveAttribute('href', '/membresia')
+      expect(
+        screen.queryByRole('button', { name: /^reservar$/i }),
+      ).not.toBeInTheDocument()
       expect(mockRepo.createBooking).not.toHaveBeenCalled()
-      expect(await screen.findByTestId('booking-gate-modal')).toBeInTheDocument()
+      expect(screen.queryByTestId('booking-gate-modal')).toBeNull()
     })
 
     it('[ZC19-11] Agenda permite reservar durante el período de gracia', async () => {
