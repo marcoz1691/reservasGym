@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, AlertCircle, Clock, X, ArrowRight, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Clock, X, ArrowRight } from 'lucide-react'
 import { useAppData, useCurrentUser } from '@/data/RepositoryProvider'
 import { selectMyMembership } from '@/app/store'
 import {
@@ -35,33 +35,9 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
     return null
   }
 
-  // 1. Expired or No Membership Banner
+  // Sin membresía: Inicio muestra la bienvenida (WelcomeNoPlanCard); acá no va aviso.
   if (!membership) {
-    return (
-      <div
-        data-testid="expiry-banner"
-        data-banner-type="none"
-        className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-danger/40 bg-danger/15 p-3.5 text-ink shadow-md ${className}`}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-danger/25 text-danger">
-            <ShieldAlert className="h-4 w-4" />
-          </div>
-          <p className="text-xs sm:text-sm font-medium text-ink-1">
-            No tienes un plan activo. Tus reservas están pausadas. Acércate a recepción
-            para activar tu membresía.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate('/membresia')}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-danger px-3 py-1.5 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
-        >
-          <span>Ver planes</span>
-          <ArrowRight className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    )
+    return null
   }
 
   const status = computeMembershipStatus(membership, now)

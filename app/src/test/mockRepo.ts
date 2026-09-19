@@ -1,0 +1,76 @@
+import { vi } from 'vitest'
+import type { GymRepository } from '@/data/types'
+import type { GymState, User } from '@/domain/models'
+
+/** Repositorio en memoria para tests de componentes y rutas. */
+export function createMockRepo(
+  user: User,
+  state: Partial<GymState> = {},
+): GymRepository {
+  const fullState: GymState = {
+    settings: {
+      name: 'Zona Cero',
+      logoUrl: null,
+      primaryColor: '#000',
+      accentColor: '#F26D17',
+      bookingWindowHours: 72,
+      cancelWindowHours: 2,
+      checkInWindowMinutes: 20,
+    },
+    users: [user],
+    trainers: [],
+    zones: [],
+    templates: [],
+    sessions: [],
+    bookings: [],
+    waitlist: [],
+    checkIns: [],
+    measurements: [],
+    membershipPlans: [],
+    memberships: [],
+    payments: [],
+    ...state,
+  }
+
+  return {
+    getCurrentUser: vi.fn().mockResolvedValue(user),
+    load: vi.fn().mockResolvedValue(fullState),
+    signIn: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+    resetPassword: vi.fn(),
+    updatePassword: vi.fn(),
+    updateProfile: vi.fn(),
+    deleteAccount: vi.fn(),
+    listBookingsForUser: vi.fn().mockResolvedValue([]),
+    createBooking: vi.fn().mockResolvedValue({ id: 'bk_1', status: 'confirmed' }),
+    cancelBooking: vi.fn(),
+    rescheduleBooking: vi.fn(),
+    checkIn: vi.fn(),
+    listMeasurements: vi.fn().mockResolvedValue([]),
+    createMeasurement: vi.fn(),
+    updateMeasurement: vi.fn(),
+    deleteMeasurement: vi.fn(),
+    getBodyGoal: vi.fn().mockResolvedValue(null),
+    upsertBodyGoal: vi.fn(),
+    updateSettings: vi.fn(),
+    listZones: vi.fn().mockResolvedValue(fullState.zones),
+    upsertZone: vi.fn(),
+    deleteZone: vi.fn(),
+    listTemplates: vi.fn().mockResolvedValue([]),
+    upsertTemplate: vi.fn(),
+    deleteTemplate: vi.fn(),
+    listSessions: vi.fn().mockResolvedValue(fullState.sessions),
+    upsertSession: vi.fn(),
+    deleteSession: vi.fn(),
+    getMembershipPlans: vi.fn().mockResolvedValue(fullState.membershipPlans),
+    upsertMembershipPlan: vi.fn(),
+    deleteMembershipPlan: vi.fn(),
+    getMemberMembership: vi.fn().mockResolvedValue(null),
+    getMemberPayments: vi.fn().mockResolvedValue([]),
+    listMemberships: vi.fn().mockResolvedValue(fullState.memberships),
+    listPayments: vi.fn().mockResolvedValue([]),
+    listMembers: vi.fn().mockResolvedValue([user]),
+    registerManualPayment: vi.fn(),
+  }
+}

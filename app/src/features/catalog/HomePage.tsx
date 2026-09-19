@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
 import { ZONE_LABELS } from '@/domain/models'
+import { selectMyMembership } from '@/app/store'
+import { WelcomeNoPlanCard, isOnlinePayEnabled } from '@/features/memberships'
 import { Badge, Button, Card, SkeletonCard } from '@/ui/primitives'
 
 function greeting(hour: number): string {
@@ -23,16 +25,32 @@ function greeting(hour: number): string {
 }
 
 export function HomePage() {
-  const user = useCurrentUser()!
+  const user = useCurrentUser()
   const data = useAppData()
   const { loading } = useGym()
   const [now] = useState(() => new Date())
+
+  if (loading || !user) {
+    return (
+      <div className="space-y-5">
+        <SkeletonCard />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+        <SkeletonCard />
+      </div>
+    )
+  }
 
   const mine = data.bookings.filter(
     (b) =>
       b.userId === user.id &&
       (b.status === 'confirmed' || b.status === 'waitlisted'),
   )
+
+  const membership = selectMyMembership(data, user.id)
 
   const next = mine
     .map((b) => ({
@@ -52,20 +70,6 @@ export function HomePage() {
     .sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))[0]
 
   const firstName = user.fullName.split(' ')[0]
-
-  if (loading) {
-    return (
-      <div className="space-y-5">
-        <SkeletonCard />
-        <div className="grid gap-3 sm:grid-cols-3">
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
-        <SkeletonCard />
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-7">
@@ -112,6 +116,8 @@ export function HomePage() {
             </Link>
           </div>
         </Card>
+      ) : !membership ? (
+        <WelcomeNoPlanCard onlinePayEnabled={isOnlinePayEnabled()} />
       ) : (
         <Card className="flex flex-col items-start gap-3 border-dashed sm:flex-row sm:items-center sm:justify-between">
           <div>

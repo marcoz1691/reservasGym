@@ -12,10 +12,7 @@ export function WelcomeNoPlanCard({
   onlinePayEnabled = false,
 }: WelcomeNoPlanCardProps) {
   return (
-    <Card
-      data-testid="welcome-no-plan"
-      className="relative overflow-hidden border-acc/25 p-0"
-    >
+    <Card className="relative overflow-hidden border-acc/25 p-0">
       <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-acc-glow blur-3xl" />
       <div className="relative p-5 sm:p-6">
         <div className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-acc">

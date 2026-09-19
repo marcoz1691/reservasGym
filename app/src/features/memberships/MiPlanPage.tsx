@@ -7,9 +7,9 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
-import { isSupabaseConfigured } from '@/data/supabaseRepository'
 import { selectMyMembership } from '@/app/store'
 import { PageHeader } from '@/ui/primitives'
+import { isOnlinePayEnabled } from './onlinePay'
 import {
   MembershipCard,
   PaymentHistory,
@@ -25,9 +25,7 @@ export function MiPlanPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [payBanner, setPayBanner] = useState<string | null>(null)
 
-  /** Datafast Dataweb — activar con VITE_ONLINE_PAYMENTS=1 + secrets DATAFAST_* */
-  const onlinePayEnabled =
-    import.meta.env.VITE_ONLINE_PAYMENTS === '1' && isSupabaseConfigured()
+  const onlinePayEnabled = isOnlinePayEnabled()
 
   const currentMembership = useMemo(
     () => selectMyMembership(data, user?.id),
