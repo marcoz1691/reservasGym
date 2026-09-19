@@ -156,6 +156,8 @@ describe('QA ZCAPP-18 — Mi Plan e Historial de Pagos', () => {
       expect(
         screen.getByText(/Activa tu plan en recepción para empezar a entrenar/i),
       ).toBeInTheDocument()
+      // ZC18-O1: no confundir “sin plan” con “membresía vencida”
+      expect(screen.queryByText(/Membresía vencida/i)).not.toBeInTheDocument()
       expect(screen.getByText(/Sin registros de pago/i)).toBeInTheDocument()
     })
   })

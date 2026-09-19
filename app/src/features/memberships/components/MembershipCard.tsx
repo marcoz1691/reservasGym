@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Calendar,
   Clock,
@@ -51,19 +51,24 @@ function getStatusBadge(status: MembershipStatus) {
 }
 
 export function MembershipCard({ membership, plan, zones }: MembershipCardProps) {
-  // Instante de montaje, estable entre renders (evita impureza en render).
-  const [nowMs] = useState(() => Date.now())
+  // ZC18-O3: reloj vivo (1 min) para que la barra de progreso avance con la pantalla abierta
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const now = useMemo(() => new Date(nowMs), [nowMs])
   const status = useMemo(
-    () => computeMembershipStatus(membership),
-    [membership],
+    () => computeMembershipStatus(membership, now),
+    [membership, now],
   )
   const remainingDays = useMemo(
-    () => daysRemaining(membership),
-    [membership],
+    () => daysRemaining(membership, now),
+    [membership, now],
   )
   const statusBadge = getStatusBadge(status)
 
-  // Calculate percentage of duration remaining
   const progressPercent = useMemo(() => {
     if (status === 'expired' || status === 'cancelled') return 0
     const start = new Date(membership.startsAt).getTime()

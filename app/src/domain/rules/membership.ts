@@ -3,8 +3,36 @@ import type { Membership, MembershipPlan, MembershipStatus } from '../models'
 export const GRACE_PERIOD_DAYS = 3
 export const EXPIRATION_WARNING_DAYS = 7
 
+/** Zona horaria operativa del gym (fechas de membresía en pantalla). */
+export const MEMBERSHIP_TIMEZONE = 'America/Guayaquil'
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+/** YYYY-MM-DD en la zona del gym (sin DST en Ecuador). */
+export function zonedDateKey(
+  date: Date,
+  timeZone: string = MEMBERSHIP_TIMEZONE,
+): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
+/**
+ * Índice de día calendario en la zona del gym (mediodía UTC del YMD local).
+ * Evita desalineación medianoche UTC vs America/Guayaquil (ZC18-O2).
+ */
+function zonedDayIndex(date: Date, timeZone: string = MEMBERSHIP_TIMEZONE): number {
+  const ymd = zonedDateKey(date, timeZone)
+  return Date.parse(`${ymd}T12:00:00.000Z`) / MS_PER_DAY
+}
+
 /**
  * Computes the real-time membership status based on end dates and grace period.
+ * Usa instantes absolutos (acceso real); los “días restantes” usan calendario Guayaquil.
  */
 export function computeMembershipStatus(
   membership: Pick<Membership, 'endsAt' | 'graceEndsAt' | 'status'>,
@@ -18,7 +46,7 @@ export function computeMembershipStatus(
   const endsAtMs = new Date(membership.endsAt).getTime()
   const graceEndsAtMs = membership.graceEndsAt
     ? new Date(membership.graceEndsAt).getTime()
-    : endsAtMs + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000
+    : endsAtMs + GRACE_PERIOD_DAYS * MS_PER_DAY
 
   if (nowMs <= endsAtMs) {
     return 'active'
@@ -95,17 +123,19 @@ export function canBookMembership(
 }
 
 /**
- * Calculates calendar days remaining until endsAt (0 if already passed).
+ * Días de calendario restantes hasta endsAt en America/Guayaquil (ZC18-O2).
+ * Mismo día calendario que la fecha de vencimiento → 1 (“último día”).
  */
 export function daysRemaining(
   membership: Membership,
   now: Date = new Date(),
 ): number {
-  const endMs = new Date(membership.endsAt).getTime()
-  const nowMs = now.getTime()
-  const diffMs = endMs - nowMs
-  if (diffMs <= 0) return 0
-  return Math.ceil(diffMs / (24 * 60 * 60 * 1000))
+  const endIdx = zonedDayIndex(new Date(membership.endsAt))
+  const nowIdx = zonedDayIndex(now)
+  const diff = Math.round(endIdx - nowIdx)
+  if (diff < 0) return 0
+  if (diff === 0) return 1
+  return diff
 }
 
 /**

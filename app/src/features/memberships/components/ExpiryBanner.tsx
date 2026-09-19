@@ -95,12 +95,17 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
 
   // 2. Urgent Grace Period Banner
   if (isInGracePeriod(membership, now) || status === 'grace') {
-    const endsAtMs = new Date(membership.endsAt).getTime()
-    const graceEndsAtMs = membership.graceEndsAt
-      ? new Date(membership.graceEndsAt).getTime()
-      : endsAtMs + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000
-    const diffMs = graceEndsAtMs - now.getTime()
-    const graceDays = Math.max(1, Math.ceil(diffMs / (24 * 60 * 60 * 1000)))
+    const graceEnd = membership.graceEndsAt
+      ? new Date(membership.graceEndsAt)
+      : new Date(
+          new Date(membership.endsAt).getTime() +
+            GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000,
+        )
+    // Días de calendario en Guayaquil (alineado a fechas en pantalla)
+    const graceDays = Math.max(
+      1,
+      daysRemaining({ ...membership, endsAt: graceEnd.toISOString() }, now),
+    )
 
     return (
       <div
