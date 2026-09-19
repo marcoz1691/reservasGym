@@ -38,13 +38,22 @@ describe('WelcomeNoPlanCard', () => {
     ).toHaveAttribute('href', '/explorar')
   })
 
-  it('menciona el pago en línea cuando está habilitado', () => {
+  it('menciona el pago en línea solo cuando está habilitado', () => {
+    const { unmount } = render(
+      <MemoryRouter>
+        <WelcomeNoPlanCard />
+      </MemoryRouter>,
+    )
+    expect(
+      screen.queryByText(/en línea con tarjeta/i),
+    ).not.toBeInTheDocument()
+    unmount()
+
     render(
       <MemoryRouter>
         <WelcomeNoPlanCard onlinePayEnabled />
       </MemoryRouter>,
     )
-
     expect(screen.getByText(/en línea con tarjeta/i)).toBeInTheDocument()
   })
 })

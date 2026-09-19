@@ -139,16 +139,17 @@ git commit -m "feat(domain): regla isFichaPending para la ficha tecnica inicial"
 ### Task 2: Componente `WelcomeNoPlanCard`
 
 **Files:**
+- Create: `app/src/ui/buttonStyles.ts`
 - Create: `app/src/ui/ButtonLink.tsx`
 - Create: `app/src/features/memberships/components/WelcomeNoPlanCard.tsx`
 - Create: `app/src/features/memberships/components/WelcomeNoPlanCard.test.tsx`
-- Modify: `app/src/ui/primitives.tsx:29-71` (extraer `buttonClasses`)
+- Modify: `app/src/ui/primitives.tsx:23-71` (mover estilos a `buttonStyles.ts`)
 - Modify: `app/src/features/memberships/components/index.ts`
 - Modify: `app/src/features/memberships/index.ts:6-12`
 
 **Interfaces:**
 - Consumes: `Card` de `@/ui/primitives`; `Link` de `react-router-dom`.
-- Produces: `buttonClasses(variant?, size?, className?): string` desde `@/ui/primitives`; `ButtonLink({ to, variant?, size?, className?, children, ...linkProps })` desde `@/ui/ButtonLink` (lo consumen las Tasks 4 y 5); y `WelcomeNoPlanCard({ onlinePayEnabled }: { onlinePayEnabled?: boolean })` desde `@/features/memberships` (la consume la Task 3).
+- Produces: `buttonClasses(variant?, size?, className?): string` con los tipos `ButtonVariant` y `ButtonSize` desde `@/ui/buttonStyles`; `ButtonLink({ to, variant?, size?, className?, children, ...linkProps })` desde `@/ui/ButtonLink` (lo consumen las Tasks 4 y 5); y `WelcomeNoPlanCard({ onlinePayEnabled }: { onlinePayEnabled?: boolean })` desde `@/features/memberships` (la consume la Task 3).
 
 - [ ] **Step 1: Escribe el test que falla**
 
@@ -223,12 +224,22 @@ Expected: FAIL — `Failed to resolve import "./WelcomeNoPlanCard"`.
 
 - [ ] **Step 3: Extrae las clases de `Button` y crea `ButtonLink`**
 
-Un CTA que navega debe ser un solo elemento enfocable, así que en vez de envolver un `Button` en un `Link` se usa un `Link` con el estilo del botón. Para no duplicar la cadena de clases, primero se extrae de `Button`.
+Un CTA que navega debe ser un solo elemento enfocable, así que en vez de envolver un `Button` en un `Link` se usa un `Link` con el estilo del botón. Para no duplicar la cadena de clases, primero se extrae de `Button` a un archivo propio: si se exporta desde `primitives.tsx`, oxlint avisa `only-export-components` (rompe fast refresh mezclar componentes y funciones en un mismo archivo).
 
-En `app/src/ui/primitives.tsx`, sube `variantStyles` y `sizeStyles` al ámbito del módulo, agrega `buttonClasses` y deja que `Button` la use:
+Crea `app/src/ui/buttonStyles.ts`:
 
 ```tsx
-const buttonVariantStyles: Record<string, string> = {
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'ghost'
+  | 'danger'
+  | 'outline'
+  | 'accent'
+
+export type ButtonSize = 'sm' | 'md' | 'lg'
+
+const variantStyles: Record<ButtonVariant, string> = {
   primary:
     'bg-acc text-[var(--color-acc-contrast)] font-bold hover:bg-acc-hi active:scale-[0.97] shadow-[var(--shadow-acc)] border border-transparent disabled:opacity-50 disabled:shadow-none',
   accent:
@@ -243,7 +254,7 @@ const buttonVariantStyles: Record<string, string> = {
     'bg-danger text-white font-bold hover:brightness-110 active:scale-[0.97] shadow-md shadow-danger/20 disabled:opacity-50',
 }
 
-const buttonSizeStyles: Record<string, string> = {
+const sizeStyles: Record<ButtonSize, string> = {
   sm: 'px-3 py-1.5 text-xs rounded-xl gap-1.5',
   md: 'px-4 py-2.5 text-sm rounded-2xl gap-2',
   lg: 'px-5 py-3 text-base rounded-2xl gap-2.5',
@@ -251,11 +262,27 @@ const buttonSizeStyles: Record<string, string> = {
 
 /** Estilo compartido por `Button` y por los CTA que navegan (`ButtonLink`). */
 export function buttonClasses(
-  variant: NonNullable<ButtonProps['variant']> = 'primary',
-  size: NonNullable<ButtonProps['size']> = 'md',
+  variant: ButtonVariant = 'primary',
+  size: ButtonSize = 'md',
   className = '',
 ): string {
-  return `focus-ring inline-flex cursor-pointer items-center justify-center font-semibold transition-[transform,background-color,border-color,box-shadow,filter] duration-150 ease-[var(--ease-out)] select-none ${buttonSizeStyles[size]} ${buttonVariantStyles[variant]} ${className}`
+  return `focus-ring inline-flex cursor-pointer items-center justify-center font-semibold transition-[transform,background-color,border-color,box-shadow,filter] duration-150 ease-[var(--ease-out)] select-none ${sizeStyles[size]} ${variantStyles[variant]} ${className}`
+}
+```
+
+En `app/src/ui/primitives.tsx`, borra los dos mapas de clases que hoy viven dentro de `Button`, importa el estilo y usa los tipos nuevos:
+
+```tsx
+import {
+  buttonClasses,
+  type ButtonSize,
+  type ButtonVariant,
+} from './buttonStyles'
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  isLoading?: boolean
 }
 
 export function Button({
@@ -286,11 +313,15 @@ Crea `app/src/ui/ButtonLink.tsx`:
 
 ```tsx
 import { Link, type LinkProps } from 'react-router-dom'
-import { buttonClasses, type ButtonProps } from './primitives'
+import {
+  buttonClasses,
+  type ButtonSize,
+  type ButtonVariant,
+} from './buttonStyles'
 
 interface ButtonLinkProps extends LinkProps {
-  variant?: ButtonProps['variant']
-  size?: ButtonProps['size']
+  variant?: ButtonVariant
+  size?: ButtonSize
 }
 
 /** CTA que navega: un solo elemento enfocable con el estilo de `Button`. */
@@ -399,7 +430,7 @@ export {
 - [ ] **Step 7: Commit**
 
 ```bash
-git add app/src/ui/primitives.tsx app/src/ui/ButtonLink.tsx app/src/features/memberships/components/WelcomeNoPlanCard.tsx app/src/features/memberships/components/WelcomeNoPlanCard.test.tsx app/src/features/memberships/components/index.ts app/src/features/memberships/index.ts
+git add app/src/ui/buttonStyles.ts app/src/ui/primitives.tsx app/src/ui/ButtonLink.tsx app/src/features/memberships/components/WelcomeNoPlanCard.tsx app/src/features/memberships/components/WelcomeNoPlanCard.test.tsx app/src/features/memberships/components/index.ts app/src/features/memberships/index.ts
 git commit -m "feat(memberships): tarjeta de bienvenida para socio sin plan"
 ```
 

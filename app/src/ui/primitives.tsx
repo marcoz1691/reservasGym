@@ -19,10 +19,15 @@ import {
   spanishValidityMessage,
   applyDecimalRangeValidity,
 } from '@/lib/formValidationEs'
+import {
+  buttonClasses,
+  type ButtonSize,
+  type ButtonVariant,
+} from './buttonStyles'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'accent'
-  size?: 'sm' | 'md' | 'lg'
+  variant?: ButtonVariant
+  size?: ButtonSize
   isLoading?: boolean
 }
 
@@ -35,31 +40,10 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const variantStyles: Record<string, string> = {
-    primary:
-      'bg-acc text-[var(--color-acc-contrast)] font-bold hover:bg-acc-hi active:scale-[0.97] shadow-[var(--shadow-acc)] border border-transparent disabled:opacity-50 disabled:shadow-none',
-    accent:
-      'bg-acc text-[var(--color-acc-contrast)] font-bold hover:bg-acc-hi active:scale-[0.97] shadow-[var(--shadow-acc)] border border-transparent disabled:opacity-50',
-    secondary:
-      'bg-surface-elevated text-ink border border-line hover:border-acc/40 hover:bg-surface active:scale-[0.97] disabled:opacity-50',
-    outline:
-      'bg-transparent text-ink border border-line hover:border-acc/60 hover:bg-acc-soft active:scale-[0.97] disabled:opacity-50',
-    ghost:
-      'bg-transparent text-ink-2 hover:bg-surface hover:text-ink active:scale-[0.97] disabled:opacity-50',
-    danger:
-      'bg-danger text-white font-bold hover:brightness-110 active:scale-[0.97] shadow-md shadow-danger/20 disabled:opacity-50',
-  }
-
-  const sizeStyles: Record<string, string> = {
-    sm: 'px-3 py-1.5 text-xs rounded-xl gap-1.5',
-    md: 'px-4 py-2.5 text-sm rounded-2xl gap-2',
-    lg: 'px-5 py-3 text-base rounded-2xl gap-2.5',
-  }
-
   return (
     <button
       disabled={disabled || isLoading}
-      className={`focus-ring inline-flex cursor-pointer items-center justify-center font-semibold transition-[transform,background-color,border-color,box-shadow,filter] duration-150 ease-[var(--ease-out)] select-none disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100 ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
+      className={`${buttonClasses(variant, size, className)} disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100`}
       {...props}
     >
       {isLoading ? (

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, Sparkles } from 'lucide-react'
-import { Button, Card } from '@/ui/primitives'
+import { Card } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 
 interface WelcomeNoPlanCardProps {
   /** Con VITE_ONLINE_PAYMENTS activo se menciona el pago con tarjeta */
@@ -31,12 +32,10 @@ export function WelcomeNoPlanCard({
             : ' actívalo en recepción.'}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Link to="/membresia">
-            <Button variant="primary" size="sm">
-              Ver planes
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+          <ButtonLink to="/membresia" size="sm">
+            Ver planes
+            <ArrowRight className="h-4 w-4" />
+          </ButtonLink>
           <Link
             to="/explorar"
             className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
