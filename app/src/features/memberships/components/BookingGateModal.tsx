@@ -24,6 +24,7 @@ export function BookingGateModal({
   if (!isOpen || !type) return null
 
   const isZoneRestricted = type === 'zone_restricted'
+  const isNoMembership = type === 'no_membership'
 
   const title = isZoneRestricted
     ? 'Área no incluida en tu plan'
@@ -35,7 +36,9 @@ export function BookingGateModal({
     message ||
     (isZoneRestricted
       ? `Tu plan actual no incluye acceso al área ${zoneName || 'seleccionada'}. Consulta en recepción para actualizar tu plan.`
-      : 'No puedes crear nuevas reservas: Tu membresía está vencida. Acércate a recepción.')
+      : isNoMembership
+        ? 'Para reservar necesitas un plan activo. Elige tu plan en Mi Plan y actívalo en recepción.'
+        : 'No puedes crear nuevas reservas: Tu membresía está vencida. Acércate a recepción.')
 
   function handleGoToMembership() {
     onClose()
@@ -60,7 +63,7 @@ export function BookingGateModal({
         <div className="flex items-center gap-3">
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
-              isZoneRestricted
+              isZoneRestricted || isNoMembership
                 ? 'bg-warn/15 text-warn'
                 : 'bg-danger/15 text-danger'
             }`}
@@ -92,7 +95,7 @@ export function BookingGateModal({
           </Button>
           <Button
             type="button"
-            variant={isZoneRestricted ? 'primary' : 'danger'}
+            variant={isZoneRestricted || isNoMembership ? 'primary' : 'danger'}
             className="flex-1 gap-2"
             onClick={handleGoToMembership}
           >

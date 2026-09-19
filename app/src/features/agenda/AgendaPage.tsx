@@ -22,6 +22,7 @@ import {
   Clock,
   Filter,
   Grid,
+  Lock,
   UserCheck,
   Users,
 } from 'lucide-react'
@@ -40,7 +41,8 @@ import {
   formatDateSpanish,
 } from '@/lib/format'
 import { Badge, Button, Card, PageHeader } from '@/ui/primitives'
-import { BookingGateModal, type BookingGateType } from '@/features/memberships'
+import { ButtonLink } from '@/ui/ButtonLink'
+import { BookingGateModal, PlanRequiredNotice, type BookingGateType } from '@/features/memberships'
 import { StaffBookingModal } from './StaffBookingModal'
 
 type View = 'dia' | 'semana' | 'mes'
@@ -53,6 +55,26 @@ export function AgendaPage() {
   const [params, setParams] = useSearchParams()
 
   const isStaffOrAdmin = user?.role === 'staff' || user?.role === 'admin'
+
+  const isMember = user?.role === 'member'
+
+  const membership = useMemo(
+    () => (user ? selectMyMembership(data, user.id) : null),
+    [data, user],
+  )
+
+  // Estado de plan evaluado en el render: el botón de cada sesión no debe
+  // invitar a un clic que siempre falla.
+  const planStatus = useMemo(
+    () => canBookMembership(membership).status,
+    [membership],
+  )
+  const neverHadPlan = isMember && planStatus === 'none'
+  const needsPlan =
+    isMember &&
+    (planStatus === 'none' ||
+      planStatus === 'expired' ||
+      planStatus === 'cancelled')
 
   const [view, setView] = useState<View>('semana')
   const [anchor, setAnchor] = useState(() => new Date())
@@ -158,7 +180,11 @@ export function AgendaPage() {
         const gateType: BookingGateType =
           memCheck.status === 'none' ? 'no_membership' : 'membership_expired'
         const reason =
-          'No puedes crear nuevas reservas: Tu membresía está vencida. Acércate a recepción.'
+          memCheck.status === 'none'
+            ? 'Para reservar necesitas un plan activo. Elige tu plan en Mi Plan y actívalo en recepción.'
+            : memCheck.status === 'expired' || memCheck.status === 'cancelled'
+              ? 'Tu membresía está vencida. Renueva tu plan para volver a reservar.'
+              : (memCheck.reason ?? 'No puedes crear nuevas reservas ahora.')
         setGateModal({
           isOpen: true,
           type: gateType,
@@ -247,6 +273,8 @@ export function AgendaPage() {
           {msg}
         </div>
       ) : null}
+
+      {neverHadPlan ? <PlanRequiredNotice /> : null}
 
       {/* 9 DISCIPLINES FILTER BAR */}
       <div className="space-y-2">
@@ -545,14 +573,26 @@ export function AgendaPage() {
                         {view !== 'mes' ? (
                           <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-line/60 pt-2">
                             {/* Member standard booking */}
-                            <Button
-                              variant={isFull ? 'secondary' : 'primary'}
-                              className="!px-2.5 !py-1 text-[10px] h-7 flex-1"
-                              disabled={busyId === s.id}
-                              onClick={() => void onBook(s.id)}
-                            >
-                              {isFull ? 'Lista Espera' : 'Reservar'}
-                            </Button>
+                            {needsPlan ? (
+                              <ButtonLink
+                                to="/membresia"
+                                variant="secondary"
+                                className="flex-1 !px-2.5 !py-1 text-[10px] h-7 gap-1 border-acc/40 text-acc hover:bg-acc/10"
+                                aria-label={`${neverHadPlan ? 'Activar' : 'Renovar'} plan para reservar ${s.title}`}
+                              >
+                                <Lock className="h-3 w-3" />
+                                {neverHadPlan ? 'Activar plan' : 'Renovar plan'}
+                              </ButtonLink>
+                            ) : (
+                              <Button
+                                variant={isFull ? 'secondary' : 'primary'}
+                                className="!px-2.5 !py-1 text-[10px] h-7 flex-1"
+                                disabled={busyId === s.id}
+                                onClick={() => void onBook(s.id)}
+                              >
+                                {isFull ? 'Lista Espera' : 'Reservar'}
+                              </Button>
+                            )}
 
                             {/* Staff Action: Book on behalf of Member */}
                             {isStaffOrAdmin && (
