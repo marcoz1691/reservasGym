@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
 import { isSupabaseConfigured } from '@/data/supabaseRepository'
-import { computeMembershipStatus } from '@/domain/rules/membership'
+import { selectMyMembership } from '@/app/store'
 import { PageHeader } from '@/ui/primitives'
 import {
   MembershipCard,
@@ -29,26 +29,10 @@ export function MiPlanPage() {
   const onlinePayEnabled =
     import.meta.env.VITE_ONLINE_PAYMENTS === '1' && isSupabaseConfigured()
 
-  const currentMembership = useMemo(() => {
-    if (!user) return null
-    const userMems = (data.memberships ?? []).filter((m) => m.userId === user.id)
-    if (userMems.length === 0) return null
-
-    const active = userMems.find((m) => {
-      const s = computeMembershipStatus(m)
-      return s === 'active' || s === 'grace'
-    })
-    if (active) {
-      return { ...active, status: computeMembershipStatus(active) }
-    }
-
-    const sorted = [...userMems].sort(
-      (a, b) => new Date(b.endsAt).getTime() - new Date(a.endsAt).getTime(),
-    )
-    const latest = sorted[0]
-    if (!latest) return null
-    return { ...latest, status: computeMembershipStatus(latest) }
-  }, [data.memberships, user])
+  const currentMembership = useMemo(
+    () => selectMyMembership(data, user?.id),
+    [data, user?.id],
+  )
 
   const currentPlan = useMemo(() => {
     if (!currentMembership) return null
