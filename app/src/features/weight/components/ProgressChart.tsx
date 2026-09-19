@@ -228,7 +228,7 @@ export function ProgressChart({
             onClick={() => setMode('weight')}
             className={`focus-ring inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition ${
               mode === 'weight'
-                ? 'bg-acc text-[#0A0D06] shadow-sm'
+                ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
                 : 'bg-surface-elevated text-ink-3 hover:text-ink'
             }`}
           >
@@ -240,7 +240,7 @@ export function ProgressChart({
             onClick={() => setMode('bmi')}
             className={`focus-ring inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition ${
               mode === 'bmi'
-                ? 'bg-acc text-[#0A0D06] shadow-sm'
+                ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
                 : 'bg-surface-elevated text-ink-3 hover:text-ink'
             }`}
           >
@@ -252,7 +252,7 @@ export function ProgressChart({
             onClick={() => setMode('waistHip')}
             className={`focus-ring inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition ${
               mode === 'waistHip'
-                ? 'bg-acc text-[#0A0D06] shadow-sm'
+                ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
                 : 'bg-surface-elevated text-ink-3 hover:text-ink'
             }`}
           >
@@ -302,9 +302,9 @@ export function ProgressChart({
                 x2="0%"
                 y2="100%"
               >
-                <stop offset="0%" stopColor="#C9FF3D" stopOpacity="0.35" />
-                <stop offset="60%" stopColor="#C9FF3D" stopOpacity="0.08" />
-                <stop offset="100%" stopColor="#C9FF3D" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="var(--color-acc)" stopOpacity="0.35" />
+                <stop offset="60%" stopColor="var(--color-acc)" stopOpacity="0.08" />
+                <stop offset="100%" stopColor="var(--color-acc)" stopOpacity="0.0" />
               </linearGradient>
 
               {/* Glowing stroke filter */}
@@ -313,8 +313,8 @@ export function ProgressChart({
                   dx="0"
                   dy="2"
                   stdDeviation="3"
-                  floodColor="#C9FF3D"
-                  floodOpacity="0.4"
+                  floodColor="var(--color-acc)"
+                  floodOpacity="0.18"
                 />
               </filter>
             </defs>
@@ -330,7 +330,7 @@ export function ProgressChart({
                     y1={y}
                     x2={width - paddingX}
                     y2={y}
-                    stroke="#232B36"
+                    stroke="var(--color-line)"
                     strokeDasharray="4 4"
                     strokeWidth="1"
                   />
@@ -338,7 +338,7 @@ export function ProgressChart({
                     x={paddingX - 8}
                     y={y + 4}
                     textAnchor="end"
-                    fill="#8A947C"
+                    fill="var(--color-ink-3)"
                     fontSize="10"
                     fontWeight="600"
                   >
@@ -356,7 +356,7 @@ export function ProgressChart({
                   y1={targetY}
                   x2={width - paddingX}
                   y2={targetY}
-                  stroke="#C9FF3D"
+                  stroke="var(--color-acc)"
                   strokeDasharray="6 4"
                   strokeWidth="1.5"
                   opacity="0.8"
@@ -367,15 +367,13 @@ export function ProgressChart({
                   width="70"
                   height="18"
                   rx="4"
-                  fill="#1E2530"
-                  stroke="#C9FF3D"
-                  strokeWidth="0.8"
+                  fill="var(--color-acc)"
                 />
                 <text
                   x={width - paddingX - 35}
                   y={targetY + 2}
                   textAnchor="middle"
-                  fill="#C9FF3D"
+                  fill="var(--color-acc-contrast)"
                   fontSize="9"
                   fontWeight="bold"
                 >
@@ -392,7 +390,7 @@ export function ProgressChart({
               <path
                 d={curvePath}
                 fill="none"
-                stroke="#C9FF3D"
+                stroke="var(--color-acc)"
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -408,8 +406,8 @@ export function ProgressChart({
                   cx={p.x}
                   cy={p.y}
                   r={hoveredPoint?.index === i ? 7 : 4.5}
-                  fill="#0E1117"
-                  stroke="#C9FF3D"
+                  fill="var(--color-surface)"
+                  stroke="var(--color-acc)"
                   strokeWidth={hoveredPoint?.index === i ? 3 : 2}
                   className="transition-all duration-200 cursor-pointer"
                 />
@@ -418,7 +416,7 @@ export function ProgressChart({
                   cx={p.x}
                   cy={p.y}
                   r={2.5}
-                  fill="#C9FF3D"
+                  fill="var(--color-acc)"
                   className="pointer-events-none"
                 />
 
@@ -431,7 +429,7 @@ export function ProgressChart({
                     x={p.x}
                     y={height - 15}
                     textAnchor="middle"
-                    fill="#8A947C"
+                    fill="var(--color-ink-3)"
                     fontSize="10"
                     fontWeight="500"
                   >

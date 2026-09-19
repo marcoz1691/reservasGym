@@ -230,7 +230,7 @@ export function AgendaPage() {
                   onClick={() => setView(v)}
                   className={`rounded-xl px-3 py-1.5 text-xs font-bold capitalize transition ${
                     view === v
-                      ? 'bg-acc text-[#0A0D06] shadow-xs'
+                      ? 'bg-acc text-[var(--color-acc-contrast)] shadow-xs'
                       : 'text-ink-3 hover:text-ink'
                   }`}
                 >
@@ -269,7 +269,7 @@ export function AgendaPage() {
             onClick={() => handleFilterChange('all')}
             className={`flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition ${
               zoneFilter === 'all'
-                ? 'border-acc bg-acc text-[#0A0D06] shadow-md'
+                ? 'border-acc bg-acc text-[var(--color-acc-contrast)] shadow-md'
                 : 'border-line bg-bg-2 text-ink-2 hover:border-acc/40 hover:bg-surface'
             }`}
           >
@@ -278,7 +278,7 @@ export function AgendaPage() {
             <span
               className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                 zoneFilter === 'all'
-                  ? 'bg-black/20 text-[#0A0D06]'
+                  ? 'bg-black/20 text-[var(--color-acc-contrast)]'
                   : 'bg-surface text-ink-3'
               }`}
             >
@@ -304,13 +304,13 @@ export function AgendaPage() {
                 onClick={() => handleFilterChange(meta.defaultZoneId)}
                 className={`flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition ${
                   isSelected
-                    ? 'border-acc bg-acc text-[#0A0D06] shadow-md'
+                    ? 'border-acc bg-acc text-[var(--color-acc-contrast)] shadow-md'
                     : 'border-line bg-bg-2 text-ink-2 hover:border-acc/40 hover:bg-surface'
                 }`}
               >
                 <Icon
                   className={`h-3.5 w-3.5 ${
-                    isSelected ? 'text-[#0A0D06]' : meta.colorClass
+                    isSelected ? 'text-[var(--color-acc-contrast)]' : meta.colorClass
                   }`}
                 />
                 <span>{meta.name}</span>
@@ -318,7 +318,7 @@ export function AgendaPage() {
                   <span
                     className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                       isSelected
-                        ? 'bg-black/20 text-[#0A0D06]'
+                        ? 'bg-black/20 text-[var(--color-acc-contrast)]'
                         : 'bg-surface text-ink-3'
                     }`}
                   >
@@ -414,7 +414,7 @@ export function AgendaPage() {
                   <span
                     className={`mt-0.5 rounded-full px-1.5 text-[9px] font-bold ${
                       isSelected
-                        ? 'bg-acc text-[#0A0D06]'
+                        ? 'bg-acc text-[var(--color-acc-contrast)]'
                         : 'bg-surface text-ink-2'
                     }`}
                   >
@@ -467,7 +467,7 @@ export function AgendaPage() {
                       })}
                     </span>
                     {dayIsToday && (
-                      <span className="rounded-md bg-acc px-1.5 py-0.2 text-[9px] font-black text-[#0A0D06]">
+                      <span className="rounded-md bg-acc px-1.5 py-0.2 text-[9px] font-black text-[var(--color-acc-contrast)]">
                         Hoy
                       </span>
                     )}

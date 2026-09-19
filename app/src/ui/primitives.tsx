@@ -165,7 +165,7 @@ export function Card({
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`ring-hairline rounded-3xl border border-line bg-surface p-4 shadow-[var(--shadow-card)] transition-[transform,border-color,box-shadow] duration-200 ease-[var(--ease-out)] ${className}`}
+      className={`rounded-3xl border border-line bg-surface p-4 shadow-[var(--shadow-card)] transition-[transform,border-color,box-shadow] duration-200 ease-[var(--ease-out)] ${className}`}
       {...props}
     >
       {children}
@@ -183,12 +183,13 @@ export function Badge({
   className = '',
   ...props
 }: BadgeProps) {
+  // Pares fondo tenue + texto oscuro, como las pills de las maquetas.
   const tones = {
     neutral: 'bg-surface-elevated text-ink-2 border border-line',
-    ok: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
-    warn: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
-    danger: 'bg-rose-500/15 text-rose-400 border border-rose-500/30',
-    accent: 'bg-acc/15 text-acc border border-acc/30',
+    ok: 'bg-success-soft text-success',
+    warn: 'bg-warn-soft text-warn',
+    danger: 'bg-danger-soft text-danger',
+    accent: 'bg-acc-soft text-acc',
   }
   return (
     <span
@@ -252,7 +253,7 @@ export function Skeleton({
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`animate-pulse rounded-2xl bg-white/[0.07] ${className}`}
+      className={`animate-pulse rounded-2xl bg-ink/[0.06] ${className}`}
       {...props}
     />
   )

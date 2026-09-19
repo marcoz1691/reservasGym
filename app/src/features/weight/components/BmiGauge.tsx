@@ -49,7 +49,7 @@ export function BmiGauge({
   const categoryColorStyles: Record<string, { bg: string; text: string; border: string }> = {
     underweight: {
       bg: 'bg-blue-500/15',
-      text: 'text-blue-400',
+      text: 'text-blue-600',
       border: 'border-blue-500/30',
     },
     normal: {
@@ -178,7 +178,7 @@ export function BmiGauge({
         {/* Scale labels */}
         <div className="flex justify-between text-[10px] font-medium text-ink-3 px-0.5">
           <span>15</span>
-          <span className="text-blue-400/80">18.5</span>
+          <span className="text-blue-600/80">18.5</span>
           <span className="text-success/80">25.0</span>
           <span className="text-warn/80">30.0</span>
           <span>35+</span>

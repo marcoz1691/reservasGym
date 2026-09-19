@@ -105,21 +105,21 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
       <div
         data-testid="expiry-banner"
         data-banner-type="grace"
-        className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-orange-500/50 bg-gradient-to-r from-orange-500/20 to-danger/15 p-3.5 text-ink shadow-md ${className}`}
+        className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-warn/50 bg-gradient-to-r from-warn-soft to-danger/15 p-3.5 text-ink shadow-md ${className}`}
       >
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-orange-500/25 text-orange-400 animate-pulse">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-warn/20 text-warn animate-pulse">
             <Clock className="h-4 w-4" />
           </div>
           <p className="text-xs sm:text-sm font-medium text-ink-1">
-            <strong className="text-orange-300 font-bold">Período de gracia:</strong> Tu membresía venció.{' '}
+            <strong className="text-warn font-bold">Período de gracia:</strong> Tu membresía venció.{' '}
             Te {graceDays === 1 ? 'queda 1 día' : `quedan ${graceDays} días`} de gracia para renovar en recepción antes de que se bloqueen tus reservas.
           </p>
         </div>
         <button
           type="button"
           onClick={() => navigate('/membresia')}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-orange-500 px-3.5 py-1.5 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-acc px-3.5 py-1.5 text-xs font-bold text-[var(--color-acc-contrast)] transition hover:brightness-110 active:scale-95"
         >
           <span>Renovar ahora</span>
           <ArrowRight className="h-3.5 w-3.5" />
@@ -150,7 +150,7 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
           <button
             type="button"
             onClick={() => navigate('/membresia')}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-warn/50 bg-warn/20 px-3 py-1.5 text-xs font-bold text-warn transition hover:bg-warn hover:text-white active:scale-95"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-warn/50 bg-warn/20 px-3 py-1.5 text-xs font-bold text-warn transition hover:bg-warn/30 active:scale-95"
           >
             <span>Ver mi plan</span>
             <ArrowRight className="h-3.5 w-3.5" />

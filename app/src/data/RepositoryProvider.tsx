@@ -25,8 +25,8 @@ const EMPTY_STATE: GymState = {
   settings: {
     name: 'Zona Cero',
     logoUrl: null,
-    primaryColor: '#0E1117',
-    accentColor: '#FF6146',
+    primaryColor: '#231F20',
+    accentColor: '#F26D17',
     bookingWindowHours: 72,
     cancelWindowHours: 2,
     checkInWindowMinutes: 20,

@@ -27,7 +27,7 @@ function getPaymentStatusBadge(status: PaymentStatus) {
     case 'refunded':
       return {
         label: 'Reembolsado',
-        className: 'bg-purple-500/15 text-purple-400 border border-purple-500/30',
+        className: 'bg-purple-500/15 text-purple-600 border border-purple-500/30',
       }
     default:
       return {

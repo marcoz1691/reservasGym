@@ -58,7 +58,7 @@ export function MyBookingsPage() {
         next[booking.id] = await QRCode.toDataURL(booking.checkInCode, {
           margin: 1,
           width: 160,
-          color: { dark: '#0E1117', light: '#00000000' },
+          color: { dark: '#1C1917', light: '#00000000' },
         })
       }
       if (!cancelled) setQrMap(next)

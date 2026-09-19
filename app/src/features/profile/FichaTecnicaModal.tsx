@@ -167,9 +167,9 @@ export function FichaTecnicaModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-      <Card className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden border border-white/10 bg-surface p-0 shadow-2xl">
+      <Card className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden border border-line bg-surface p-0 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 bg-surface p-5 sm:px-6">
+        <div className="flex items-center justify-between border-b border-line bg-surface p-5 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/20 text-acc">
               <Activity className="h-5 w-5" />
@@ -189,7 +189,7 @@ export function FichaTecnicaModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl p-2 text-ink-3 hover:bg-white/5 hover:text-ink"
+              className="rounded-xl p-2 text-ink-3 hover:bg-surface-elevated hover:text-ink"
             >
               <X className="h-5 w-5" />
             </button>
@@ -197,7 +197,7 @@ export function FichaTecnicaModal({
         </div>
 
         {/* Progress Stepper */}
-        <div className="grid grid-cols-4 border-b border-white/5 bg-bg/80 text-xs font-semibold">
+        <div className="grid grid-cols-4 border-b border-line bg-bg/80 text-xs font-semibold">
           <button
             type="button"
             onClick={() => setStep(1)}
@@ -256,7 +256,7 @@ export function FichaTecnicaModal({
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-y-auto p-6">
           {savedSuccess ? (
             <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success-soft text-success">
                 <Check className="h-8 w-8" />
               </div>
               <h3 className="text-xl font-bold text-ink">¡Ficha Técnica Guardada!</h3>
@@ -325,7 +325,7 @@ export function FichaTecnicaModal({
 
                   {/* Real-time BMI Display Card */}
                   {bmiVal && bmiCategory ? (
-                    <div className="rounded-2xl border border-white/10 bg-surface p-4">
+                    <div className="rounded-2xl border border-line bg-surface p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
@@ -475,7 +475,7 @@ export function FichaTecnicaModal({
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-surface p-4 text-xs text-ink-3">
+                  <div className="rounded-2xl border border-line bg-surface p-4 text-xs text-ink-3">
                     <p className="font-semibold text-ink">
                       🔒 Privacidad y protección de datos (LOPDP Ecuador)
                     </p>
@@ -505,12 +505,12 @@ export function FichaTecnicaModal({
                             className={`flex items-center gap-2 rounded-xl border p-3 text-left text-xs font-semibold transition-all ${
                               selected
                                 ? 'border-acc bg-acc/15 text-acc'
-                                : 'border-white/10 bg-surface text-ink-2 hover:border-white/20 hover:text-ink'
+                                : 'border-line bg-surface text-ink-2 hover:border-line-strong hover:text-ink'
                             }`}
                           >
                             <div
                               className={`flex h-4 w-4 items-center justify-center rounded-md border ${
-                                selected ? 'border-acc bg-acc text-black' : 'border-white/30'
+                                selected ? 'border-acc bg-acc text-[var(--color-acc-contrast)]' : 'border-line-strong'
                               }`}
                             >
                               {selected && <Check className="h-3 w-3 stroke-[3]" />}
@@ -570,7 +570,7 @@ export function FichaTecnicaModal({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-surface p-4">
+                  <div className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4">
                     <div>
                       <span className="text-sm font-bold text-ink">
                         Habilitar Face ID / Huella en este teléfono
@@ -587,14 +587,14 @@ export function FichaTecnicaModal({
                         onChange={(e) => setEnableBiometrics(e.target.checked)}
                         className="peer sr-only"
                       />
-                      <div className="peer h-6 w-11 rounded-full bg-white/20 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-acc peer-checked:after:translate-x-full peer-focus:outline-none" />
+                      <div className="peer h-6 w-11 rounded-full bg-line-strong after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-acc peer-checked:after:translate-x-full peer-focus:outline-none" />
                     </label>
                   </div>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
+              <div className="mt-6 flex items-center justify-between border-t border-line pt-4">
                 {step > 1 ? (
                   <Button
                     type="button"

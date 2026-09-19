@@ -1,10 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
-import {
-  Dumbbell,
-  Fingerprint,
-  Sparkles,
-} from 'lucide-react'
+import { Fingerprint, Sparkles } from 'lucide-react'
 import {
   useAppData,
   useCurrentUser,
@@ -144,27 +140,16 @@ export function LoginPage() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-bg p-4 py-10">
       <Card className="w-full max-w-lg space-y-6 p-6 sm:p-8">
-        {/* Brand header */}
-        <div className="flex items-center gap-3">
-          {settings.logoUrl ? (
-            <img
-              src={settings.logoUrl}
-              alt={settings.name}
-              className="h-11 w-11 rounded-2xl object-cover"
-            />
-          ) : (
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-acc text-white shadow-md shadow-acc/20 font-black">
-              <Dumbbell className="h-6 w-6" />
-            </div>
-          )}
-          <div>
-            <h1 className="text-xl font-extrabold text-ink tracking-tight">
-              {settings.name || 'Zona Cero'}
-            </h1>
-            <p className="text-xs text-ink-3">
-              Centro de Rendimiento · Reservas & Entrenamiento
-            </p>
-          </div>
+        {/* Brand header — imagotipo centrado, como en la maqueta del login */}
+        <div className="text-center">
+          <img
+            src={settings.logoUrl || `${import.meta.env.BASE_URL}brand/logo-color.png`}
+            alt={settings.name || 'Zona Cero'}
+            className="mx-auto h-14 w-auto"
+          />
+          <p className="mt-3 text-xs text-ink-3">
+            Centro de Rendimiento · Reservas & Entrenamiento
+          </p>
         </div>
 
         {/* Mode Switcher */}
@@ -177,7 +162,7 @@ export function LoginPage() {
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
               mode === 'login'
-                ? 'bg-acc text-white font-bold shadow-xs'
+                ? 'bg-acc text-[var(--color-acc-contrast)] font-bold shadow-xs'
                 : 'text-ink-2 hover:text-ink'
             }`}
           >
@@ -191,7 +176,7 @@ export function LoginPage() {
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
               mode === 'register'
-                ? 'bg-acc text-white font-bold shadow-xs'
+                ? 'bg-acc text-[var(--color-acc-contrast)] font-bold shadow-xs'
                 : 'text-ink-2 hover:text-ink'
             }`}
           >

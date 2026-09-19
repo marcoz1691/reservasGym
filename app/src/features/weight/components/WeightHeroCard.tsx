@@ -63,12 +63,11 @@ export function WeightHeroCard({
     <div className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-surface-elevated via-surface to-bg p-5 md:p-6 shadow-[var(--shadow-pop)]">
       {/* Background Accent Glow */}
       <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-acc/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
 
       {/* Header row with actions */}
       <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line/80 pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-acc/15 text-acc border border-acc/20 shadow-[0_0_15px_rgba(201,255,61,0.2)]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-acc/15 text-acc border border-acc/20">
             <Scale className="h-5 w-5" />
           </div>
           <div>
@@ -95,7 +94,7 @@ export function WeightHeroCard({
           <button
             type="button"
             onClick={onOpenMeasurementModal}
-            className="focus-ring inline-flex items-center gap-1.5 rounded-2xl bg-acc px-4 py-2 text-xs font-black text-[#0A0D06] shadow-[0_4px_20px_rgba(201,255,61,0.3)] transition hover:brightness-110 active:scale-95"
+            className="focus-ring inline-flex items-center gap-1.5 rounded-2xl bg-acc px-4 py-2 text-xs font-black text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] transition hover:brightness-110 active:scale-95"
           >
             <Plus className="h-4 w-4" />
             {isStaff ? 'Registrar medidas' : 'Nueva medición'}
@@ -142,9 +141,9 @@ export function WeightHeroCard({
                 <div
                   className={`mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
                     totalDelta.isLoss
-                      ? 'bg-emerald-500/15 text-emerald-400'
+                      ? 'bg-success-soft text-success'
                       : totalDelta.isGain
-                        ? 'bg-amber-500/15 text-amber-400'
+                        ? 'bg-warn-soft text-warn'
                         : 'bg-surface text-ink-3'
                   }`}
                 >
@@ -206,7 +205,7 @@ export function WeightHeroCard({
               {/* Progress Bar */}
               <div className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-surface p-0.5">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-acc/80 to-acc transition-all duration-700 ease-out shadow-[0_0_12px_rgba(201,255,61,0.5)]"
+                  className="h-full rounded-full bg-gradient-to-r from-acc/80 to-acc transition-all duration-700 ease-out"
                   style={{ width: `${goalProgress.progressPercent}%` }}
                 />
               </div>

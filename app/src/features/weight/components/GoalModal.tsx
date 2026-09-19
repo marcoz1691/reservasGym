@@ -135,9 +135,9 @@ export function GoalModal({
           <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-bg/90 p-3.5 text-xs">
             <div className="flex items-center gap-2">
               {diffInfo.isLoss ? (
-                <TrendingDown className="h-4 w-4 text-emerald-400" />
+                <TrendingDown className="h-4 w-4 text-success" />
               ) : diffInfo.isGain ? (
-                <TrendingUp className="h-4 w-4 text-amber-400" />
+                <TrendingUp className="h-4 w-4 text-warn" />
               ) : (
                 <Sparkles className="h-4 w-4 text-acc" />
               )}
@@ -164,7 +164,7 @@ export function GoalModal({
         )}
 
         {error && (
-          <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/15 p-2.5 text-xs text-red-400">
+          <div className="mt-3 rounded-xl border border-danger/30 bg-danger-soft p-2.5 text-xs text-danger">
             {error}
           </div>
         )}
@@ -215,7 +215,7 @@ export function GoalModal({
             <button
               type="submit"
               disabled={saving}
-              className="focus-ring inline-flex items-center gap-2 rounded-2xl bg-acc px-5 py-2.5 text-xs font-black text-[#0A0D06] shadow-[0_4px_20px_rgba(201,255,61,0.25)] transition hover:brightness-110 active:scale-95 disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-2xl bg-acc px-5 py-2.5 text-xs font-black text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] transition hover:brightness-110 active:scale-95 disabled:opacity-50"
             >
               {saving ? 'Guardando...' : existingGoal ? 'Actualizar Meta' : 'Fijar Meta'}
             </button>

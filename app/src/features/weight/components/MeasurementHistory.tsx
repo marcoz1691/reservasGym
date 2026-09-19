@@ -97,9 +97,9 @@ export function MeasurementHistory({
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
                       delta.isLoss
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                        ? 'bg-success-soft text-success border border-success/25'
                         : delta.isGain
-                          ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                          ? 'bg-warn-soft text-warn border border-warn/25'
                           : 'bg-surface text-ink-3'
                     }`}
                   >
@@ -145,7 +145,7 @@ export function MeasurementHistory({
                       type="button"
                       disabled={deletingId === m.id}
                       onClick={() => void handleDelete(m.id)}
-                      className="rounded-xl bg-red-500 px-3 py-1.5 text-xs font-bold text-white hover:brightness-110 disabled:opacity-50"
+                      className="rounded-xl bg-danger px-3 py-1.5 text-xs font-bold text-white hover:brightness-110 disabled:opacity-50"
                     >
                       {deletingId === m.id ? 'Eliminando...' : 'Confirmar'}
                     </button>
@@ -170,7 +170,7 @@ export function MeasurementHistory({
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteId(m.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl text-ink-3 transition hover:bg-red-500/15 hover:text-red-400"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl text-ink-3 transition hover:bg-danger-soft hover:text-danger"
                       title="Eliminar registro"
                     >
                       <Trash2 className="h-4 w-4" />

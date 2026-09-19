@@ -166,7 +166,7 @@ export function ProfilePage() {
 
       {/* Hero card / User Summary */}
       <Card className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-gradient-to-br from-bg-2 to-surface/40 p-6">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-acc text-white font-extrabold text-2xl shadow-lg shadow-acc/20">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-acc text-[var(--color-acc-contrast)] font-extrabold text-2xl shadow-lg shadow-acc/20">
           {user.fullName.charAt(0).toUpperCase()}
         </div>
         <div className="space-y-1 flex-1">

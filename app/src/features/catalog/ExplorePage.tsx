@@ -167,7 +167,7 @@ export function ExplorePage() {
             onClick={() => setZoneType('all')}
             className={`flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition ${
               zoneType === 'all'
-                ? 'border-acc bg-acc text-[#0A0D06] shadow-md'
+                ? 'border-acc bg-acc text-[var(--color-acc-contrast)] shadow-md'
                 : 'border-line bg-bg-2 text-ink-2 hover:border-acc/40 hover:bg-surface'
             }`}
           >
@@ -176,7 +176,7 @@ export function ExplorePage() {
             <span
               className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                 zoneType === 'all'
-                  ? 'bg-black/20 text-[#0A0D06]'
+                  ? 'bg-black/20 text-[var(--color-acc-contrast)]'
                   : 'bg-surface text-ink-3'
               }`}
             >
@@ -199,13 +199,13 @@ export function ExplorePage() {
                 onClick={() => setZoneType(typeKey)}
                 className={`flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition ${
                   isSelected
-                    ? 'border-acc bg-acc text-[#0A0D06] shadow-md'
+                    ? 'border-acc bg-acc text-[var(--color-acc-contrast)] shadow-md'
                     : 'border-line bg-bg-2 text-ink-2 hover:border-acc/40 hover:bg-surface'
                 }`}
               >
                 <Icon
                   className={`h-3.5 w-3.5 ${
-                    isSelected ? 'text-[#0A0D06]' : meta.colorClass
+                    isSelected ? 'text-[var(--color-acc-contrast)]' : meta.colorClass
                   }`}
                 />
                 <span>{meta.name}</span>
@@ -213,7 +213,7 @@ export function ExplorePage() {
                   <span
                     className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                       isSelected
-                        ? 'bg-black/20 text-[#0A0D06]'
+                        ? 'bg-black/20 text-[var(--color-acc-contrast)]'
                         : 'bg-surface text-ink-3'
                     }`}
                   >

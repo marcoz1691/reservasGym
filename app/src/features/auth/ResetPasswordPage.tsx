@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AlertCircle, CheckCircle2, Dumbbell, KeyRound } from 'lucide-react'
+import { AlertCircle, CheckCircle2, KeyRound } from 'lucide-react'
 import { useGym } from '@/data/RepositoryProvider'
 import {
   checkNewPassword,
@@ -216,7 +216,11 @@ export function ResetPasswordPage() {
         ) : null}
 
         <div className="mt-6 flex items-center justify-center gap-2 border-t border-line pt-4 text-[11px] text-ink-3">
-          <Dumbbell className="h-3.5 w-3.5" />
+          <img
+            src={`${import.meta.env.BASE_URL}brand/mark-color.png`}
+            alt=""
+            className="h-3.5 w-auto"
+          />
           <span>Zona Cero Performance Center</span>
         </div>
       </div>

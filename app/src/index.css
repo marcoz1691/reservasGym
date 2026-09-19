@@ -2,47 +2,54 @@
 @import 'tailwindcss';
 
 /*
- * Sistema de color — Zona Cero (dark, premium)
- * Neutros cálidos con un sesgo sutil hacia el acento coral: un gris puro
- * lee como "sin decidir"; un carbón tibio lee como elegido.
- * Escala de elevación real: bg < surface < surface-elevated < line.
+ * Sistema de color — Zona Cero · Opción 1 «Claro» (elegida por el cliente).
+ * Valores tomados de las maquetas aprobadas en
+ * docs/design-systems/zona-cero-mocks (bloque :root de los .dc.html).
+ *
+ * La elevación se invierte respecto a un tema oscuro: el ground es el tono
+ * tibio (#F6F5F2), las tarjetas son blancas y los campos van un punto
+ * más apagados (#FAFAF8) para leerse hundidos dentro de la tarjeta.
  */
 @theme {
   /* Grounds y superficies */
-  --color-bg: #0D0B0A;
-  --color-bg-2: #141110;
-  --color-surface: #171413;
-  --color-surface-elevated: #211D1B;
-  --color-line: #322B27;
-  --color-line-strong: #433A34;
-  --color-line-subtle: rgba(255, 244, 240, 0.06);
+  --color-bg: #F6F5F2;
+  --color-bg-2: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FAFAF8;
+  --color-line: #E7E4DF;
+  --color-line-strong: #D6D2CB;
+  --color-line-subtle: rgba(28, 25, 23, 0.06);
 
-  /* Jerarquía de texto (blanco cálido, no puro) */
-  --color-ink: #FBF7F5;
-  --color-ink-2: #B9ADA5;
-  --color-ink-3: #8B7E76; /* ≥ 4.5:1 sobre surface */
+  /* Jerarquía de texto */
+  --color-ink: #1C1917;
+  --color-ink-2: #6B6560;
+  --color-ink-3: #9C9690;
 
-  /* Acento coral + rampa */
-  --color-acc: #FF6146;
-  --color-acc-hi: #FF8168;
-  --color-acc-dark: #E23D22;
-  --color-acc-soft: rgba(255, 97, 70, 0.14);
-  --color-acc-glow: rgba(255, 97, 70, 0.28);
-  --color-acc-contrast: #1A0B07;
+  /* Acento naranja de marca + rampa.
+     En claro el hover oscurece: aclarar sobre blanco pierde presencia. */
+  --color-acc: #F26D17;
+  --color-acc-hi: #DA5E0C;
+  --color-acc-dark: #B94E08;
+  --color-acc-soft: rgba(242, 109, 23, 0.10);
+  --color-acc-glow: rgba(242, 109, 23, 0.20);
+  /* Carbón sobre el naranja: 5.9:1 (AA). Blanco daba 2.76:1 y no pasaba. */
+  --color-acc-contrast: #231F20;
 
-  /* Semánticos — separados en tono del acento para no confundirse con él */
-  --color-success: #26D07C;
-  --color-success-soft: rgba(38, 208, 124, 0.14);
-  --color-warn: #F5A524;
-  --color-warn-soft: rgba(245, 165, 36, 0.14);
-  --color-danger: #F43F5E;
-  --color-danger-soft: rgba(244, 63, 94, 0.14);
+  /* Semánticos — pares fondo tenue + texto oscuro, como en las maquetas */
+  --color-success: #1E8E5A;
+  --color-success-soft: #E8F6EE;
+  --color-warn: #B7791F;
+  --color-warn-soft: #FDF2DC;
+  --color-danger: #D64545;
+  --color-danger-soft: #FBEAEA;
 
-  --color-brand: #0D0B0A;
+  --color-brand: #231F20;
 
   /* Tipografía */
-  --font-sans: 'IBM Plex Sans', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Barlow Semi Condensed', 'DM Sans', sans-serif;
+  /* Las maquetas usan solo IBM Plex. Lo angular lo aporta el logo, no la
+     tipografía: por eso `display` y `sans` son la misma familia. */
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
 
   /* Curvas de easing propias (emil-design-eng) — las nativas de CSS son flojas */
@@ -50,10 +57,10 @@
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /* Sombras — tibias, no negro puro */
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.28), 0 10px 30px -12px rgba(0, 0, 0, 0.5);
-  --shadow-pop: 0 8px 40px -8px rgba(0, 0, 0, 0.55);
-  --shadow-acc: 0 8px 30px -10px var(--color-acc-glow);
+  /* Sombras — en claro son suaves; una sombra densa ensucia el blanco */
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px -8px rgba(15, 23, 42, 0.10);
+  --shadow-pop: 0 12px 40px -12px rgba(15, 23, 42, 0.18);
+  --shadow-acc: 0 6px 16px -8px var(--color-acc-glow);
 }
 
 @layer base {
@@ -73,11 +80,6 @@
     font-family: var(--font-sans);
     color: var(--color-ink);
     background-color: var(--color-bg);
-    background-image:
-      radial-gradient(1200px 700px at 0% -8%, rgba(255, 97, 70, 0.12), transparent 60%),
-      radial-gradient(900px 520px at 100% 0%, rgba(226, 61, 34, 0.08), transparent 55%),
-      radial-gradient(760px 480px at 50% 108%, rgba(33, 29, 27, 0.6), transparent 70%);
-    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -143,11 +145,6 @@
     border-radius: 1.25rem;
     border: 1px solid var(--color-line);
     background: var(--color-surface-elevated);
-  }
-
-  /* Realce sutil arriba de las tarjetas (luz cenital) */
-  .ring-hairline {
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
   }
 
   /* Safe areas iOS / móvil */

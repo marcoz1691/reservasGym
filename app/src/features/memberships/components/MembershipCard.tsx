@@ -206,13 +206,13 @@ export function MembershipCard({ membership, plan, zones }: MembershipCardProps)
 
         {/* Grace Period Warning Box */}
         {status === 'grace' && membership.graceEndsAt && (
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-300">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
+          <div className="flex items-start gap-3 rounded-2xl border border-warn/30 bg-warn-soft p-4 text-xs text-warn">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-warn" />
             <div className="space-y-1">
-              <p className="font-bold text-amber-200">
+              <p className="font-bold text-warn">
                 Tu plan venció pero estás en período de gracia
               </p>
-              <p className="text-[11px] leading-relaxed text-amber-300/90">
+              <p className="text-[11px] leading-relaxed text-warn/90">
                 Puedes continuar ingresando y reservando hasta el{' '}
                 <span className="font-bold underline">
                   {formatDateSpanish(membership.graceEndsAt)}
@@ -225,13 +225,13 @@ export function MembershipCard({ membership, plan, zones }: MembershipCardProps)
 
         {/* Expired Warning Box */}
         {status === 'expired' && (
-          <div className="flex items-start gap-3 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs text-rose-300">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-rose-400" />
+          <div className="flex items-start gap-3 rounded-2xl border border-danger/30 bg-danger-soft p-4 text-xs text-danger">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-danger" />
             <div className="space-y-1">
-              <p className="font-bold text-rose-200">
+              <p className="font-bold text-danger">
                 Tu membresía ha expirado
               </p>
-              <p className="text-[11px] leading-relaxed text-rose-300/90">
+              <p className="text-[11px] leading-relaxed text-danger/90">
                 Para seguir reservando clases y asistiendo a los entrenamientos, por favor acércate a recepción para renovar tu plan.
               </p>
             </div>

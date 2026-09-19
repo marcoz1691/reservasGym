@@ -203,7 +203,7 @@ export function MeasurementModal({
         )}
 
         {error && (
-          <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/15 p-2.5 text-xs text-red-400">
+          <div className="mt-3 rounded-xl border border-danger/30 bg-danger-soft p-2.5 text-xs text-danger">
             {error}
           </div>
         )}
@@ -217,7 +217,7 @@ export function MeasurementModal({
                   label="Peso (kg) *"
                   type="number"
                   step="0.1"
-                  min="20"
+                  min="1"
                   max="350"
                   placeholder="Ej. 68.5"
                   value={weightKg}
@@ -318,7 +318,7 @@ export function MeasurementModal({
             <button
               type="submit"
               disabled={saving}
-              className="focus-ring inline-flex items-center gap-2 rounded-2xl bg-acc px-5 py-2.5 text-xs font-black text-[#0A0D06] shadow-[0_4px_20px_rgba(201,255,61,0.25)] transition hover:brightness-110 active:scale-95 disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-2xl bg-acc px-5 py-2.5 text-xs font-black text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] transition hover:brightness-110 active:scale-95 disabled:opacity-50"
             >
               {saving ? 'Guardando...' : initialData ? 'Actualizar' : 'Guardar Medición'}
             </button>
