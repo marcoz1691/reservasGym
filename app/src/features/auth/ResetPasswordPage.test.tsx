@@ -37,6 +37,27 @@ describe('ZCAPP-46 · pantalla de nueva contraseña', () => {
     expect(screen.getByLabelText(/repite la contraseña/i)).toBeInTheDocument()
   })
 
+  it('el ojo muestra y oculta cada contraseña por separado', async () => {
+    await new LocalRepository().resetPassword(SOCIO)
+    const user = userEvent.setup()
+    renderPage()
+
+    const nueva = await screen.findByLabelText(/nueva contraseña/i)
+    const repite = screen.getByLabelText(/repite la contraseña/i)
+    expect(nueva).toHaveAttribute('type', 'password')
+    expect(repite).toHaveAttribute('type', 'password')
+
+    const ojos = screen.getAllByRole('button', { name: /mostrar contraseña/i })
+    await user.click(ojos[0]!)
+
+    expect(nueva).toHaveAttribute('type', 'text')
+    // el segundo campo no se destapa solo
+    expect(repite).toHaveAttribute('type', 'password')
+
+    await user.click(screen.getByRole('button', { name: /ocultar contraseña/i }))
+    expect(nueva).toHaveAttribute('type', 'password')
+  })
+
   it('avisa si las contraseñas no coinciden y no la cambia', async () => {
     await new LocalRepository().resetPassword(SOCIO)
     const user = userEvent.setup()
