@@ -43,7 +43,7 @@ export function Button({
   return (
     <button
       disabled={disabled || isLoading}
-      className={`${buttonClasses(variant, size, className)} disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100`}
+      className={`disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100 ${buttonClasses(variant, size, className)}`}
       {...props}
     >
       {isLoading ? (

@@ -36,6 +36,8 @@ describe('WelcomeNoPlanCard', () => {
     expect(
       screen.getByRole('link', { name: /explorar áreas/i }),
     ).toHaveAttribute('href', '/explorar')
+    // Un CTA que navega es un solo control: sin <button> dentro del <a>.
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('menciona el pago en línea solo cuando está habilitado', () => {

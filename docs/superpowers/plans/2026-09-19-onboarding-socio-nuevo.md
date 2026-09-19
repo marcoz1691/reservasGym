@@ -141,6 +141,7 @@ git commit -m "feat(domain): regla isFichaPending para la ficha tecnica inicial"
 **Files:**
 - Create: `app/src/ui/buttonStyles.ts`
 - Create: `app/src/ui/ButtonLink.tsx`
+- Create: `app/src/ui/ButtonLink.test.tsx`
 - Create: `app/src/features/memberships/components/WelcomeNoPlanCard.tsx`
 - Create: `app/src/features/memberships/components/WelcomeNoPlanCard.test.tsx`
 - Modify: `app/src/ui/primitives.tsx:23-71` (mover estilos a `buttonStyles.ts`)
@@ -194,6 +195,8 @@ describe('WelcomeNoPlanCard', () => {
     expect(
       screen.getByRole('link', { name: /explorar áreas/i }),
     ).toHaveAttribute('href', '/explorar')
+    // Un CTA que navega es un solo control: sin <button> dentro del <a>.
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('menciona el pago en línea solo cuando está habilitado', () => {
@@ -297,7 +300,7 @@ export function Button({
   return (
     <button
       disabled={disabled || isLoading}
-      className={`${buttonClasses(variant, size, className)} disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100`}
+      className={`disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100 ${buttonClasses(variant, size, className)}`}
       {...props}
     >
       {isLoading ? (
@@ -340,10 +343,72 @@ export function ButtonLink({
 }
 ```
 
-Corre la suite de UI para confirmar que el refactor de `Button` no cambió comportamiento:
+Crea `app/src/ui/ButtonLink.test.tsx`, que fija el contrato del que dependen las Tasks 4 y 5 (hoy no hay ningún test bajo `src/ui/`, así que sin este archivo esa ruta no ejecuta nada):
+
+```tsx
+import { describe, expect, it } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { ButtonLink } from './ButtonLink'
+
+describe('ButtonLink', () => {
+  it('es un único elemento enfocable, no un botón dentro de un enlace', () => {
+    render(
+      <MemoryRouter>
+        <ButtonLink to="/membresia">Ver planes</ButtonLink>
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: 'Ver planes' })
+    expect(link).toHaveAttribute('href', '/membresia')
+    expect(link.querySelector('button')).toBeNull()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('aplica variante, tamaño y clases propias sin perder el estilo base', () => {
+    render(
+      <MemoryRouter>
+        <ButtonLink
+          to="/agenda"
+          variant="secondary"
+          size="sm"
+          className="shrink-0"
+        >
+          Explorar
+        </ButtonLink>
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: 'Explorar' })
+    expect(link).toHaveClass('shrink-0')
+    expect(link).toHaveClass('border-line')
+    expect(link).toHaveClass('px-3')
+    expect(link).toHaveClass('focus-ring')
+  })
+
+  it('reenvía los atributos del enlace, como aria-label', () => {
+    render(
+      <MemoryRouter>
+        <ButtonLink
+          to="/membresia"
+          aria-label="Activar plan para reservar CrossFit WOD Power"
+        >
+          Activar plan
+        </ButtonLink>
+      </MemoryRouter>,
+    )
+
+    expect(
+      screen.getByRole('link', {
+        name: 'Activar plan para reservar CrossFit WOD Power',
+      }),
+    ).toBeInTheDocument()
+  })
+})
+```
 
 Run: `npm test -- --run src/ui/`
-Expected: PASS.
+Expected: PASS — 3 tests.
 
 - [ ] **Step 4: Implementa el componente**
 
@@ -430,7 +495,7 @@ export {
 - [ ] **Step 7: Commit**
 
 ```bash
-git add app/src/ui/buttonStyles.ts app/src/ui/primitives.tsx app/src/ui/ButtonLink.tsx app/src/features/memberships/components/WelcomeNoPlanCard.tsx app/src/features/memberships/components/WelcomeNoPlanCard.test.tsx app/src/features/memberships/components/index.ts app/src/features/memberships/index.ts
+git add app/src/ui/buttonStyles.ts app/src/ui/primitives.tsx app/src/ui/ButtonLink.tsx app/src/ui/ButtonLink.test.tsx app/src/features/memberships/components/WelcomeNoPlanCard.tsx app/src/features/memberships/components/WelcomeNoPlanCard.test.tsx app/src/features/memberships/components/index.ts app/src/features/memberships/index.ts
 git commit -m "feat(memberships): tarjeta de bienvenida para socio sin plan"
 ```
 
