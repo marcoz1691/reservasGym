@@ -596,8 +596,10 @@ export class SupabaseRepository implements GymRepository {
 
     const user = await this.getCurrentUser()
     if (!user) {
+      // Email confirmation activo: cuenta creada sin sesión.
+      // No es un fallo técnico — la UI lo muestra como éxito.
       throw new Error(
-        'Cuenta creada. Revisa tu correo si el proyecto exige confirmación.',
+        'PENDING_EMAIL_CONFIRMATION:Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.',
       )
     }
     return user
