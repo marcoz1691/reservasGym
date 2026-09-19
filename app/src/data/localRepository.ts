@@ -1005,4 +1005,12 @@ export class LocalRepository implements GymRepository {
       membership: { ...membership },
     }
   }
+
+  async createOnlineCheckout(
+    _planId: string,
+  ): Promise<{ initPoint: string; paymentId: string }> {
+    throw new Error(
+      'El pago en línea requiere el ambiente Supabase (QA). Usa recepción en modo local.',
+    )
+  }
 }

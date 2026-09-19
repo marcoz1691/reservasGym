@@ -160,6 +160,7 @@ create table if not exists payments (
   provider text not null check (provider in ('manual', 'datafast', 'mercadopago')),
   manual_method text check (manual_method in ('cash', 'transfer', 'card_pos')),
   reference text,
+  mp_payment_id text,
   created_at timestamptz not null default now(),
   approved_at timestamptz
 );
@@ -169,6 +170,7 @@ create index if not exists idx_memberships_user_id on memberships(user_id);
 create index if not exists idx_memberships_status on memberships(status);
 create index if not exists idx_payments_user_id on payments(user_id);
 create index if not exists idx_payments_status on payments(status);
+create unique index if not exists idx_payments_mp_payment_id on payments (mp_payment_id) where mp_payment_id is not null;
 
 -- ============================================================================
 -- 3. FUNCIONES Y PROCEDURES

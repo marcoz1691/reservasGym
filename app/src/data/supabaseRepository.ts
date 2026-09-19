@@ -489,8 +489,8 @@ export class SupabaseRepository implements GymRepository {
         settings: {
           name: 'Zona Cero Performance Center',
           logoUrl: null,
-          primaryColor: '#0B3D2E',
-          accentColor: '#2DD4A8',
+          primaryColor: '#231F20',
+          accentColor: '#F26D17',
           bookingWindowHours: 168,
           cancelWindowHours: 2,
           checkInWindowMinutes: 15,
@@ -1449,5 +1449,39 @@ export class SupabaseRepository implements GymRepository {
     const payment = mapPayment(payData)
 
     return { payment, membership }
+  }
+
+  async createOnlineCheckout(
+    planId: string,
+  ): Promise<{ initPoint: string; paymentId: string }> {
+    await this.requireUser()
+    const { data, error } = await this.client.functions.invoke(
+      'create-mp-preference',
+      { body: { planId } },
+    )
+
+    const payload = (data ?? {}) as {
+      initPoint?: string
+      paymentId?: string
+      error?: string
+      code?: string
+      detail?: unknown
+    }
+
+    if (payload?.initPoint && payload?.paymentId) {
+      return { initPoint: payload.initPoint, paymentId: payload.paymentId }
+    }
+
+    if (payload?.error) {
+      throw new Error(payload.error)
+    }
+
+    if (error) {
+      throw new Error(error.message || 'No se pudo iniciar el pago en línea')
+    }
+
+    throw new Error(
+      'Pasarela no disponible. Configura Mercado Pago en el servidor.',
+    )
   }
 }

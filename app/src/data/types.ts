@@ -103,4 +103,9 @@ export interface GymRepository {
     manualMethod: ManualPaymentMethod
     reference?: string
   }): Promise<{ payment: Payment; membership: Membership }>
+  /**
+   * Creates a Mercado Pago Checkout Pro preference and returns the redirect URL.
+   * Only available with Supabase + Edge Function configured.
+   */
+  createOnlineCheckout?(planId: string): Promise<{ initPoint: string; paymentId: string }>
 }
