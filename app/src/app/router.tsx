@@ -74,6 +74,11 @@ const DatafastCheckoutPage = lazy(() =>
     default: m.DatafastCheckoutPage,
   })),
 )
+const WelcomeFichaPage = lazy(() =>
+  import('@/features/profile/WelcomeFichaPage').then((m) => ({
+    default: m.WelcomeFichaPage,
+  })),
+)
 
 function RootRedirect() {
   const user = useCurrentUser()
@@ -91,6 +96,7 @@ export function AppRouter() {
         {/* Pública: se llega desde el enlace del correo, sin sesión iniciada. */}
         <Route path="/recuperar" element={<ResetPasswordPage />} />
         <Route element={<RequireAuth />}>
+          <Route path="bienvenida" element={<WelcomeFichaPage />} />
           <Route element={<AppLayout />}>
             <Route index element={<HomePage />} />
             <Route path="membresia" element={<MiPlanPage />} />

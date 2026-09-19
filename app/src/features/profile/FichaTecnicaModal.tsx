@@ -20,6 +20,8 @@ interface FichaTecnicaModalProps {
   open: boolean
   onClose: () => void
   isInitialOnboarding?: boolean
+  /** Solo en onboarding: permite entrar a la app y llenar la ficha después */
+  onSkip?: () => void
 }
 
 const PRESET_GOALS = [
@@ -35,6 +37,7 @@ export function FichaTecnicaModal({
   open,
   onClose,
   isInitialOnboarding = false,
+  onSkip,
 }: FichaTecnicaModalProps) {
   const user = useCurrentUser()
   const { repo } = useGym()
@@ -605,11 +608,19 @@ export function FichaTecnicaModal({
                   </Button>
                 ) : (
                   <div>
-                    {!isInitialOnboarding && (
+                    {!isInitialOnboarding ? (
                       <Button type="button" variant="ghost" onClick={onClose}>
                         Cancelar
                       </Button>
-                    )}
+                    ) : onSkip ? (
+                      <button
+                        type="button"
+                        onClick={onSkip}
+                        className="text-xs font-semibold text-ink-3 underline-offset-2 transition hover:text-ink hover:underline"
+                      >
+                        Completarla después
+                      </button>
+                    ) : null}
                   </div>
                 )}
 
