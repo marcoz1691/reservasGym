@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+coverage/
+.DS_Store
+*.local
+.env
+.env.*
+!.env.example
+!.env.staging.example
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Archivos temporales de Word / Office
+~$*

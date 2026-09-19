@@ -1,0 +1,1 @@
+var e={gimnasio:`Gimnasio`,fisioterapia:`Fisioterapia`,nutricion:`Nutrición`,bailoterapia:`Bailoterapia`,comunes:`Áreas comunes`,hyrox:`Hyrox`,musculacion:`Musculación`,crossfit:`CrossFit`,dragon_fit:`Dragon Fit`};export{e as t};
