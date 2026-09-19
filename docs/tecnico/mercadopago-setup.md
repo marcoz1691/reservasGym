@@ -1,15 +1,24 @@
 # Setup Mercado Pago — ReservasGym Avanzada
 
-Guía para configurar cobros de membresía en **Ecuador** con Mercado Pago Checkout Pro.
+> **Ecuador:** Mercado Pago **Checkout Pro no está disponible** para vendedores en EC.
+> Países MP online: Argentina, Brasil, Chile, Colombia, México, Perú, Uruguay.
+> Para Zona Cero (Quito) usar **Datafast Dataweb**, **Kushki** o **PagoPlux** — ver [pasarelas-ecuador.md](./pasarelas-ecuador.md).
+> El código de Edge Functions MP en este repo es referencia / multi-país; **no activar el CTA** en EC (`VITE_ONLINE_PAYMENTS` permanece apagado).
+
+Guía para configurar cobros de membresía con Mercado Pago Checkout Pro **solo en países donde MP opera**.
 
 ---
 
 ## 1. Requisitos del gimnasio
 
 1. Cuenta Mercado Pago activa en Ecuador (persona natural o jurídica).
-2. Credenciales de producción y sandbox en [developers.mercadopago.com](https://www.mercadopago.com.ec/developers).
+2. Credenciales de producción y prueba en [Mercado Pago Developers](https://www.mercadopago.com/developers/panel/app) (iniciar sesión con la cuenta EC).
 3. Cuenta bancaria vinculada para retiros.
 4. Comisiones MP asumidas por el gimnasio (no incluidas en el precio del software).
+
+> **Nota:** la ruta antigua `mercadopago.com.ec/developers` ya no existe. Usar el panel global:
+> - Inicio: https://www.mercadopago.com/developers/es  
+> - Tus integraciones / apps: https://www.mercadopago.com/developers/panel/app  
 
 ---
 
@@ -98,10 +107,22 @@ supabase functions deploy mp-webhook
 
 ## 8. Checklist
 
-- [ ] Cuenta MP Ecuador del gym
-- [ ] App creada en Developers
-- [ ] Secrets en Supabase
-- [ ] Functions desplegadas
-- [ ] Webhook registrado y probado
+- [x] Edge Functions en repo: `create-mp-preference`, `mp-webhook`
+- [x] Columna `payments.mp_payment_id` (staging)
+- [x] CTA **Pagar en línea** en Mi Plan (QA / Supabase)
+- [ ] Cuenta MP Ecuador del gym + Access Token **TEST**
+- [ ] Secrets en Supabase staging: `MP_ACCESS_TOKEN`, `APP_URL=https://zona-cero-qa.vercel.app`
+- [ ] Webhook en MP Developers → `https://kqhmclbexnnsbzbgerbx.supabase.co/functions/v1/mp-webhook`
 - [ ] Pago sandbox exitoso → membresía extendida
-- [ ] Pago producción de prueba
+- [ ] Pago producción de prueba (Go-Live)
+
+### Activar en staging (una vez)
+
+1. [Mercado Pago Developers → Tus integraciones](https://www.mercadopago.com/developers/panel/app) → credenciales de **prueba** (Access Token).
+2. Supabase Dashboard → Project Settings → Edge Functions → Secrets:
+   - `MP_ACCESS_TOKEN` = Access Token de prueba (`TEST-...` o `APP_USR-...` sandbox)
+   - `APP_URL` = `https://zona-cero-qa.vercel.app`
+3. En MP → Webhooks: URL del `mp-webhook` (arriba), eventos `payment`.
+4. Redeploy QA frontend si hace falta. En **Mi Plan** → **Pagar en línea**.
+
+Sin `MP_ACCESS_TOKEN`, el botón aparece en QA pero el servidor responde que la pasarela no está configurada.

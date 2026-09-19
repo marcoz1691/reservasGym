@@ -489,8 +489,8 @@ export class SupabaseRepository implements GymRepository {
         settings: {
           name: 'Zona Cero Performance Center',
           logoUrl: null,
-          primaryColor: '#0B3D2E',
-          accentColor: '#2DD4A8',
+          primaryColor: '#231F20',
+          accentColor: '#F26D17',
           bookingWindowHours: 168,
           cancelWindowHours: 2,
           checkInWindowMinutes: 15,
@@ -1451,5 +1451,69 @@ export class SupabaseRepository implements GymRepository {
     const payment = mapPayment(payData)
 
     return { payment, membership }
+  }
+
+  async createOnlineCheckout(params: {
+    planId: string
+    phone: string
+    identification: string
+    street?: string
+  }): Promise<{
+    checkoutId: string
+    paymentId: string
+    widgetScriptUrl: string
+    shopperResultUrl: string
+  }> {
+    await this.requireUser()
+    const { data, error } = await this.client.functions.invoke(
+      'create-datafast-checkout',
+      { body: params },
+    )
+
+    const payload = (data ?? {}) as {
+      checkoutId?: string
+      paymentId?: string
+      widgetScriptUrl?: string
+      shopperResultUrl?: string
+      error?: string
+    }
+
+    if (
+      payload.checkoutId &&
+      payload.paymentId &&
+      payload.widgetScriptUrl &&
+      payload.shopperResultUrl
+    ) {
+      return {
+        checkoutId: payload.checkoutId,
+        paymentId: payload.paymentId,
+        widgetScriptUrl: payload.widgetScriptUrl,
+        shopperResultUrl: payload.shopperResultUrl,
+      }
+    }
+
+    if (payload.error) throw new Error(payload.error)
+    if (error) throw new Error(error.message || 'No se pudo iniciar el pago Datafast')
+    throw new Error('Pasarela Datafast no disponible. Revisa secrets en Supabase.')
+  }
+
+  async verifyOnlinePayment(params: {
+    paymentId: string
+    resourcePath: string
+  }): Promise<{ ok: boolean; description?: string }> {
+    await this.requireUser()
+    const { data, error } = await this.client.functions.invoke(
+      'verify-datafast-payment',
+      { body: params },
+    )
+    const payload = (data ?? {}) as {
+      ok?: boolean
+      description?: string
+      error?: string
+    }
+    if (payload.ok) return { ok: true }
+    if (payload.error) throw new Error(payload.error)
+    if (error) throw new Error(error.message || 'No se pudo verificar el pago')
+    return { ok: false, description: payload.description ?? 'Pago no aprobado' }
   }
 }

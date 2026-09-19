@@ -388,7 +388,7 @@ export function CobrosPage() {
           }}
           className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
             activeTab === 'pos'
-              ? 'bg-acc text-white shadow-sm'
+              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
@@ -403,7 +403,7 @@ export function CobrosPage() {
           }}
           className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
             activeTab === 'vencimientos'
-              ? 'bg-acc text-white shadow-sm'
+              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
@@ -413,7 +413,7 @@ export function CobrosPage() {
             <span
               className={`ml-1 rounded-full px-2 py-0.5 text-xs font-black ${
                 activeTab === 'vencimientos'
-                  ? 'bg-white/20 text-white'
+                  ? 'bg-black/15 text-[var(--color-acc-contrast)]'
                   : 'bg-warn/20 text-warn'
               }`}
             >
@@ -429,7 +429,7 @@ export function CobrosPage() {
           }}
           className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
             activeTab === 'historial'
-              ? 'bg-acc text-white shadow-sm'
+              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
@@ -928,7 +928,7 @@ export function CobrosPage() {
                 onClick={() => setExpirationFilter('all')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'all'
-                    ? 'bg-acc text-white'
+                    ? 'bg-acc text-[var(--color-acc-contrast)]'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -939,7 +939,7 @@ export function CobrosPage() {
                 onClick={() => setExpirationFilter('warning')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'warning'
-                    ? 'bg-warn text-black'
+                    ? 'bg-warn text-ink'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -950,7 +950,7 @@ export function CobrosPage() {
                 onClick={() => setExpirationFilter('grace')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'grace'
-                    ? 'bg-warn text-black'
+                    ? 'bg-warn text-ink'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1104,7 +1104,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('all')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'all'
-                    ? 'bg-acc text-white'
+                    ? 'bg-acc text-[var(--color-acc-contrast)]'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1115,7 +1115,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('card_pos')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'card_pos'
-                    ? 'bg-acc text-white'
+                    ? 'bg-acc text-[var(--color-acc-contrast)]'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1126,7 +1126,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('cash')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'cash'
-                    ? 'bg-acc text-white'
+                    ? 'bg-acc text-[var(--color-acc-contrast)]'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1137,7 +1137,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('transfer')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'transfer'
-                    ? 'bg-acc text-white'
+                    ? 'bg-acc text-[var(--color-acc-contrast)]'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >

@@ -182,8 +182,8 @@ export function WeightPage() {
         <div
           className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-xs font-bold transition-all shadow-lg animate-in fade-in ${
             toast.type === 'success'
-              ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
-              : 'border-red-500/30 bg-red-500/15 text-red-400'
+              ? 'border-success/25 bg-success-soft text-success'
+              : 'border-danger/30 bg-danger-soft text-danger'
           }`}
         >
           {toast.type === 'success' ? (

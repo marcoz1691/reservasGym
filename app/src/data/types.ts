@@ -103,4 +103,24 @@ export interface GymRepository {
     manualMethod: ManualPaymentMethod
     reference?: string
   }): Promise<{ payment: Payment; membership: Membership }>
+  /**
+   * Inicia checkout online (Datafast Dataweb / COPYandPay).
+   * Solo disponible con Supabase + Edge Function configurada.
+   */
+  createOnlineCheckout?(params: {
+    planId: string
+    phone: string
+    identification: string
+    street?: string
+  }): Promise<{
+    checkoutId: string
+    paymentId: string
+    widgetScriptUrl: string
+    shopperResultUrl: string
+  }>
+  /** Confirma pago Datafast con resourcePath del redirect. */
+  verifyOnlinePayment?(params: {
+    paymentId: string
+    resourcePath: string
+  }): Promise<{ ok: boolean; description?: string }>
 }

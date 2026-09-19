@@ -209,26 +209,38 @@ describe('domain/rules/membership', () => {
   })
 
   describe('daysRemaining', () => {
-    it('calculates remaining calendar days correctly', () => {
-      const now = new Date('2026-09-24T00:00:00.000Z')
-      // endsAt is 2026-10-01T00:00:00.000Z -> exactly 7 days
+    // endsAt 2026-10-01T00:00:00.000Z = 2026-09-30 19:00 America/Guayaquil
+    it('usa días de calendario America/Guayaquil (ZC18-O2)', () => {
+      const now = new Date('2026-09-24T00:00:00.000Z') // 23 sep 19:00 Guayaquil
       expect(daysRemaining(baseMembership, now)).toBe(7)
     })
 
-    it('rounds up partial days left', () => {
-      const now = new Date('2026-09-24T12:00:00.000Z')
-      // 6.5 days left -> 7 calendar days remaining
-      expect(daysRemaining(baseMembership, now)).toBe(7)
+    it('cuenta el día calendario actual hacia el vencimiento', () => {
+      const now = new Date('2026-09-24T12:00:00.000Z') // 24 sep Guayaquil
+      expect(daysRemaining(baseMembership, now)).toBe(6)
     })
 
-    it('returns 0 when now is equal to endsAt', () => {
+    it('mismo día calendario que endsAt → 1 (último día)', () => {
       const now = new Date('2026-10-01T00:00:00.000Z')
-      expect(daysRemaining(baseMembership, now)).toBe(0)
+      expect(daysRemaining(baseMembership, now)).toBe(1)
     })
 
-    it('returns 0 when now is past endsAt', () => {
+    it('returns 0 when now is past endsAt calendar day', () => {
       const now = new Date('2026-10-05T00:00:00.000Z')
       expect(daysRemaining(baseMembership, now)).toBe(0)
+    })
+
+    it('alinea medianoche Guayaquil con la fecha mostrada', () => {
+      // 1 oct 00:30 Guayaquil = 1 oct 05:30 UTC — ya pasó endsAt absoluto,
+      // pero comprobamos solo días entre claves de fecha locales.
+      const mem = {
+        ...baseMembership,
+        endsAt: '2026-10-01T05:00:00.000Z', // 1 oct 00:00 Guayaquil
+      }
+      const sameLocalMorning = new Date('2026-10-01T05:30:00.000Z')
+      expect(daysRemaining(mem, sameLocalMorning)).toBe(1)
+      const nextLocalDay = new Date('2026-10-02T05:00:00.000Z')
+      expect(daysRemaining(mem, nextLocalDay)).toBe(0)
     })
   })
 

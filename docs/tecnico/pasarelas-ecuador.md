@@ -22,15 +22,16 @@ Mercado Pago **no** es la opción por defecto en Ecuador; lo más común es **Da
 - Integración API Dataweb / checkout online
 - Mercado Pago / Kushki / PagoPlux (salvo pedido explícito después)
 
-### Upsell / fase 2 (opcional)
+### Upsell / fase 2 — Datafast Dataweb (online)
 
 Si el cliente activa **Datafast comercio electrónico (Dataweb)** con su banco:
 
-1. Pedir commerce ID + credenciales test/prod.
-2. Implementar adaptador `datafast` en Edge Functions.
-3. Cambiar CTA socio a **Renovar ahora** → checkout Datafast.
+1. Pedir `entityId`, Access Token, MID, TID (test + prod) — ver [datafast-dataweb-setup.md](./datafast-dataweb-setup.md).
+2. Secrets en Supabase + `VITE_ONLINE_PAYMENTS=1`.
+3. Edge Functions `create-datafast-checkout` / `verify-datafast-payment`.
+4. CTA socio: **Pagar en línea** → widget COPYandPay.
 
-Hasta entonces el “botón de pagos” en la app es **informativo** (ir a recepción), no un checkout.
+Hasta no tener credenciales Dataweb, el botón permanece apagado (solo recepción).
 
 ### Texto WhatsApp (confirmar alcance)
 
@@ -128,4 +129,5 @@ manual | datafast | kushki | pagoplux | mercadopago | payphone
 ## 6. Referencias
 
 - Spec Avanzada: [plan-avanzada.md](./plan-avanzada.md)
-- Setup legacy MP (solo si el cliente lo elige): [mercadopago-setup.md](./mercadopago-setup.md)
+- **Datafast Dataweb (Ecuador):** [datafast-dataweb-setup.md](./datafast-dataweb-setup.md)
+- Setup legacy MP (solo países donde opera): [mercadopago-setup.md](./mercadopago-setup.md)

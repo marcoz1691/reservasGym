@@ -1,4 +1,4 @@
-import { Check, Dumbbell, Sparkles, Ticket } from 'lucide-react'
+import { Check, CreditCard, Dumbbell, Loader2, Sparkles, Ticket } from 'lucide-react'
 import type { MembershipPlan, Zone } from '@/domain/models'
 import { ZONE_LABELS } from '@/domain/models'
 import { formatCurrency } from '@/lib/format'
@@ -7,9 +7,20 @@ interface PlansShowcaseProps {
   plans: MembershipPlan[]
   currentPlanId?: string | null
   zones: Zone[]
+  /** When set, shows online pay CTA per plan */
+  onPayOnline?: (planId: string) => void | Promise<void>
+  payingPlanId?: string | null
+  onlinePayEnabled?: boolean
 }
 
-export function PlansShowcase({ plans, currentPlanId, zones }: PlansShowcaseProps) {
+export function PlansShowcase({
+  plans,
+  currentPlanId,
+  zones,
+  onPayOnline,
+  payingPlanId = null,
+  onlinePayEnabled = false,
+}: PlansShowcaseProps) {
   const activePlans = plans.filter((p) => p.active)
 
   if (activePlans.length === 0) {
@@ -34,6 +45,7 @@ export function PlansShowcase({ plans, currentPlanId, zones }: PlansShowcaseProp
         {activePlans.map((plan) => {
           const isCurrent = plan.id === currentPlanId
           const hasQuota = plan.visitQuota !== null && plan.visitQuota !== undefined
+          const isPaying = payingPlanId === plan.id
 
           return (
             <div
@@ -45,7 +57,7 @@ export function PlansShowcase({ plans, currentPlanId, zones }: PlansShowcaseProp
               }`}
             >
               {isCurrent && (
-                <div className="absolute -top-3 right-5 inline-flex items-center gap-1 rounded-full bg-acc px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white shadow-md">
+                <div className="absolute -top-3 right-5 inline-flex items-center gap-1 rounded-full bg-acc px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--color-acc-contrast)] shadow-md">
                   <Check className="h-3 w-3" />
                   Tu plan actual
                 </div>
@@ -64,7 +76,6 @@ export function PlansShowcase({ plans, currentPlanId, zones }: PlansShowcaseProp
                   </div>
                 </div>
 
-                {/* Features & Quota */}
                 <div className="space-y-2.5 border-t border-line/60 pt-3 text-xs text-ink-2">
                   <div className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-acc shrink-0" />
@@ -87,7 +98,6 @@ export function PlansShowcase({ plans, currentPlanId, zones }: PlansShowcaseProp
                     </div>
                   )}
 
-                  {/* Included disciplines */}
                   <div className="space-y-1.5 pt-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-ink-3 block">
                       Disciplinas incluidas:
@@ -119,10 +129,31 @@ export function PlansShowcase({ plans, currentPlanId, zones }: PlansShowcaseProp
                 </div>
               </div>
 
-              {/* Bottom footer */}
-              <div className="mt-5 border-t border-line/60 pt-3 text-center">
-                <p className="text-[11px] text-ink-3">
-                  Adquiérelo o renuévalo en recepción
+              <div className="mt-5 border-t border-line/60 pt-3 space-y-2">
+                {onlinePayEnabled && onPayOnline ? (
+                  <button
+                    type="button"
+                    disabled={Boolean(payingPlanId)}
+                    onClick={() => void onPayOnline(plan.id)}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-acc px-4 py-2.5 text-sm font-bold text-[var(--color-acc-contrast)] transition hover:brightness-110 disabled:opacity-60 active:scale-[0.98]"
+                  >
+                    {isPaying ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Redirigiendo…
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-4 w-4" />
+                        {isCurrent ? 'Renovar en línea' : 'Pagar en línea'}
+                      </>
+                    )}
+                  </button>
+                ) : null}
+                <p className="text-[11px] text-ink-3 text-center">
+                  {onlinePayEnabled
+                    ? 'También puedes pagar en recepción (efectivo, transferencia o Datafast)'
+                    : 'Adquiérelo o renuévalo en recepción'}
                 </p>
               </div>
             </div>

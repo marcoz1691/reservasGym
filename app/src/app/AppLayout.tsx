@@ -73,7 +73,7 @@ export function AppLayout() {
   const isMember = user?.role === 'member'
   const desktopNav = isMember ? memberDesktopNav : staffDesktopNav
   const mobileTabs = isMember ? memberMobileTabs : staffMobileTabs
-  const accent = settings.accentColor || '#FF6146'
+  const accent = settings.accentColor || '#F26D17'
 
   const activeBookingsCount = isMember && user
     ? bookings.filter(
@@ -112,9 +112,11 @@ export function AppLayout() {
                 className="h-10 w-10 rounded-xl object-cover shadow-md"
               />
             ) : (
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-acc text-white shadow-lg shadow-acc/25 font-black">
-                <Dumbbell className="h-5 w-5" />
-              </div>
+              <img
+                src={`${import.meta.env.BASE_URL}brand/mark-color.png`}
+                alt={settings.name || 'Zona Cero'}
+                className="h-6 w-auto shrink-0"
+              />
             )}
             <div className="min-w-0">
               <div className="truncate font-display text-base font-black tracking-tight text-ink">
@@ -147,7 +149,7 @@ export function AppLayout() {
                   <span>{label}</span>
                 </div>
                 {to === '/reservas' && activeBookingsCount > 0 ? (
-                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-acc px-1.5 text-[10px] font-extrabold text-white">
+                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-acc px-1.5 text-[10px] font-extrabold text-[var(--color-acc-contrast)]">
                     {activeBookingsCount}
                   </span>
                 ) : null}
@@ -214,9 +216,11 @@ export function AppLayout() {
                 className="h-8 w-8 rounded-lg object-cover"
               />
             ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-acc text-white font-black shadow-sm">
-                <Dumbbell className="h-4 w-4" />
-              </div>
+              <img
+                src={`${import.meta.env.BASE_URL}brand/mark-color.png`}
+                alt={settings.name || 'Zona Cero'}
+                className="h-5 w-auto shrink-0"
+              />
             )}
             <div>
               <span className="font-display text-sm font-black tracking-tight text-ink">
@@ -284,7 +288,7 @@ export function AppLayout() {
                         }`}
                       />
                       {to === '/reservas' && activeBookingsCount > 0 ? (
-                        <span className="absolute -top-1 -right-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-acc px-1 text-[9px] font-extrabold text-white">
+                        <span className="absolute -top-1 -right-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-acc px-1 text-[9px] font-extrabold text-[var(--color-acc-contrast)]">
                           {activeBookingsCount}
                         </span>
                       ) : null}

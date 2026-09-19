@@ -76,7 +76,7 @@ export function BrandingPage() {
             <div className="flex items-center gap-3">
               <input
                 type="color"
-                value={accentColor || '#FF6146'}
+                value={accentColor || '#F26D17'}
                 onChange={(e) => setAccentColor(e.target.value)}
                 className="h-11 w-14 cursor-pointer rounded-xl border border-line bg-surface-elevated"
               />
@@ -95,7 +95,7 @@ export function BrandingPage() {
             <p className="text-xs font-bold uppercase text-ink-3">Vista previa</p>
             <p className="mt-1 text-xl font-extrabold">{name || 'Nombre'}</p>
             <div
-              className="mt-3 inline-flex rounded-2xl px-4 py-2 text-sm font-bold text-white shadow-md"
+              className="mt-3 inline-flex rounded-2xl px-4 py-2 text-sm font-bold text-[var(--color-acc-contrast)] shadow-md"
               style={{ background: accentColor }}
             >
               Botón de ejemplo
