@@ -29,7 +29,7 @@ Un socio recién registrado, sin plan activo, recibe hoy una experiencia de erro
 
 **`ExpiryBanner`** pierde su rama de «sin membresía» (líneas 39-65) y devuelve `null` en ese caso. Queda dedicado a vencimiento, gracia y cancelación: baja de cuatro a tres estados.
 
-**`WelcomeNoPlanCard`** (nuevo, `app/src/features/memberships/components/`) es presentacional y sin estado. Recibe `firstName` y `onlinePayEnabled` por props, no toca el repositorio y se exporta desde el índice de memberships.
+**`WelcomeNoPlanCard`** (nuevo, `app/src/features/memberships/components/`) es presentacional y sin estado. Recibe solo `onlinePayEnabled` por props, no toca el repositorio y se exporta desde el índice de memberships. No recibe el nombre del socio porque el saludo de Inicio ya lo muestra.
 
 **`HomePage`** calcula la membresía con el mismo selector y elige el bloque hero en tres ramas: próxima clase reservada, socio sin plan (tarjeta nueva) o plan activo sin reservas («Sin reservas próximas» actual). Métricas, chips y próximas sesiones no cambian.
 
@@ -59,7 +59,7 @@ El `aria-label` nombra la sesión, por ejemplo «Activar plan para reservar Hyro
 
 La franja superior (`PlanRequiredNotice`, componente nuevo en memberships) aparece **solo** para quien nunca tuvo plan, con el texto «Estás explorando la agenda. Activa tu plan para reservar» y CTA «Ver planes». El socio vencido no la ve, porque ya recibe el banner de vencimiento y serían dos avisos apilados. Es un componente aparte de `WelcomeNoPlanCard`: uno es tira y el otro hero, y unificarlos con variantes reintroduce el acoplamiento que descartamos.
 
-El gate se conserva como red de seguridad para lista de espera y áreas no incluidas en el plan, pero el mensaje fijo de la línea 161 pasa a usar la razón que devuelve el dominio, que ya distingue entre «No cuenta con una membresía activa.» y «Membresía vencida. Por favor renueva tu plan.». En paralelo, el texto por defecto de `BookingGateModal` para `no_membership` cambia a «Para reservar necesitas un plan activo. Elige tu plan en Mi Plan y actívalo en recepción.», porque hoy afirma que la membresía está vencida.
+El gate se conserva como red de seguridad para lista de espera y áreas no incluidas en el plan, pero el mensaje fijo de la línea 161 pasa a usar la razón que devuelve el dominio, que ya distingue entre «No cuenta con una membresía activa.» y «Membresía vencida. Por favor renueva tu plan.». En paralelo, el texto por defecto de `BookingGateModal` para `no_membership` cambia a «Para reservar necesitas un plan activo. Elige tu plan en Mi Plan y actívalo en recepción.», porque hoy afirma que la membresía está vencida. Ese mismo caso deja el tratamiento rojo de error y pasa a tono marca (icono y botón), por coherencia con el resto del cambio; vencida y cancelada conservan el rojo.
 
 Staff y admin no ven la franja ni el cambio de botón: conservan «Reservar» y «Por Socio».
 
