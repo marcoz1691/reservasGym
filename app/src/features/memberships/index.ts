@@ -9,4 +9,5 @@ export {
   PlansShowcase,
   PaymentRow,
   PaymentHistory,
+  WelcomeNoPlanCard,
 } from './components'
