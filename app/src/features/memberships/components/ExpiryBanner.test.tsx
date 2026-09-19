@@ -244,7 +244,7 @@ describe('ExpiryBanner Component', () => {
     expect(banner).toHaveAttribute('data-banner-type', 'none')
     expect(
       screen.getByText(
-        /Membresía vencida\. Tus reservas están pausadas\. Acércate a recepción para renovar tu plan\./i,
+        /No tienes un plan activo\. Tus reservas están pausadas\. Acércate a recepción para activar tu membresía\./i,
       ),
     ).toBeInTheDocument()
   })

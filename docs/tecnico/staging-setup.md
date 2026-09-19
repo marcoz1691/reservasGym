@@ -5,17 +5,19 @@
 | Capa | Uso | Cuándo |
 |------|-----|--------|
 | **Local** | Dev diario (`npm run dev` sin Supabase → LocalRepository) | Siempre |
-| **Staging** | BD real, RLS, Auth, demos a William | **Sprint 1 en adelante** |
+| **Staging / QA** | BD real, RLS, Auth, demos y QA profesional | **Sprint 1 en adelante** |
 | **Producción** | Gym real | Sprint 7 / Go-Live |
 
-**Flujo:** `local` → `staging` (validar en Jira: *Listo para pruebas*) → `prod`
+**Flujo:** `local` → `QA` (validar en Jira: *Listo para pruebas*) → `prod`
+
+**URL fija QA (oficial):** https://zona-cero-qa.vercel.app
 
 ---
 
 ## 1. Crear proyecto Supabase Staging (una vez)
 
 1. [supabase.com/dashboard](https://supabase.com/dashboard) → **New project**
-2. Nombre: `zona-cero-staging`
+2. Nombre: `zona-cero` (o `zona-cero-staging`)
 3. Región: **South America (São Paulo)** (más cercana a Ecuador)
 4. Guardar **Project URL** y **anon public key** (Settings → API)
 
@@ -74,7 +76,7 @@ Luego ejecutar `staging-users.sql` para elevar roles.
 
 ---
 
-## 4. Configurar la app local → staging
+## 4. Configurar la app local → staging (solo desarrollo)
 
 ```powershell
 cd app
@@ -93,23 +95,40 @@ Abrir `http://localhost:5190` e iniciar sesión con las cuentas staging.
 
 | Columna | Dónde probar |
 |---------|----------------|
-| En curso | Local (LocalRepository o staging) |
-| **Listo para pruebas** | **`npm run dev:staging`** + checklist del ticket |
+| En curso | Local o `npm run dev:staging` |
+| **Listo para pruebas** | **https://zona-cero-qa.vercel.app** + checklist del ticket |
 | Finalizado | Mismo ambiente; criterios de aceptación OK |
 
 Al mover un ticket a *Listo para pruebas*, el comentario debe incluir:
-- Comando: `npm run dev:staging`
+- URL: `https://zona-cero-qa.vercel.app`
 - Usuario/contraseña de prueba
 - Checklist DoD (3–5 ítems)
 
 ---
 
-## 6. Frontend desplegado (URL pública) — Sprint 2–3
+## 6. Frontend QA (URL pública fija) — operativo
 
-Cuando haya demo para William (membresías / panel recepción):
+| Ítem | Valor |
+|------|-------|
+| **URL fija QA** | **https://zona-cero-qa.vercel.app** |
+| Proyecto Vercel | `marcspro/zona-cero-qa` |
+| Backend | Mismo Supabase staging (`zona-cero`) |
+| Env en Vercel | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
 
-- Deploy en Vercel/Netlify con variables `VITE_SUPABASE_*` del **mismo** proyecto staging
-- URL sugerida: `staging.zonacero.app` o preview de Vercel
+**Cómo probar (QA profesional / William / recepción):** abrir la URL en desktop o celular (Safari/Chrome). No hace falta clonar el repo ni Node. Opcional: «Añadir a pantalla de inicio» para sensación de app (sigue siendo web).
+
+**Auth redirects (Supabase Dashboard → Authentication → URL Configuration):**
+- Site URL: `https://zona-cero-qa.vercel.app`
+- Redirect URLs: `https://zona-cero-qa.vercel.app/**` y `http://localhost:5190/**`
+
+**Redeploy:**
+
+```powershell
+cd app
+npx vercel --prod --scope marcspro
+```
+
+Opcional después: dominio custom `qa.zonacero.app` apuntando al mismo proyecto.
 
 ---
 
@@ -132,10 +151,8 @@ El badge **main PRODUCTION** en el dashboard **no** hay que cambiarlo — no es 
 
 ## Checklist Sprint 1 (SCRUM-15)
 
-- [ ] Proyecto `zona-cero-staging` creado
-- [ ] `schema.sql` aplicado sin errores
-- [ ] `seed.sql` aplicado (8 zonas + planes visibles)
-- [ ] RLS activo en todas las tablas (`alter table ... enable row level security`)
-- [ ] 3 usuarios staging creados + `staging-users.sql` ejecutado
-- [ ] `.env.staging` configurado
-- [ ] `npm run dev:staging` — login socio y staff OK
+- [x] Proyecto Supabase staging (`zona-cero`) operativo
+- [x] `schema.sql` / `seed.sql` / RLS / usuarios staging
+- [x] Frontend QA en Vercel: https://zona-cero-qa.vercel.app
+- [ ] Site URL + Redirect URLs en Supabase Auth (sección 6)
+- [x] Login socio/staff/admin OK contra staging

@@ -48,7 +48,8 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
             <ShieldAlert className="h-4 w-4" />
           </div>
           <p className="text-xs sm:text-sm font-medium text-ink-1">
-            Membresía vencida. Tus reservas están pausadas. Acércate a recepción para renovar tu plan.
+            No tienes un plan activo. Tus reservas están pausadas. Acércate a recepción
+            para activar tu membresía.
           </p>
         </div>
         <button

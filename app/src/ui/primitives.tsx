@@ -5,7 +5,18 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
   ReactNode,
+  FormEvent,
+  InvalidEvent,
+  KeyboardEvent,
+  ClipboardEvent,
+  ChangeEvent,
 } from 'react'
+import {
+  isBlockedNumberKey,
+  sanitizeDecimalInput,
+  spanishValidityMessage,
+  applyDecimalRangeValidity,
+} from '@/lib/formValidationEs'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'accent'
@@ -68,8 +79,22 @@ export function Input({
   error,
   hint,
   className = '',
+  onInvalid,
+  onInput,
+  onKeyDown,
+  onPaste,
+  onChange,
+  type,
+  inputMode,
+  min,
+  max,
+  step,
   ...props
 }: InputProps) {
+  // type=number en Chrome permite y muestra "e" (notación científica).
+  // Usamos text + inputMode decimal y validamos min/max nosotros.
+  const isNumber = type === 'number'
+
   return (
     <label className="block space-y-1.5">
       {label ? (
@@ -81,7 +106,87 @@ export function Input({
         className={`focus-ring w-full rounded-2xl border bg-surface-elevated px-3.5 py-2.5 text-ink outline-none placeholder:text-ink-3 transition-colors duration-150 ease-[var(--ease-out)] focus-visible:border-acc/60 focus-visible:ring-2 focus-visible:ring-acc/20 ${
           error ? 'border-danger/80' : 'border-line'
         } ${className}`}
+        type={isNumber ? 'text' : type}
+        inputMode={inputMode ?? (isNumber ? 'decimal' : undefined)}
+        min={isNumber ? undefined : min}
+        max={isNumber ? undefined : max}
+        step={isNumber ? undefined : step}
+        data-zc-decimal={isNumber ? 'true' : undefined}
         {...props}
+        onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+          if (isNumber && isBlockedNumberKey(e.key)) {
+            e.preventDefault()
+            return
+          }
+          onKeyDown?.(e)
+        }}
+        onBeforeInput={(e) => {
+          if (!isNumber) return
+          const data = (e.nativeEvent as InputEvent).data
+          if (data && /[eE+\-]|[^\d.]/.test(data)) {
+            e.preventDefault()
+          }
+        }}
+        onPaste={(e: ClipboardEvent<HTMLInputElement>) => {
+          if (isNumber) {
+            const text = e.clipboardData.getData('text')
+            e.preventDefault()
+            const cleaned = sanitizeDecimalInput(text)
+            const el = e.currentTarget
+            const start = el.selectionStart ?? el.value.length
+            const end = el.selectionEnd ?? el.value.length
+            const next = sanitizeDecimalInput(
+              el.value.slice(0, start) + cleaned + el.value.slice(end),
+            )
+            const native = Object.getOwnPropertyDescriptor(
+              HTMLInputElement.prototype,
+              'value',
+            )
+            native?.set?.call(el, next)
+            applyDecimalRangeValidity(el, min, max)
+            el.dispatchEvent(new Event('input', { bubbles: true }))
+            onChange?.({
+              ...e,
+              target: el,
+              currentTarget: el,
+            } as ChangeEvent<HTMLInputElement>)
+            return
+          }
+          onPaste?.(e)
+        }}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+          if (isNumber) {
+            const cleaned = sanitizeDecimalInput(e.target.value)
+            if (cleaned !== e.target.value) {
+              e.target.value = cleaned
+            }
+            applyDecimalRangeValidity(e.target, min, max)
+          }
+          onChange?.(e)
+        }}
+        onInvalid={(e: InvalidEvent<HTMLInputElement>) => {
+          if (isNumber) {
+            applyDecimalRangeValidity(e.currentTarget, min, max)
+            if (!e.currentTarget.validity.customError) {
+              e.currentTarget.setCustomValidity(
+                spanishValidityMessage(e.currentTarget),
+              )
+            }
+          } else {
+            e.currentTarget.setCustomValidity(
+              spanishValidityMessage(e.currentTarget),
+            )
+          }
+          onInvalid?.(e)
+        }}
+        onInput={(e: FormEvent<HTMLInputElement>) => {
+          if (isNumber) {
+            applyDecimalRangeValidity(e.currentTarget, min, max)
+          } else {
+            e.currentTarget.setCustomValidity('')
+          }
+          onInput?.(e)
+        }}
       />
       {error ? (
         <span className="block text-xs font-medium text-danger">{error}</span>
@@ -102,6 +207,8 @@ export function Select({
   error,
   className = '',
   children,
+  onInvalid,
+  onInput,
   ...props
 }: SelectProps) {
   return (
@@ -116,6 +223,16 @@ export function Select({
           error ? 'border-danger/80' : 'border-line'
         }`}
         {...props}
+        onInvalid={(e: InvalidEvent<HTMLSelectElement>) => {
+          e.currentTarget.setCustomValidity(
+            spanishValidityMessage(e.currentTarget),
+          )
+          onInvalid?.(e)
+        }}
+        onInput={(e: FormEvent<HTMLSelectElement>) => {
+          e.currentTarget.setCustomValidity('')
+          onInput?.(e)
+        }}
       >
         {children}
       </select>
@@ -136,6 +253,8 @@ export function Textarea({
   label,
   error,
   className = '',
+  onInvalid,
+  onInput,
   ...props
 }: TextareaProps) {
   return (
@@ -150,6 +269,16 @@ export function Textarea({
           error ? 'border-danger/80' : 'border-line'
         } ${className}`}
         {...props}
+        onInvalid={(e: InvalidEvent<HTMLTextAreaElement>) => {
+          e.currentTarget.setCustomValidity(
+            spanishValidityMessage(e.currentTarget),
+          )
+          onInvalid?.(e)
+        }}
+        onInput={(e: FormEvent<HTMLTextAreaElement>) => {
+          e.currentTarget.setCustomValidity('')
+          onInput?.(e)
+        }}
       />
       {error ? (
         <span className="block text-xs font-medium text-danger">{error}</span>

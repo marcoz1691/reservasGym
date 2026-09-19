@@ -16,6 +16,7 @@ import type {
 } from '@/domain/models'
 import type { AuthCredentials } from '@/data/types'
 import { getRepository } from '@/data'
+import { computeMembershipStatus } from '@/domain/rules/membership'
 
 type AgendaView = 'day' | 'week' | 'month'
 
@@ -274,11 +275,30 @@ export function selectMyBookings(state: GymState | null, userId?: string): Booki
   return state.bookings.filter((b) => b.userId === userId)
 }
 
-export function selectMyMembership(state: GymState | null, userId?: string): Membership | null {
+export function selectMyMembership(
+  state: GymState | null,
+  userId?: string,
+  now: Date = new Date(),
+): Membership | null {
   if (!state || !userId) return null
   const userMemberships = (state.memberships ?? []).filter((m) => m.userId === userId)
   if (userMemberships.length === 0) return null
-  return userMemberships[0] ?? null
+
+  // Misma regla que getMemberMembership / MiPlanPage: preferir active|grace
+  const current = userMemberships.find((m) => {
+    const s = computeMembershipStatus(m, now)
+    return s === 'active' || s === 'grace'
+  })
+  if (current) {
+    return { ...current, status: computeMembershipStatus(current, now) }
+  }
+
+  const sorted = [...userMemberships].sort(
+    (a, b) => new Date(b.endsAt).getTime() - new Date(a.endsAt).getTime(),
+  )
+  const latest = sorted[0]
+  if (!latest) return null
+  return { ...latest, status: computeMembershipStatus(latest, now) }
 }
 
 export function selectMyPayments(state: GymState | null, userId?: string): Payment[] {
