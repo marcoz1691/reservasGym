@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Building2,
   CalendarCheck,
@@ -20,22 +20,14 @@ import {
 export function MiPlanPage() {
   const user = useCurrentUser()
   const data = useAppData()
-  const { repo, refresh } = useGym()
+  const { refresh } = useGym()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [payingPlanId, setPayingPlanId] = useState<string | null>(null)
-  const [payError, setPayError] = useState<string | null>(null)
   const [payBanner, setPayBanner] = useState<string | null>(null)
 
-  /**
-   * Pago online desactivado para Ecuador.
-   * Mercado Pago Checkout Pro no está disponible en EC (sí en AR/BR/CL/CO/MX/PE/UY).
-   * Pasarelas locales: Datafast Dataweb, Kushki, PagoPlux — ver docs/tecnico/pasarelas-ecuador.md
-   * Cuando haya credenciales de una pasarela EC, activar con VITE_ONLINE_PAYMENTS=1 + adaptador.
-   */
+  /** Datafast Dataweb — activar con VITE_ONLINE_PAYMENTS=1 + secrets DATAFAST_* */
   const onlinePayEnabled =
-    import.meta.env.VITE_ONLINE_PAYMENTS === '1' &&
-    isSupabaseConfigured() &&
-    typeof repo.createOnlineCheckout === 'function'
+    import.meta.env.VITE_ONLINE_PAYMENTS === '1' && isSupabaseConfigured()
 
   const currentMembership = useMemo(() => {
     if (!user) return null
@@ -82,14 +74,12 @@ export function MiPlanPage() {
     if (!payment) return
 
     if (payment === 'success') {
-      setPayBanner(
-        'Pago recibido. Si tu plan aún no aparece activo, espera unos segundos y actualiza — el webhook confirma el cobro.',
-      )
+      setPayBanner('Pago recibido. Revisa el estado de tu membresía abajo.')
       void refresh()
     } else if (payment === 'failure') {
       setPayBanner('El pago no se completó. Puedes intentar de nuevo o pagar en recepción.')
     } else if (payment === 'pending') {
-      setPayBanner('Pago pendiente de confirmación. Te avisaremos cuando Mercado Pago lo apruebe.')
+      setPayBanner('Pago pendiente de confirmación.')
     }
 
     const next = new URLSearchParams(searchParams)
@@ -97,26 +87,9 @@ export function MiPlanPage() {
     setSearchParams(next, { replace: true })
   }, [searchParams, setSearchParams, refresh])
 
-  const handlePayOnline = useCallback(
-    async (planId: string) => {
-      if (!repo.createOnlineCheckout) {
-        setPayError('Pago en línea no disponible en este ambiente.')
-        return
-      }
-      setPayError(null)
-      setPayingPlanId(planId)
-      try {
-        const { initPoint } = await repo.createOnlineCheckout(planId)
-        window.location.assign(initPoint)
-      } catch (err) {
-        setPayError(
-          err instanceof Error ? err.message : 'No se pudo iniciar el pago en línea',
-        )
-        setPayingPlanId(null)
-      }
-    },
-    [repo],
-  )
+  function handlePayOnline(selectedPlanId: string) {
+    navigate(`/membresia/pago?planId=${encodeURIComponent(selectedPlanId)}`)
+  }
 
   if (!user) {
     return (
@@ -142,15 +115,6 @@ export function MiPlanPage() {
         </div>
       ) : null}
 
-      {payError ? (
-        <div
-          role="alert"
-          className="rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
-        >
-          {payError}
-        </div>
-      ) : null}
-
       {currentMembership ? (
         <MembershipCard
           membership={currentMembership}
@@ -168,14 +132,14 @@ export function MiPlanPage() {
 
             <h2 className="text-2xl font-black tracking-tight text-ink md:text-3xl">
               {onlinePayEnabled
-                ? 'Activa tu plan en línea o en recepción'
+                ? 'Activa tu plan en línea (Datafast) o en recepción'
                 : 'Activa tu plan en recepción para empezar a entrenar'}
             </h2>
 
             <p className="text-sm text-ink-2 leading-relaxed">
               Actualmente no cuentas con una membresía activa en Zona Cero Performance.
               {onlinePayEnabled
-                ? ' Elige un plan abajo y paga con tarjeta, o acércate a recepción.'
+                ? ' Elige un plan abajo y paga con tarjeta Dataweb, o acércate a recepción.'
                 : ' Para reservar clases, acércate a la recepción del gimnasio.'}
             </p>
 
@@ -197,7 +161,7 @@ export function MiPlanPage() {
                 </div>
                 <p className="text-[11px] text-ink-3">
                   {onlinePayEnabled
-                    ? 'Mercado Pago seguro, o efectivo / transferencia / Datafast.'
+                    ? 'Datafast Dataweb (tarjeta) o efectivo / transferencia / POS.'
                     : 'Paga en efectivo, transferencia o tarjeta Datafast.'}
                 </p>
               </div>
@@ -228,7 +192,6 @@ export function MiPlanPage() {
         zones={data.zones ?? []}
         onlinePayEnabled={onlinePayEnabled}
         onPayOnline={onlinePayEnabled ? handlePayOnline : undefined}
-        payingPlanId={payingPlanId}
       />
 
       <PaymentHistory
