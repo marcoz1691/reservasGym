@@ -1,6 +1,11 @@
 # Setup Mercado Pago — ReservasGym Avanzada
 
-Guía para configurar cobros de membresía en **Ecuador** con Mercado Pago Checkout Pro.
+> **Ecuador:** Mercado Pago **Checkout Pro no está disponible** para vendedores en EC.
+> Países MP online: Argentina, Brasil, Chile, Colombia, México, Perú, Uruguay.
+> Para Zona Cero (Quito) usar **Datafast Dataweb**, **Kushki** o **PagoPlux** — ver [pasarelas-ecuador.md](./pasarelas-ecuador.md).
+> El código de Edge Functions MP en este repo es referencia / multi-país; **no activar el CTA** en EC (`VITE_ONLINE_PAYMENTS` permanece apagado).
+
+Guía para configurar cobros de membresía con Mercado Pago Checkout Pro **solo en países donde MP opera**.
 
 ---
 

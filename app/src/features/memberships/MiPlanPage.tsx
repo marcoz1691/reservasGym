@@ -26,8 +26,16 @@ export function MiPlanPage() {
   const [payError, setPayError] = useState<string | null>(null)
   const [payBanner, setPayBanner] = useState<string | null>(null)
 
+  /**
+   * Pago online desactivado para Ecuador.
+   * Mercado Pago Checkout Pro no está disponible en EC (sí en AR/BR/CL/CO/MX/PE/UY).
+   * Pasarelas locales: Datafast Dataweb, Kushki, PagoPlux — ver docs/tecnico/pasarelas-ecuador.md
+   * Cuando haya credenciales de una pasarela EC, activar con VITE_ONLINE_PAYMENTS=1 + adaptador.
+   */
   const onlinePayEnabled =
-    isSupabaseConfigured() && typeof repo.createOnlineCheckout === 'function'
+    import.meta.env.VITE_ONLINE_PAYMENTS === '1' &&
+    isSupabaseConfigured() &&
+    typeof repo.createOnlineCheckout === 'function'
 
   const currentMembership = useMemo(() => {
     if (!user) return null
