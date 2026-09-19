@@ -17,6 +17,7 @@
 - Textos de UI en español, con tildes, tal como aparecen literalmente en este plan.
 - Solo el caso «nunca tuvo plan» (`selectMyMembership` → `null`) cambia el banner. Vencida, gracia y cancelada se conservan: no toques esas ramas de `ExpiryBanner` ni las pruebas ZC18-03, ZC18-04, ZC18-11, ZC18-12.
 - Nada de `role="alert"`, rojo (`danger`) ni `animate-pulse` en los componentes nuevos: el tono es marca (`acc`).
+- Un CTA que navega es **un solo** elemento enfocable: usa `ButtonLink` de `@/ui/ButtonLink` (Task 2), nunca `<Link><Button>…</Button></Link>`, que anida dos controles para una sola acción (`nested-interactive` en axe).
 - Staff y admin no ven ninguno de los avisos nuevos ni el guard de ficha.
 - No se agregan columnas ni migraciones en Supabase.
 - Sigue el estilo de los archivos vecinos: componentes con `export function`, clases Tailwind inline, comentarios solo para explicar decisiones.
@@ -138,14 +139,16 @@ git commit -m "feat(domain): regla isFichaPending para la ficha tecnica inicial"
 ### Task 2: Componente `WelcomeNoPlanCard`
 
 **Files:**
+- Create: `app/src/ui/ButtonLink.tsx`
 - Create: `app/src/features/memberships/components/WelcomeNoPlanCard.tsx`
 - Create: `app/src/features/memberships/components/WelcomeNoPlanCard.test.tsx`
+- Modify: `app/src/ui/primitives.tsx:29-71` (extraer `buttonClasses`)
 - Modify: `app/src/features/memberships/components/index.ts`
 - Modify: `app/src/features/memberships/index.ts:6-12`
 
 **Interfaces:**
-- Consumes: `Button` y `Card` de `@/ui/primitives`; `Link` de `react-router-dom`.
-- Produces: `WelcomeNoPlanCard({ onlinePayEnabled }: { onlinePayEnabled?: boolean })`, exportada desde `@/features/memberships`. La consume la Task 3.
+- Consumes: `Card` de `@/ui/primitives`; `Link` de `react-router-dom`.
+- Produces: `buttonClasses(variant?, size?, className?): string` desde `@/ui/primitives`; `ButtonLink({ to, variant?, size?, className?, children, ...linkProps })` desde `@/ui/ButtonLink` (lo consumen las Tasks 4 y 5); y `WelcomeNoPlanCard({ onlinePayEnabled }: { onlinePayEnabled?: boolean })` desde `@/features/memberships` (la consume la Task 3).
 
 - [ ] **Step 1: Escribe el test que falla**
 
@@ -192,13 +195,22 @@ describe('WelcomeNoPlanCard', () => {
     ).toHaveAttribute('href', '/explorar')
   })
 
-  it('menciona el pago en línea cuando está habilitado', () => {
+  it('menciona el pago en línea solo cuando está habilitado', () => {
+    const { unmount } = render(
+      <MemoryRouter>
+        <WelcomeNoPlanCard />
+      </MemoryRouter>,
+    )
+    expect(
+      screen.queryByText(/en línea con tarjeta/i),
+    ).not.toBeInTheDocument()
+    unmount()
+
     render(
       <MemoryRouter>
         <WelcomeNoPlanCard onlinePayEnabled />
       </MemoryRouter>,
     )
-
     expect(screen.getByText(/en línea con tarjeta/i)).toBeInTheDocument()
   })
 })
@@ -209,14 +221,108 @@ describe('WelcomeNoPlanCard', () => {
 Run: `npm test -- --run src/features/memberships/components/WelcomeNoPlanCard.test.tsx`
 Expected: FAIL — `Failed to resolve import "./WelcomeNoPlanCard"`.
 
-- [ ] **Step 3: Implementa el componente**
+- [ ] **Step 3: Extrae las clases de `Button` y crea `ButtonLink`**
+
+Un CTA que navega debe ser un solo elemento enfocable, así que en vez de envolver un `Button` en un `Link` se usa un `Link` con el estilo del botón. Para no duplicar la cadena de clases, primero se extrae de `Button`.
+
+En `app/src/ui/primitives.tsx`, sube `variantStyles` y `sizeStyles` al ámbito del módulo, agrega `buttonClasses` y deja que `Button` la use:
+
+```tsx
+const buttonVariantStyles: Record<string, string> = {
+  primary:
+    'bg-acc text-[var(--color-acc-contrast)] font-bold hover:bg-acc-hi active:scale-[0.97] shadow-[var(--shadow-acc)] border border-transparent disabled:opacity-50 disabled:shadow-none',
+  accent:
+    'bg-acc text-[var(--color-acc-contrast)] font-bold hover:bg-acc-hi active:scale-[0.97] shadow-[var(--shadow-acc)] border border-transparent disabled:opacity-50',
+  secondary:
+    'bg-surface-elevated text-ink border border-line hover:border-acc/40 hover:bg-surface active:scale-[0.97] disabled:opacity-50',
+  outline:
+    'bg-transparent text-ink border border-line hover:border-acc/60 hover:bg-acc-soft active:scale-[0.97] disabled:opacity-50',
+  ghost:
+    'bg-transparent text-ink-2 hover:bg-surface hover:text-ink active:scale-[0.97] disabled:opacity-50',
+  danger:
+    'bg-danger text-white font-bold hover:brightness-110 active:scale-[0.97] shadow-md shadow-danger/20 disabled:opacity-50',
+}
+
+const buttonSizeStyles: Record<string, string> = {
+  sm: 'px-3 py-1.5 text-xs rounded-xl gap-1.5',
+  md: 'px-4 py-2.5 text-sm rounded-2xl gap-2',
+  lg: 'px-5 py-3 text-base rounded-2xl gap-2.5',
+}
+
+/** Estilo compartido por `Button` y por los CTA que navegan (`ButtonLink`). */
+export function buttonClasses(
+  variant: NonNullable<ButtonProps['variant']> = 'primary',
+  size: NonNullable<ButtonProps['size']> = 'md',
+  className = '',
+): string {
+  return `focus-ring inline-flex cursor-pointer items-center justify-center font-semibold transition-[transform,background-color,border-color,box-shadow,filter] duration-150 ease-[var(--ease-out)] select-none ${buttonSizeStyles[size]} ${buttonVariantStyles[variant]} ${className}`
+}
+
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  isLoading = false,
+  className = '',
+  disabled,
+  children,
+  ...props
+}: ButtonProps) {
+  return (
+    <button
+      disabled={disabled || isLoading}
+      className={`${buttonClasses(variant, size, className)} disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100`}
+      {...props}
+    >
+      {isLoading ? (
+        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      ) : null}
+      {children}
+    </button>
+  )
+}
+```
+
+Crea `app/src/ui/ButtonLink.tsx`:
+
+```tsx
+import { Link, type LinkProps } from 'react-router-dom'
+import { buttonClasses, type ButtonProps } from './primitives'
+
+interface ButtonLinkProps extends LinkProps {
+  variant?: ButtonProps['variant']
+  size?: ButtonProps['size']
+}
+
+/** CTA que navega: un solo elemento enfocable con el estilo de `Button`. */
+export function ButtonLink({
+  variant = 'primary',
+  size = 'md',
+  className = '',
+  children,
+  ...props
+}: ButtonLinkProps) {
+  return (
+    <Link className={buttonClasses(variant, size, className)} {...props}>
+      {children}
+    </Link>
+  )
+}
+```
+
+Corre la suite de UI para confirmar que el refactor de `Button` no cambió comportamiento:
+
+Run: `npm test -- --run src/ui/`
+Expected: PASS.
+
+- [ ] **Step 4: Implementa el componente**
 
 Crea `app/src/features/memberships/components/WelcomeNoPlanCard.tsx`:
 
 ```tsx
 import { Link } from 'react-router-dom'
 import { ArrowRight, Sparkles } from 'lucide-react'
-import { Button, Card } from '@/ui/primitives'
+import { Card } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 
 interface WelcomeNoPlanCardProps {
   /** Con VITE_ONLINE_PAYMENTS activo se menciona el pago con tarjeta */
@@ -247,12 +353,10 @@ export function WelcomeNoPlanCard({
             : ' actívalo en recepción.'}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Link to="/membresia">
-            <Button variant="primary" size="sm">
-              Ver planes
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+          <ButtonLink to="/membresia" size="sm">
+            Ver planes
+            <ArrowRight className="h-4 w-4" />
+          </ButtonLink>
           <Link
             to="/explorar"
             className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
@@ -266,12 +370,12 @@ export function WelcomeNoPlanCard({
 }
 ```
 
-- [ ] **Step 4: Corre el test y verifica que pasa**
+- [ ] **Step 5: Corre el test y verifica que pasa**
 
 Run: `npm test -- --run src/features/memberships/components/WelcomeNoPlanCard.test.tsx`
 Expected: PASS — 3 tests.
 
-- [ ] **Step 5: Expórtalo en los dos barriles**
+- [ ] **Step 6: Expórtalo en los dos barriles**
 
 En `app/src/features/memberships/components/index.ts` agrega la línea:
 
@@ -292,10 +396,10 @@ export {
 } from './components'
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add app/src/features/memberships/components/WelcomeNoPlanCard.tsx app/src/features/memberships/components/WelcomeNoPlanCard.test.tsx app/src/features/memberships/components/index.ts app/src/features/memberships/index.ts
+git add app/src/ui/primitives.tsx app/src/ui/ButtonLink.tsx app/src/features/memberships/components/WelcomeNoPlanCard.tsx app/src/features/memberships/components/WelcomeNoPlanCard.test.tsx app/src/features/memberships/components/index.ts app/src/features/memberships/index.ts
 git commit -m "feat(memberships): tarjeta de bienvenida para socio sin plan"
 ```
 
@@ -666,7 +770,7 @@ git commit -m "feat(inicio): bienvenida para socio sin plan en lugar de banner r
 - Modify: `app/src/features/memberships/index.ts`
 
 **Interfaces:**
-- Consumes: `Button` de `@/ui/primitives`; `Link` de `react-router-dom`.
+- Consumes: `ButtonLink` de `@/ui/ButtonLink` (Task 2), con firma `ButtonLink({ to, variant?, size?, className?, children, ...linkProps })`.
 - Produces: `PlanRequiredNotice()` (sin props), exportada desde `@/features/memberships`. La consume la Task 5.
 
 - [ ] **Step 1: Escribe el test que falla**
@@ -709,9 +813,8 @@ Expected: FAIL — `Failed to resolve import "./PlanRequiredNotice"`.
 Crea `app/src/features/memberships/components/PlanRequiredNotice.tsx`:
 
 ```tsx
-import { Link } from 'react-router-dom'
 import { ArrowRight, Sparkles } from 'lucide-react'
-import { Button } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 
 export function PlanRequiredNotice() {
   return (
@@ -723,12 +826,10 @@ export function PlanRequiredNotice() {
         <Sparkles className="h-4 w-4 shrink-0 text-acc" />
         Estás explorando la agenda. Activa tu plan para reservar.
       </p>
-      <Link to="/membresia" className="shrink-0">
-        <Button variant="primary" size="sm">
-          Ver planes
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-      </Link>
+      <ButtonLink to="/membresia" size="sm" className="shrink-0">
+        Ver planes
+        <ArrowRight className="h-4 w-4" />
+      </ButtonLink>
     </div>
   )
 }
@@ -936,12 +1037,12 @@ Expected: FAIL — no existe `plan-required-notice` y el botón sigue siendo «R
 En `app/src/features/agenda/AgendaPage.tsx` agrega a los imports:
 
 ```tsx
-import { Link, useSearchParams } from 'react-router-dom'
 import { Lock } from 'lucide-react'
+import { ButtonLink } from '@/ui/ButtonLink'
 import { BookingGateModal, PlanRequiredNotice, type BookingGateType } from '@/features/memberships'
 ```
 
-Respeta la forma actual de los imports del archivo: `useSearchParams` ya se importa de `react-router-dom` (agrega `Link` ahí), `Lock` va junto a los demás iconos de `lucide-react`, y `PlanRequiredNotice` se suma al import existente de `@/features/memberships`.
+Respeta la forma actual de los imports del archivo: `Lock` va junto a los demás iconos de `lucide-react` y `PlanRequiredNotice` se suma al import existente de `@/features/memberships`.
 
 Debajo de `const isStaffOrAdmin = ...` (línea 55) agrega:
 
@@ -979,19 +1080,15 @@ Y en el bloque de acciones de cada sesión (líneas 546-556) envuelve el botón 
 
 ```tsx
                             {needsPlan ? (
-                              <Link
+                              <ButtonLink
                                 to="/membresia"
-                                className="flex-1"
+                                variant="secondary"
+                                className="flex-1 !px-2.5 !py-1 text-[10px] h-7 gap-1 border-acc/40 text-acc hover:bg-acc/10"
                                 aria-label={`${neverHadPlan ? 'Activar' : 'Renovar'} plan para reservar ${s.title}`}
                               >
-                                <Button
-                                  variant="secondary"
-                                  className="w-full !px-2.5 !py-1 text-[10px] h-7 gap-1 border-acc/40 text-acc hover:bg-acc/10"
-                                >
-                                  <Lock className="h-3 w-3" />
-                                  {neverHadPlan ? 'Activar plan' : 'Renovar plan'}
-                                </Button>
-                              </Link>
+                                <Lock className="h-3 w-3" />
+                                {neverHadPlan ? 'Activar plan' : 'Renovar plan'}
+                              </ButtonLink>
                             ) : (
                               <Button
                                 variant={isFull ? 'secondary' : 'primary'}
