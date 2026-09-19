@@ -110,6 +110,10 @@ describe('Primer ingreso — ficha técnica', () => {
       screen.getByRole('button', { name: /Guardar Ficha Técnica/i }),
     )
 
+    expect(
+      await screen.findByText('¡Ficha Técnica Guardada!'),
+    ).toBeInTheDocument()
+
     await waitFor(
       () => {
         expect(

@@ -141,11 +141,23 @@ export function FichaTecnicaModal({
         })
       }
 
-      await refresh()
-      setSavedSuccess(true)
-      setTimeout(() => {
-        onClose()
-      }, 1500)
+      if (isInitialOnboarding) {
+        // Keep the socio pending until after the success pause so RequireAuth
+        // does not bounce /bienvenida → / before the banner paints.
+        setSavedSuccess(true)
+        setTimeout(() => {
+          void (async () => {
+            await refresh()
+            onClose()
+          })()
+        }, 1500)
+      } else {
+        await refresh()
+        setSavedSuccess(true)
+        setTimeout(() => {
+          onClose()
+        }, 1500)
+      }
     } catch (err) {
       console.error(err)
     } finally {

@@ -90,7 +90,11 @@ export function ExplorePage() {
         const gateType: BookingGateType =
           memCheck.status === 'none' ? 'no_membership' : 'membership_expired'
         const reason =
-          'No puedes crear nuevas reservas: Tu membresía está vencida. Acércate a recepción.'
+          memCheck.status === 'none'
+            ? 'Para reservar necesitas un plan activo. Elige tu plan en Mi Plan y actívalo en recepción.'
+            : memCheck.status === 'expired' || memCheck.status === 'cancelled'
+              ? 'Tu membresía está vencida. Renueva tu plan para volver a reservar.'
+              : (memCheck.reason ?? 'No puedes crear nuevas reservas ahora.')
         setGateModal({
           isOpen: true,
           type: gateType,

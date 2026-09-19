@@ -194,7 +194,7 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
     const modal = await screen.findByTestId('booking-gate-modal')
     expect(modal).toBeInTheDocument()
     expect(
-      within(modal).getByText(/No puedes crear nuevas reservas: Tu membresía está vencida\. Acércate a recepción\./i),
+      within(modal).getByText(/Para reservar necesitas un plan activo/i),
     ).toBeInTheDocument()
 
     // Clicking "Ir a Mi plan" redirects to /membresia
@@ -238,7 +238,7 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
     const modal = await screen.findByTestId('booking-gate-modal')
     expect(modal).toBeInTheDocument()
     expect(
-      within(modal).getByText(/No puedes crear nuevas reservas: Tu membresía está vencida\. Acércate a recepción\./i),
+      within(modal).getByText(/Tu membresía está vencida\. Renueva tu plan/i),
     ).toBeInTheDocument()
   })
 
