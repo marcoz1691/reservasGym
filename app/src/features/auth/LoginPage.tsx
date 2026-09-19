@@ -46,6 +46,7 @@ export function LoginPage() {
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [bioUser, setBioUser] = useState<{ fullName: string; email: string } | null>(null)
   const [bioAvailable, setBioAvailable] = useState(false)
 
@@ -65,6 +66,7 @@ export function LoginPage() {
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
     setError('')
+    setSuccess('')
     setSubmitting(true)
     try {
       await repo.signIn({ email: loginEmail, password: loginPassword })
@@ -79,6 +81,7 @@ export function LoginPage() {
 
   async function handleBiometricLogin() {
     setError('')
+    setSuccess('')
     setSubmitting(true)
     try {
       const bioAuth = await authenticateWithBiometrics()
@@ -101,6 +104,18 @@ export function LoginPage() {
     }
   }
 
+  function goToLoginAfterSignup(email: string, message: string) {
+    setError('')
+    setSuccess(message)
+    setLoginEmail(email)
+    setLoginPassword('')
+    setFullName('')
+    setRegisterEmail('')
+    setRegisterPassword('')
+    setConfirmPassword('')
+    setMode('login')
+  }
+
   async function handleRegister(e: FormEvent) {
     e.preventDefault()
     if (!fullName.trim()) {
@@ -121,21 +136,41 @@ export function LoginPage() {
     }
 
     setError('')
+    setSuccess('')
     setSubmitting(true)
+
+    const email = registerEmail.trim()
 
     try {
       await repo.signUp({
-        email: registerEmail.trim(),
+        email,
         password: registerPassword,
         fullName: fullName.trim(),
       })
-      // Flag in sessionStorage so the onboarding Ficha Técnica modal triggers automatically
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('just_signed_up', 'true')
+      // Flujo esperado: crear cuenta → iniciar sesión → ficha en Perfil.
+      // Si Supabase dejó sesión abierta, la cerramos para forzar el login.
+      try {
+        await repo.signOut()
+      } catch {
+        /* sin sesión previa: ok */
       }
       await refresh()
+      goToLoginAfterSignup(
+        email,
+        'Cuenta creada correctamente. Ahora inicia sesión con tu correo y contraseña. Luego podrás completar tu ficha técnica en Perfil.',
+      )
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al registrar la cuenta')
+      const msg = err instanceof Error ? err.message : 'Error al registrar la cuenta'
+      if (msg.startsWith('PENDING_EMAIL_CONFIRMATION:')) {
+        goToLoginAfterSignup(email, msg.replace('PENDING_EMAIL_CONFIRMATION:', ''))
+        return
+      }
+      // Mensaje legado (deploys anteriores) — tratarlo como éxito, no como error
+      if (msg.startsWith('Cuenta creada')) {
+        goToLoginAfterSignup(email, msg)
+        return
+      }
+      setError(msg)
     } finally {
       setSubmitting(false)
     }
@@ -188,6 +223,7 @@ export function LoginPage() {
             onClick={() => {
               setMode('register')
               setError('')
+              setSuccess('')
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
               mode === 'register'
@@ -261,6 +297,12 @@ export function LoginPage() {
               </div>
             </div>
 
+            {success ? (
+              <p className="rounded-xl border border-success/40 bg-success-soft p-3 text-xs text-success font-semibold">
+                {success}
+              </p>
+            ) : null}
+
             {error ? (
               <p className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-xs text-danger font-semibold">
                 {error}
@@ -320,8 +362,8 @@ export function LoginPage() {
                 <span>Crea tu cuenta de socio</span>
               </div>
               <p className="mt-1 text-ink-3">
-                Luego de crear tu cuenta, completarás tu ficha técnica antropométrica (peso,
-                estatura y metas).
+                Después de crear la cuenta, inicia sesión. Desde Perfil podrás completar
+                tu ficha técnica (peso, estatura y metas).
               </p>
             </div>
 
@@ -371,7 +413,7 @@ export function LoginPage() {
             ) : null}
 
             <Button type="submit" className="w-full font-bold" disabled={submitting}>
-              {submitting ? 'Creando cuenta…' : 'Crear cuenta y completar Ficha Técnica'}
+              {submitting ? 'Creando cuenta…' : 'Crear cuenta'}
             </Button>
           </form>
         )}

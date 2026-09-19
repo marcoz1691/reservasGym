@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { NavLink, Outlet, Link } from 'react-router-dom'
 import {
   CalendarClock,
@@ -23,7 +22,6 @@ import {
   useRepo,
 } from '@/data/RepositoryProvider'
 import { ExpiryBanner } from '@/features/memberships'
-import { FichaTecnicaModal } from '@/features/profile/FichaTecnicaModal'
 import { Button } from '@/ui/primitives'
 
 const memberDesktopNav = [
@@ -71,20 +69,6 @@ export function AppLayout() {
   const repo = useRepo()
   const refresh = useRefresh()
   const { settings, bookings } = useAppData()
-
-  const [fichaModalOpen, setFichaModalOpen] = useState(false)
-  const [isInitialOnboarding, setIsInitialOnboarding] = useState(false)
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && user?.role === 'member') {
-      const justSignedUp = sessionStorage.getItem('just_signed_up') === 'true'
-      if (justSignedUp) {
-        sessionStorage.removeItem('just_signed_up')
-        setIsInitialOnboarding(true)
-        setFichaModalOpen(true)
-      }
-    }
-  }, [user])
 
   const isMember = user?.role === 'member'
   const desktopNav = isMember ? memberDesktopNav : staffDesktopNav
@@ -316,12 +300,6 @@ export function AppLayout() {
           </div>
         </nav>
       </div>
-
-      <FichaTecnicaModal
-        open={fichaModalOpen}
-        onClose={() => setFichaModalOpen(false)}
-        isInitialOnboarding={isInitialOnboarding}
-      />
     </div>
   )
 }
