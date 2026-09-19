@@ -1006,11 +1006,26 @@ export class LocalRepository implements GymRepository {
     }
   }
 
-  async createOnlineCheckout(
-    _planId: string,
-  ): Promise<{ initPoint: string; paymentId: string }> {
+  async createOnlineCheckout(_params: {
+    planId: string
+    phone: string
+    identification: string
+    street?: string
+  }): Promise<{
+    checkoutId: string
+    paymentId: string
+    widgetScriptUrl: string
+    shopperResultUrl: string
+  }> {
     throw new Error(
-      'El pago en línea requiere el ambiente Supabase (QA). Usa recepción en modo local.',
+      'El pago en línea (Datafast) requiere el ambiente Supabase (QA). Usa recepción en modo local.',
     )
+  }
+
+  async verifyOnlinePayment(_params: {
+    paymentId: string
+    resourcePath: string
+  }): Promise<{ ok: boolean; description?: string }> {
+    throw new Error('Verificación Datafast solo en Supabase.')
   }
 }

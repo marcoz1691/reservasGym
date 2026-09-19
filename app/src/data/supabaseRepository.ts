@@ -1451,37 +1451,67 @@ export class SupabaseRepository implements GymRepository {
     return { payment, membership }
   }
 
-  async createOnlineCheckout(
-    planId: string,
-  ): Promise<{ initPoint: string; paymentId: string }> {
+  async createOnlineCheckout(params: {
+    planId: string
+    phone: string
+    identification: string
+    street?: string
+  }): Promise<{
+    checkoutId: string
+    paymentId: string
+    widgetScriptUrl: string
+    shopperResultUrl: string
+  }> {
     await this.requireUser()
     const { data, error } = await this.client.functions.invoke(
-      'create-mp-preference',
-      { body: { planId } },
+      'create-datafast-checkout',
+      { body: params },
     )
 
     const payload = (data ?? {}) as {
-      initPoint?: string
+      checkoutId?: string
       paymentId?: string
+      widgetScriptUrl?: string
+      shopperResultUrl?: string
       error?: string
-      code?: string
-      detail?: unknown
     }
 
-    if (payload?.initPoint && payload?.paymentId) {
-      return { initPoint: payload.initPoint, paymentId: payload.paymentId }
+    if (
+      payload.checkoutId &&
+      payload.paymentId &&
+      payload.widgetScriptUrl &&
+      payload.shopperResultUrl
+    ) {
+      return {
+        checkoutId: payload.checkoutId,
+        paymentId: payload.paymentId,
+        widgetScriptUrl: payload.widgetScriptUrl,
+        shopperResultUrl: payload.shopperResultUrl,
+      }
     }
 
-    if (payload?.error) {
-      throw new Error(payload.error)
-    }
+    if (payload.error) throw new Error(payload.error)
+    if (error) throw new Error(error.message || 'No se pudo iniciar el pago Datafast')
+    throw new Error('Pasarela Datafast no disponible. Revisa secrets en Supabase.')
+  }
 
-    if (error) {
-      throw new Error(error.message || 'No se pudo iniciar el pago en línea')
-    }
-
-    throw new Error(
-      'Pasarela no disponible. Configura Mercado Pago en el servidor.',
+  async verifyOnlinePayment(params: {
+    paymentId: string
+    resourcePath: string
+  }): Promise<{ ok: boolean; description?: string }> {
+    await this.requireUser()
+    const { data, error } = await this.client.functions.invoke(
+      'verify-datafast-payment',
+      { body: params },
     )
+    const payload = (data ?? {}) as {
+      ok?: boolean
+      description?: string
+      error?: string
+    }
+    if (payload.ok) return { ok: true }
+    if (payload.error) throw new Error(payload.error)
+    if (error) throw new Error(error.message || 'No se pudo verificar el pago')
+    return { ok: false, description: payload.description ?? 'Pago no aprobado' }
   }
 }

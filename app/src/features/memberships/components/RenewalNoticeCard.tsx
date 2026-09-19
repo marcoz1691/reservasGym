@@ -32,7 +32,7 @@ export function RenewalNoticeCard({
             <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-600">
               <Sparkles className="h-3.5 w-3.5" />
               {onlinePayEnabled
-                ? 'Mercado Pago · tarjeta / débito'
+                ? 'Datafast Dataweb · tarjeta'
                 : 'Próximamente: Pago online con tarjeta desde la app'}
             </span>
           </div>
@@ -47,8 +47,9 @@ export function RenewalNoticeCard({
             {onlinePayEnabled ? (
               <>
                 Elige un plan abajo y pulsa <strong className="text-ink">Pagar en línea</strong>.
-                Serás redirigido a Mercado Pago de forma segura. También puedes pagar en el counter
-                de <strong className="text-ink">Zona Cero Performance Center</strong>.
+                Serás redirigido a un formulario seguro de <strong className="text-ink">Datafast</strong>.
+                También puedes pagar en el counter de{' '}
+                <strong className="text-ink">Zona Cero Performance Center</strong>.
               </>
             ) : (
               <>
@@ -103,7 +104,7 @@ export function RenewalNoticeCard({
           </div>
           <p className="text-[11px] text-ink-3 max-w-[200px] md:text-right">
             {onlinePayEnabled
-              ? 'Tras un pago aprobado, tu membresía se extiende sola en la app.'
+              ? 'Tras un pago aprobado con Datafast, tu membresía se extiende sola en la app.'
               : 'Tu membresía se habilita al instante tras registrar el cobro en el sistema.'}
           </p>
         </div>
