@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRouter } from '@/app/router'
@@ -83,6 +83,41 @@ describe('Primer ingreso — ficha técnica', () => {
 
     // Espera a que Inicio termine de cargar antes de negar la ficha.
     expect(await screen.findByText(/Áreas disponibles/i)).toBeInTheDocument()
+    expect(
+      screen.queryByText('Ficha Técnica Inicial de Ingreso'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('socio sin ficha guarda la ficha y aterriza en Inicio', async () => {
+    const user = { ...memberSinFicha }
+    const repo = createMockRepo(user)
+    repo.updateProfile = vi.fn(async (patch) => Object.assign(user, patch))
+    resetRepositoryForTests(repo)
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <RepositoryProvider>
+          <AppRouter />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    await screen.findByText('Ficha Técnica Inicial de Ingreso')
+    await userEvent.click(screen.getByRole('button', { name: /Siguiente/i }))
+    await userEvent.click(screen.getByRole('button', { name: /Siguiente/i }))
+    await userEvent.click(screen.getByRole('button', { name: /Siguiente/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /Guardar Ficha Técnica/i }),
+    )
+
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText(/Activa tu plan y empieza a entrenar/i),
+        ).toBeInTheDocument()
+      },
+      { timeout: 8000 },
+    )
     expect(
       screen.queryByText('Ficha Técnica Inicial de Ingreso'),
     ).not.toBeInTheDocument()
