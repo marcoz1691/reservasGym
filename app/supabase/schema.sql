@@ -81,6 +81,33 @@ create table if not exists bookings (
   check_in_code text not null
 );
 
+-- El socio no puede UPDATE sessions (RLS staff-only). El cupo se sincroniza aquí.
+create or replace function public.sync_session_booked_count()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  sid text;
+begin
+  sid := coalesce(NEW.session_id, OLD.session_id);
+  update public.sessions
+  set booked_count = (
+    select count(*)::int
+    from public.bookings
+    where session_id = sid and status = 'confirmed'
+  )
+  where id = sid;
+  return coalesce(NEW, OLD);
+end;
+$$;
+
+drop trigger if exists bookings_sync_booked_count on bookings;
+create trigger bookings_sync_booked_count
+after insert or update of status or delete on bookings
+for each row execute function public.sync_session_booked_count();
+
 create table if not exists waitlist_entries (
   id text primary key,
   session_id text not null references sessions(id) on delete cascade,
@@ -190,6 +217,13 @@ as $$
   );
 $$;
 
+-- Vive en `public`, así que PostgREST la expone como /rest/v1/rpc/is_staff. Se cierra
+-- el acceso anónimo; `authenticated` la conserva porque las políticas RLS de abajo se
+-- evalúan con los privilegios del rol que consulta y sin EXECUTE fallarían todas.
+revoke all on function public.is_staff() from public;
+revoke all on function public.is_staff() from anon;
+grant execute on function public.is_staff() to authenticated;
+
 -- Soporte de eliminación de cuenta (Apple App Store Guideline 5.1.1(v))
 create or replace function public.delete_user_account()
 returns void
@@ -213,12 +247,16 @@ begin
 end;
 $$;
 
+-- El revoke a `anon` es necesario aparte: los default privileges de Supabase otorgan
+-- EXECUTE explícito a anon/authenticated/service_role al crear la función.
 revoke all on function public.delete_user_account() from public;
+revoke all on function public.delete_user_account() from anon;
 grant execute on function public.delete_user_account() to authenticated;
 
 -- Manejo de creación de perfil al registrar nuevo usuario en auth.users
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer
+set search_path = public as $$
 begin
   insert into public.profiles (
     id,
@@ -248,6 +286,14 @@ begin
   return new;
 end;
 $$;
+
+-- Solo la debe ejecutar el trigger. GoTrue inserta en auth.users como
+-- supabase_auth_admin, que no es superusuario: necesita el grant explícito, porque
+-- al revocar PUBLIC se queda sin el permiso heredado y el registro no crearía perfil.
+revoke all on function public.handle_new_user() from public;
+revoke all on function public.handle_new_user() from anon;
+revoke all on function public.handle_new_user() from authenticated;
+grant execute on function public.handle_new_user() to supabase_auth_admin;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created

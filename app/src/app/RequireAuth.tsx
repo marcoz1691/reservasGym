@@ -1,12 +1,13 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useCurrentUser, useGym } from '@/data/RepositoryProvider'
-import { isFichaPending } from '@/domain/rules'
+import { selectMyMembership } from '@/app/store'
+import { canUseBookingNav, isFichaPending } from '@/domain/rules'
 import { wasFichaSkipped } from '@/features/profile/fichaOnboarding'
 import { Spinner } from '@/ui/primitives'
 
 export function RequireAuth() {
   const user = useCurrentUser()
-  const { loading } = useGym()
+  const { loading, state } = useGym()
   const location = useLocation()
   if (loading && !user) return <Spinner />
   if (!user) return <Navigate to="/login" replace />
@@ -20,6 +21,13 @@ export function RequireAuth() {
   }
   if (location.pathname === '/bienvenida' && !isFichaPending(user)) {
     return <Navigate to="/" replace />
+  }
+  const membership = state ? selectMyMembership(state, user.id) : undefined
+  if (
+    !canUseBookingNav(user.role, membership) &&
+    (location.pathname === '/agenda' || location.pathname === '/reservas')
+  ) {
+    return <Navigate to="/membresia" replace />
   }
   return <Outlet />
 }

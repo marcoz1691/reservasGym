@@ -122,6 +122,15 @@ export function canBookMembership(
   }
 }
 
+/** Agenda y Reservas: el socio solo las ve si puede reservar. Staff/admin siempre. */
+export function canUseBookingNav(
+  role: 'member' | 'staff' | 'admin' | undefined,
+  membership: Membership | null | undefined,
+): boolean {
+  if (role !== 'member') return true
+  return canBookMembership(membership).allowed
+}
+
 /**
  * Días de calendario restantes hasta endsAt en America/Guayaquil (ZC18-O2).
  * Mismo día calendario que la fecha de vencimiento → 1 (“último día”).

@@ -65,7 +65,7 @@ describe('Admin Billing & Membership Plans UI', () => {
 
       // Amount should auto-fill with 45.00
       const amountInput = screen.getByLabelText(/Monto a Cobrar \(USD\)/i)
-      expect(amountInput).toHaveValue(45)
+      expect(amountInput).toHaveValue('45.00')
 
       // 3. Select payment method "Datáfono POS Datafast"
       const posButton = screen.getByText(/Datáfono POS Datafast/i)

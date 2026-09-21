@@ -174,17 +174,38 @@ describe('LocalRepository memberships and billing', () => {
     expect(member2Membership?.status).toBe('active')
   })
 
-  it('rejects manual payment registration from members', async () => {
-    const repo = new LocalRepository()
-    await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
+  it('Zero Active bloquea reserva de Hyrox y permite musculación', async () => {
+    const staff = new LocalRepository()
+    await staff.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+    const plan = await staff.upsertMembershipPlan({
+      name: 'Zero Active Mensual',
+      priceCents: 3500,
+      durationDays: 30,
+      allowedZoneIds: ['zone-gimnasio', 'zone-muscu', 'zone-bailo'],
+    })
+    await staff.registerManualPayment({
+      userId: 'user_member_2',
+      planId: plan.id,
+      amountCents: 3500,
+      manualMethod: 'cash',
+    })
 
-    await expect(
-      repo.registerManualPayment({
-        userId: 'user_member',
-        planId: 'plan-mensual-full',
-        amountCents: 4500,
-        manualMethod: 'cash',
-      }),
-    ).rejects.toThrow(/sin permiso/i)
+    const member = new LocalRepository()
+    await member.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+    const sessions = await member.listSessions(new Date().toISOString())
+    const hyrox = sessions.find((s) =>
+      s.zoneId.replace(/[_-]/g, '').toLowerCase().includes('hyrox'),
+    )
+    const muscu = sessions.find((s) =>
+      s.zoneId.replace(/[_-]/g, '').toLowerCase().includes('muscu'),
+    )
+    expect(hyrox).toBeTruthy()
+    expect(muscu).toBeTruthy()
+
+    await expect(member.createBooking(hyrox!.id, 'user_member_2')).rejects.toThrow(
+      /no incluye/i,
+    )
+    const booked = await member.createBooking(muscu!.id, 'user_member_2')
+    expect('status' in booked && booked.status).toBe('confirmed')
   })
 })

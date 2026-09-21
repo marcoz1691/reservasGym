@@ -3,6 +3,7 @@ import {
   Clock,
   Filter,
   Grid,
+  Lock,
   UserCheck,
 } from 'lucide-react'
 import {
@@ -16,17 +17,30 @@ import { selectMyMembership } from '@/app/store'
 import { canBookMembership, canBookZone } from '@/domain/rules'
 import { getDisciplineMeta, ZONA_CERO_DISCIPLINES } from '@/domain/disciplines'
 import { formatEcuadorSessionWhen, formatEcuadorTime } from '@/lib/format'
-import { Badge, Button, Card, PageHeader, Select } from '@/ui/primitives'
+import { Badge, Button, Card, PageHeader, Spinner } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 import { BookingGateModal, type BookingGateType } from '@/features/memberships'
 import { StaffBookingModal } from '@/features/agenda/StaffBookingModal'
 
 export function ExplorePage() {
   const data = useAppData()
-  const user = useCurrentUser()!
+  const user = useCurrentUser()
   const repo = useRepo()
   const refresh = useRefresh()
 
   const isStaffOrAdmin = user?.role === 'staff' || user?.role === 'admin'
+  const isMember = user?.role === 'member'
+  const membership = user ? selectMyMembership(data, user.id) : null
+  const memberPlan = membership
+    ? (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
+    : undefined
+  const planStatus = canBookMembership(membership).status
+  const neverHadPlan = isMember && planStatus === 'none'
+  const needsPlan =
+    isMember &&
+    (planStatus === 'none' ||
+      planStatus === 'expired' ||
+      planStatus === 'cancelled')
 
   const [zoneType, setZoneType] = useState('all')
   const [msg, setMsg] = useState('')
@@ -60,19 +74,8 @@ export function ExplorePage() {
       .slice(0, 50)
   }, [data, zoneType])
 
-  // Counts per discipline
-  const disciplineCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: data.sessions.length }
-    for (const session of data.sessions) {
-      const zone = data.zones.find((z) => z.id === session.zoneId)
-      const type = zone?.type ?? session.zoneId
-      counts[type] = (counts[type] ?? 0) + 1
-      counts[session.zoneId] = (counts[session.zoneId] ?? 0) + 1
-    }
-    return counts
-  }, [data.sessions, data.zones])
-
   async function onBookSession(sessionId: string) {
+    if (!user) return
     setBusyId(sessionId)
     setMsg('')
 
@@ -138,112 +141,70 @@ export function ExplorePage() {
     }
   }
 
+  if (!user) return <Spinner />
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Explorar Disciplinas"
-        subtitle="Las 9 disciplinas oficiales de Zona Cero Performance Center (Ecuador UTC-5)"
+        title="Explorar áreas"
+        subtitle="Disciplinas de Zona Cero. Reserva solo las incluidas en tu plan."
       />
 
       {msg ? (
-        <div className="rounded-2xl border border-acc/30 bg-acc/10 p-3 text-xs font-bold text-acc">
+        <div className="rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink-2">
           {msg}
         </div>
       ) : null}
 
-      {/* 9 DISCIPLINES FILTER CHIPS */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-ink-3">
-          <span className="flex items-center gap-1.5">
-            <Filter className="h-3.5 w-3.5 text-acc" />
-            Filtrar por Disciplina
+        <div className="flex items-center justify-between text-xs text-ink-3">
+          <span className="flex items-center gap-1.5 font-medium">
+            <Filter className="h-3.5 w-3.5" />
+            Disciplinas
           </span>
-          <span className="text-[11px] font-normal lowercase text-ink-3">
+          <span className="text-[11px]">
             {zoneType === 'all'
-              ? `${sessions.length} sesiones disponibles`
-              : `${sessions.length} en categoría`}
+              ? `${sessions.length} sesiones`
+              : `${sessions.length} en esta área`}
           </span>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
             onClick={() => setZoneType('all')}
-            className={`flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition ${
+            className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
               zoneType === 'all'
-                ? 'border-acc bg-acc text-[var(--color-acc-contrast)] shadow-md'
-                : 'border-line bg-bg-2 text-ink-2 hover:border-acc/40 hover:bg-surface'
+                ? 'border-acc/40 bg-surface text-ink'
+                : 'border-transparent text-ink-2 hover:bg-surface hover:text-ink'
             }`}
           >
             <Grid className="h-3.5 w-3.5" />
             <span>Todas</span>
-            <span
-              className={`rounded-full px-1.5 py-0.2 text-[10px] ${
-                zoneType === 'all'
-                  ? 'bg-black/20 text-[var(--color-acc-contrast)]'
-                  : 'bg-surface text-ink-3'
-              }`}
-            >
-              {disciplineCounts.all ?? 0}
-            </span>
           </button>
 
           {Object.entries(ZONA_CERO_DISCIPLINES).map(([typeKey, meta]) => {
             const Icon = meta.icon
             const isSelected = zoneType === typeKey || zoneType === meta.defaultZoneId
-            const count =
-              (disciplineCounts[typeKey] ?? 0) +
-              (disciplineCounts[meta.defaultZoneId] ?? 0) +
-              (disciplineCounts[`zone_${typeKey}`] ?? 0)
 
             return (
               <button
                 key={typeKey}
                 type="button"
                 onClick={() => setZoneType(typeKey)}
-                className={`flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition ${
+                className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                   isSelected
-                    ? 'border-acc bg-acc text-[var(--color-acc-contrast)] shadow-md'
-                    : 'border-line bg-bg-2 text-ink-2 hover:border-acc/40 hover:bg-surface'
+                    ? 'border-acc/40 bg-surface text-ink'
+                    : 'border-transparent text-ink-2 hover:bg-surface hover:text-ink'
                 }`}
               >
-                <Icon
-                  className={`h-3.5 w-3.5 ${
-                    isSelected ? 'text-[var(--color-acc-contrast)]' : meta.colorClass
-                  }`}
-                />
+                <Icon className="h-3.5 w-3.5 text-ink-3" />
                 <span>{meta.name}</span>
-                {count > 0 && (
-                  <span
-                    className={`rounded-full px-1.5 py-0.2 text-[10px] ${
-                      isSelected
-                        ? 'bg-black/20 text-[var(--color-acc-contrast)]'
-                        : 'bg-surface text-ink-3'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                )}
               </button>
             )
           })}
         </div>
       </div>
-
-      {/* Fallback Dropdown for Mobile / Accessibility */}
-      <Select
-        label="Seleccionar Área"
-        className="max-w-sm sm:hidden"
-        value={zoneType}
-        onChange={(e) => setZoneType(e.target.value)}
-      >
-        <option value="all">Todas las 9 Disciplinas</option>
-        {Object.entries(ZONA_CERO_DISCIPLINES).map(([t, meta]) => (
-          <option key={t} value={t}>
-            {meta.name}
-          </option>
-        ))}
-      </Select>
 
       {/* Disciplines Showcase Cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -259,34 +220,36 @@ export function ExplorePage() {
           .map((z) => {
             const meta = getDisciplineMeta(z.type ?? z.id)
             const Icon = meta.icon
+            const included =
+              !isMember ||
+              needsPlan ||
+              !memberPlan ||
+              canBookZone(memberPlan, z.id).allowed
             return (
               <Card
                 key={z.id}
-                className="flex flex-col justify-between border-line bg-bg-2 p-4 transition hover:border-acc/40"
+                className={`flex flex-col justify-between p-4 ${
+                  included ? '' : 'opacity-60'
+                }`}
               >
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-xl ${meta.bgLightClass} ${meta.colorClass}`}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="font-extrabold text-ink">{z.name}</div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <Icon className="h-4 w-4 shrink-0 text-ink-3" />
+                      <div className="font-semibold text-ink">{z.name}</div>
                     </div>
-                    <Badge tone={meta.tone}>{meta.shortName}</Badge>
+                    {included ? null : (
+                      <Badge tone="neutral">No incluida</Badge>
+                    )}
                   </div>
-                  <p className="text-xs text-ink-3">
+                  <p className="text-xs leading-relaxed text-ink-3">
                     {z.description || meta.description}
                   </p>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between border-t border-line/60 pt-2 text-[11px] text-ink-3">
-                  <span>Capacidad base:</span>
-                  <span className="font-bold text-ink-2">
-                    {z.defaultCapacity} cupos
-                  </span>
-                </div>
+                <p className="mt-3 text-[11px] text-ink-3">
+                  {z.defaultCapacity} cupos
+                </p>
               </Card>
             )
           })}
@@ -294,8 +257,8 @@ export function ExplorePage() {
 
       {/* Available Sessions List */}
       <div className="space-y-3">
-        <h2 className="text-lg font-black text-ink">
-          Próximas Sesiones Programadas
+        <h2 className="font-display text-lg font-bold text-ink">
+          Próximas sesiones
         </h2>
 
         {sessions.length === 0 ? (
@@ -314,29 +277,25 @@ export function ExplorePage() {
               return (
                 <Card
                   key={s.id}
-                  className="flex flex-wrap items-center justify-between gap-3 p-4 bg-bg-2 transition hover:border-acc/40"
+                  className="flex flex-wrap items-center justify-between gap-3 p-4"
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${meta.bgLightClass} ${meta.colorClass}`}
-                    >
-                      <Icon className="h-5 w-5" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line text-ink-3">
+                      <Icon className="h-4 w-4" />
                     </div>
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-ink text-sm">
+                        <span className="text-sm font-semibold text-ink">
                           {s.title}
                         </span>
-                        <span
-                          className={`rounded-md px-1.5 py-0.2 text-[10px] font-bold ${meta.badgeClass}`}
-                        >
+                        <span className="text-[11px] text-ink-3">
                           {meta.name}
                         </span>
                       </div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-3">
-                        <span className="flex items-center gap-1 font-medium text-ink-2">
-                          <Clock className="h-3 w-3 text-acc" />
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
                           {formatEcuadorSessionWhen(s.startsAt)} (
                           {formatEcuadorTime(s.startsAt)} -{' '}
                           {formatEcuadorTime(s.endsAt)})
@@ -352,20 +311,42 @@ export function ExplorePage() {
                     </Badge>
 
                     {/* Member action */}
-                    <Button
-                      variant={full ? 'secondary' : 'primary'}
-                      disabled={busyId === s.id}
-                      onClick={() => void onBookSession(s.id)}
-                      className="text-xs py-1.5 px-3"
-                    >
-                      {full ? 'Lista de espera' : 'Reservar'}
-                    </Button>
+                    {needsPlan ? (
+                      <ButtonLink
+                        to="/membresia"
+                        variant="secondary"
+                        className="text-xs py-1.5 px-3"
+                      >
+                        {neverHadPlan ? 'Activar plan' : 'Renovar plan'}
+                      </ButtonLink>
+                    ) : isMember &&
+                      memberPlan &&
+                      !canBookZone(memberPlan, s.zoneId).allowed ? (
+                      <ButtonLink
+                        to="/membresia"
+                        variant="secondary"
+                        className="text-xs py-1.5 px-3 text-ink-3"
+                        aria-label={`No incluido en tu plan: ${s.title}`}
+                      >
+                        <Lock className="h-3.5 w-3.5" />
+                        No incluido
+                      </ButtonLink>
+                    ) : (
+                      <Button
+                        variant={full ? 'secondary' : 'primary'}
+                        disabled={busyId === s.id}
+                        onClick={() => void onBookSession(s.id)}
+                        className="text-xs py-1.5 px-3"
+                      >
+                        {full ? 'Lista de espera' : 'Reservar'}
+                      </Button>
+                    )}
 
                     {/* Staff action */}
                     {isStaffOrAdmin && (
                       <Button
                         variant="secondary"
-                        className="text-xs py-1.5 px-3 gap-1.5 text-acc border-acc/30 hover:bg-acc/10"
+                        className="gap-1.5 px-3 py-1.5 text-xs"
                         onClick={() => setStaffModalSession(s)}
                         title="Reservar por un socio en recepción"
                       >

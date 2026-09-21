@@ -121,6 +121,15 @@ Al mover un ticket a *Listo para pruebas*, el comentario debe incluir:
 - Site URL: `https://zona-cero-qa.vercel.app`
 - Redirect URLs: `https://zona-cero-qa.vercel.app/**` y `http://localhost:5190/**`
 
+> **Pendiente y crítico para recuperación de contraseña (ZCAPP-46).** Mientras el
+> Site URL siga en el default `http://localhost:3000` y la URL de QA no esté en la
+> lista, Supabase **descarta** el `redirect_to` que manda la app y lo reemplaza por
+> el Site URL. El enlace del correo sale apuntando a un `localhost:3000` donde no
+> hay nada y el socio ve un error, aunque el token se canjee bien. Verificado en
+> los logs del proyecto el 2026-09-19: la app pidió
+> `recover?redirect_to=https://zona-cero-qa.vercel.app/recuperar` y el correo llegó
+> con `verify?...&redirect_to=http://localhost:3000`.
+
 **Redeploy:**
 
 ```powershell
@@ -129,6 +138,47 @@ npx vercel --prod --scope marcspro
 ```
 
 Opcional después: dominio custom `qa.zonacero.app` apuntando al mismo proyecto.
+
+---
+
+## 6b. Correos de Auth en QA — no se envían, se registran
+
+El correo integrado de Supabase permite **2 envíos por hora y por proyecto**,
+compartidos entre todos los tipos. Probar recuperación de contraseña agota el cupo
+al instante (`429 over_email_send_rate_limit`). QA es ambiente de pruebas y no
+tiene sentido gastar envíos reales en notificaciones de prueba.
+
+Por eso QA usa un **Send Email hook** (`app/supabase/qa-mail-hook.sql`): Supabase
+llama a una función Postgres antes de cada envío, la función guarda el enlace y
+devuelve vacío, y Supabase **no envía nada**. Como efecto secundario desaparece el
+tope de 2/hora.
+
+Para leer el enlace, en el SQL Editor:
+
+```sql
+select * from qa_mail.enlaces;
+```
+
+Devuelve fecha, tipo (`recovery`, `signup`, `email_change`), correo destino, el
+enlace listo para abrir y el código OTP. Las filas se borran solas a los 7 días.
+
+| Ítem | Valor |
+|------|-------|
+| Activación | Authentication → Hooks → Send Email → Postgres function `qa_mail.send_email_hook` |
+| Rate limit | Authentication → Rate Limits → `rate_limit_email_sent` (configurable al existir el hook) |
+| Diseño | [spec](../superpowers/specs/2026-09-19-qa-mail-hook-design.md) |
+
+> **Contrapartida.** Mientras el hook esté activo **nadie recibe correos en QA**. Si
+> el cliente o recepción prueban un registro, la confirmación no les llega y hay que
+> pasarles el enlace desde `qa_mail.enlaces`.
+>
+> **Registro en QA (recomendado):** Authentication → Providers → Email → desactivar
+> **Confirm email**. Así el signup no dispara correo ni choca con
+> `email rate limit exceeded`. El olvido de contraseña sigue usando el hook
+> (`qa_mail.enlaces`). En producción se deja Confirm email **activado**.
+>
+> Si Confirm email sigue activo, sube también Authentication → Rate Limits →
+> `rate_limit_email_sent` (solo tiene efecto con el Send Email hook configurado).
 
 ---
 
@@ -146,6 +196,20 @@ Proyecto Supabase **prod** separado (`zona-cero-prod`); mismos SQL (`schema.sql`
 Ver cronograma §8: [cronograma-desarrollo-avanzada.md](./cronograma-desarrollo-avanzada.md#8-decisión-de-arquitectura--supabase-plan-free-vs-pro).
 
 El badge **main PRODUCTION** en el dashboard **no** hay que cambiarlo — no es el ambiente staging/prod del proyecto.
+
+### Correos en producción — verificación obligatoria
+
+El hook de QA de la sección 6b **no debe existir en `zona-cero-prod`**. Con el hook
+activo Supabase deja de enviar correos por completo y falla en silencio: la app
+sigue mostrando «enlace enviado» y ningún socio recibe nunca su recuperación.
+
+Por eso `qa-mail-hook.sql` está fuera de `schema.sql` y prod no lo hereda al aplicar
+el esquema. Antes del Go-Live hay que confirmar:
+
+- [ ] Authentication → Hooks **vacío** (sin Send Email hook)
+- [ ] Project Settings → Authentication → **SMTP propio** configurado y probado
+- [ ] El schema `qa_mail` **no** existe en prod
+- [ ] Site URL y Redirect URLs apuntan al dominio real, no a QA
 
 ---
 

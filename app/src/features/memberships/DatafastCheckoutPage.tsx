@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CreditCard, Loader2, ShieldCheck } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
@@ -47,13 +48,15 @@ export function DatafastCheckoutPage() {
 
   // Handle return from Datafast widget
   useEffect(() => {
-    if (!resourcePath || !paymentId || !repo.verifyOnlinePayment) return
+    // Se enlaza fuera del closure: dentro, TS pierde el estrechamiento del opcional.
+    const verifyOnlinePayment = repo.verifyOnlinePayment?.bind(repo)
+    if (!resourcePath || !paymentId || !verifyOnlinePayment) return
     let cancelled = false
     ;(async () => {
       setBusy(true)
       setError(null)
       try {
-        const result = await repo.verifyOnlinePayment({ paymentId, resourcePath })
+        const result = await verifyOnlinePayment({ paymentId, resourcePath })
         if (cancelled) return
         if (result.ok) {
           setStatusMsg('Pago aprobado. Tu membresía ya está activa.')

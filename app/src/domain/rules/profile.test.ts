@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { User } from '../models'
-import { isFichaPending } from './profile'
+import { displayFirstName, displayInitials, isFichaPending } from './profile'
 
 const member: User = {
   id: 'user_member_1',
@@ -37,5 +37,29 @@ describe('isFichaPending', () => {
   it('es false sin usuario', () => {
     expect(isFichaPending(null)).toBe(false)
     expect(isFichaPending(undefined)).toBe(false)
+  })
+})
+
+describe('displayFirstName', () => {
+  it('usa el primer nombre real', () => {
+    expect(displayFirstName('Juan Pérez')).toBe('Juan')
+    expect(displayFirstName('Ana Socio')).toBe('Ana')
+  })
+
+  it('no saluda como Socio/Staff/Admin cuando es solo el rol de la cuenta', () => {
+    expect(displayFirstName('Socio Demo Staging')).toBe('Demo')
+    expect(displayFirstName('Staff Zona Cero')).toBe('Zona')
+  })
+
+  it('tolera vacío', () => {
+    expect(displayFirstName('')).toBe('')
+    expect(displayFirstName(null)).toBe('')
+  })
+})
+
+describe('displayInitials', () => {
+  it('omite el prefijo de rol', () => {
+    expect(displayInitials('Socio Demo Staging')).toBe('DS')
+    expect(displayInitials('Juan Pérez')).toBe('JP')
   })
 })

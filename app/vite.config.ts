@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url'
 
 const rootDir = import.meta.dirname ?? path.dirname(fileURLToPath(import.meta.url))
 
+// Capacitor needs relative asset paths; web hosting needs absolute base (`/` or `/repo/`).
 export default defineConfig(({ mode }) => ({
-  base: './',
+  base: mode === 'capacitor' ? './' : (process.env.VITE_BASE_PATH || '/'),
   plugins: [react(), tailwindcss()],
   server: {
     host: true,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { MembershipPlan } from '../models'
-import { canBookZone } from './zoneAccess'
+import type { Membership, MembershipPlan } from '../models'
+import { canBookZone, assertMemberBookingAllowed } from './zoneAccess'
 
 describe('domain/rules/zoneAccess', () => {
   const allAccessPlan: MembershipPlan = {
@@ -68,5 +68,39 @@ describe('domain/rules/zoneAccess', () => {
     expect(canBookZone(multiZonePlan, 'zone-crossfit').allowed).toBe(true)
     expect(canBookZone(multiZonePlan, 'zone-dragon-fit').allowed).toBe(false)
     expect(canBookZone(multiZonePlan, 'zone-nutricion').allowed).toBe(false)
+  })
+
+  it('Zero Active (gimnasio, musculación, bailo) no incluye Hyrox ni CrossFit', () => {
+    const zeroActive: MembershipPlan = {
+      id: 'c2000000-0000-4000-8000-000000000030',
+      name: 'Zero Active Mensual',
+      priceCents: 3500,
+      durationDays: 30,
+      visitQuota: null,
+      allowedZoneIds: ['zone-gimnasio', 'zone-muscu', 'zone-bailo'],
+      active: true,
+    }
+    expect(canBookZone(zeroActive, 'zone-gimnasio').allowed).toBe(true)
+    expect(canBookZone(zeroActive, 'zone-muscu').allowed).toBe(true)
+    expect(canBookZone(zeroActive, 'zone-bailo').allowed).toBe(true)
+    expect(canBookZone(zeroActive, 'zone-hyrox').allowed).toBe(false)
+    expect(canBookZone(zeroActive, 'zone-crossfit').allowed).toBe(false)
+
+    const membership: Membership = {
+      id: 'mem-za',
+      userId: 'u1',
+      planId: zeroActive.id,
+      status: 'active',
+      startsAt: '2026-09-01T00:00:00.000Z',
+      endsAt: '2026-10-01T00:00:00.000Z',
+      visitsLeft: null,
+      graceEndsAt: '2026-10-04T00:00:00.000Z',
+    }
+    expect(
+      assertMemberBookingAllowed(membership, zeroActive, 'zone-hyrox').ok,
+    ).toBe(false)
+    expect(
+      assertMemberBookingAllowed(membership, zeroActive, 'zone-muscu').ok,
+    ).toBe(true)
   })
 })

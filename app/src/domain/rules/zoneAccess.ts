@@ -1,4 +1,5 @@
-import type { MembershipPlan } from '../models'
+import type { Membership, MembershipPlan } from '../models'
+import { canBookMembership } from './membership'
 
 /**
  * Validates if a membership plan grants access to a specific zone.
@@ -34,4 +35,20 @@ export function canBookZone(
     allowed: false,
     reason: `Tu plan (${plan.name}) no incluye acceso a esta zona.`,
   }
+}
+
+export function assertMemberBookingAllowed(
+  membership: Membership | null | undefined,
+  plan: MembershipPlan | null | undefined,
+  zoneId: string,
+): { ok: true } | { ok: false; reason: string } {
+  const mem = canBookMembership(membership)
+  if (!mem.allowed) {
+    return { ok: false, reason: mem.reason ?? 'No puedes reservar ahora.' }
+  }
+  const zone = canBookZone(plan, zoneId)
+  if (!zone.allowed) {
+    return { ok: false, reason: zone.reason ?? 'Tu plan no incluye esta disciplina.' }
+  }
+  return { ok: true }
 }
