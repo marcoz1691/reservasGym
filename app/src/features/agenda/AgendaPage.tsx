@@ -42,7 +42,7 @@ import {
 } from '@/lib/format'
 import { Badge, Button, Card, PageHeader } from '@/ui/primitives'
 import { ButtonLink } from '@/ui/ButtonLink'
-import { BookingGateModal, PlanRequiredNotice, type BookingGateType } from '@/features/memberships'
+import { BookingGateModal, type BookingGateType } from '@/features/memberships'
 import { StaffBookingModal } from './StaffBookingModal'
 
 type View = 'dia' | 'semana' | 'mes'
@@ -75,6 +75,9 @@ export function AgendaPage() {
     (planStatus === 'none' ||
       planStatus === 'expired' ||
       planStatus === 'cancelled')
+  const memberPlan = membership
+    ? (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
+    : undefined
 
   const [view, setView] = useState<View>('semana')
   const [anchor, setAnchor] = useState(() => new Date())
@@ -274,8 +277,6 @@ export function AgendaPage() {
         </div>
       ) : null}
 
-      {neverHadPlan ? <PlanRequiredNotice /> : null}
-
       {/* 9 DISCIPLINES FILTER BAR */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-ink-3">
@@ -320,10 +321,7 @@ export function AgendaPage() {
               zoneFilter === typeKey ||
               zoneFilter === meta.defaultZoneId ||
               zoneFilter === `zone_${typeKey}`
-            const count =
-              (disciplineCounts[typeKey] ?? 0) +
-              (disciplineCounts[meta.defaultZoneId] ?? 0) +
-              (disciplineCounts[`zone_${typeKey}`] ?? 0)
+            const count = disciplineCounts[typeKey] ?? disciplineCounts[meta.defaultZoneId] ?? 0
 
             return (
               <button
@@ -583,12 +581,25 @@ export function AgendaPage() {
                                 <Lock className="h-3 w-3" />
                                 {neverHadPlan ? 'Activar plan' : 'Renovar plan'}
                               </ButtonLink>
+                            ) : isMember &&
+                              memberPlan &&
+                              !canBookZone(memberPlan, s.zoneId).allowed ? (
+                              <ButtonLink
+                                to="/membresia"
+                                variant="secondary"
+                                className="flex-1 !px-2.5 !py-1 text-[10px] h-7 gap-1 border-line text-ink-3"
+                                aria-label={`No incluido en tu plan: ${s.title}`}
+                              >
+                                <Lock className="h-3 w-3" />
+                                No incluido
+                              </ButtonLink>
                             ) : (
                               <Button
                                 variant={isFull ? 'secondary' : 'primary'}
                                 className="!px-2.5 !py-1 text-[10px] h-7 flex-1"
                                 disabled={busyId === s.id}
                                 onClick={() => void onBook(s.id)}
+                                aria-label={`${isFull ? 'Lista Espera' : 'Reservar'} ${s.title}`}
                               >
                                 {isFull ? 'Lista Espera' : 'Reservar'}
                               </Button>

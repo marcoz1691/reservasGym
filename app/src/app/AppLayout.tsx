@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Outlet, Link } from 'react-router-dom'
 import {
   CalendarClock,
@@ -18,10 +19,17 @@ import {
 import {
   useAppData,
   useCurrentUser,
+  useGym,
   useRefresh,
   useRepo,
 } from '@/data/RepositoryProvider'
-import { ExpiryBanner } from '@/features/memberships'
+import { selectMyMembership } from '@/app/store'
+import { canUseBookingNav, displayInitials } from '@/domain/rules'
+import { ExpiryBanner, PlanRequiredNotice } from '@/features/memberships'
+import {
+  markNoPlanReminderDismissed,
+  wasNoPlanReminderDismissed,
+} from '@/features/memberships/noPlanReminder'
 import { Button } from '@/ui/primitives'
 
 const memberDesktopNav = [
@@ -56,6 +64,13 @@ const memberMobileTabs = [
   { to: '/peso', label: 'Peso', icon: TrendingUp },
 ]
 
+const memberMobileTabsNoPlan = [
+  { to: '/', label: 'Inicio', icon: Home, end: true },
+  { to: '/explorar', label: 'Explorar', icon: Dumbbell },
+  { to: '/membresia', label: 'Mi Plan', icon: CreditCard },
+  { to: '/peso', label: 'Peso', icon: TrendingUp },
+]
+
 const staffMobileTabs = [
   { to: '/admin', label: 'Admin', icon: LayoutDashboard, end: true },
   { to: '/admin/cobros', label: 'Cobros', icon: CreditCard },
@@ -68,11 +83,31 @@ export function AppLayout() {
   const user = useCurrentUser()
   const repo = useRepo()
   const refresh = useRefresh()
+  const { state, loading } = useGym()
   const { settings, bookings } = useAppData()
+  const [noPlanReminderDismissed, setNoPlanReminderDismissed] = useState(
+    wasNoPlanReminderDismissed,
+  )
 
   const isMember = user?.role === 'member'
-  const desktopNav = isMember ? memberDesktopNav : staffDesktopNav
-  const mobileTabs = isMember ? memberMobileTabs : staffMobileTabs
+  const membership =
+    user && state ? selectMyMembership(state, user.id) : undefined
+  const showBookingNav = canUseBookingNav(user?.role, membership)
+  const showNoPlanReminder =
+    !loading &&
+    Boolean(state) &&
+    isMember &&
+    !membership &&
+    !noPlanReminderDismissed
+  const desktopNav = (isMember ? memberDesktopNav : staffDesktopNav).filter(
+    (item) =>
+      showBookingNav || (item.to !== '/agenda' && item.to !== '/reservas'),
+  )
+  const mobileTabs = isMember
+    ? showBookingNav
+      ? memberMobileTabs
+      : memberMobileTabsNoPlan
+    : staffMobileTabs
   const accent = settings.accentColor || '#F26D17'
 
   const activeBookingsCount = isMember && user
@@ -83,14 +118,7 @@ export function AppLayout() {
       ).length
     : 0
 
-  const userInitials = user?.fullName
-    ? user.fullName
-        .split(' ')
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase()
-    : 'ZC'
+  const userInitials = displayInitials(user?.fullName) || 'ZC'
 
   return (
     <div
@@ -122,10 +150,12 @@ export function AppLayout() {
               <div className="truncate font-display text-base font-black tracking-tight text-ink">
                 {settings.name || 'Zona Cero'}
               </div>
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-acc">
-                <Sparkles className="h-3 w-3" />
-                <span>Performance Center</span>
-              </div>
+              {!(settings.name || '').toLowerCase().includes('performance center') ? (
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-acc">
+                  <Sparkles className="h-3 w-3" />
+                  <span>Performance Center</span>
+                </div>
+              ) : null}
             </div>
           </Link>
 
@@ -226,9 +256,11 @@ export function AppLayout() {
               <span className="font-display text-sm font-black tracking-tight text-ink">
                 {settings.name || 'Zona Cero'}
               </span>
-              <span className="block text-[10px] font-bold text-acc leading-none">
-                Performance Center
-              </span>
+              {!(settings.name || '').toLowerCase().includes('performance center') ? (
+                <span className="block text-[10px] font-bold text-acc leading-none">
+                  Performance Center
+                </span>
+              ) : null}
             </div>
           </Link>
 
@@ -261,6 +293,15 @@ export function AppLayout() {
           <ExpiryBanner />
           <Outlet />
         </main>
+
+        {showNoPlanReminder ? (
+          <PlanRequiredNotice
+            onDismiss={() => {
+              markNoPlanReminderDismissed()
+              setNoPlanReminderDismissed(true)
+            }}
+          />
+        ) : null}
 
         {/* Mobile bottom tab bar — in document flow so content is never hidden underneath */}
         <nav

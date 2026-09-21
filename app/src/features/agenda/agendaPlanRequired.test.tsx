@@ -5,7 +5,7 @@ import { AgendaPage } from '@/features/agenda/AgendaPage'
 import { RepositoryProvider } from '@/data/RepositoryProvider'
 import { resetRepositoryForTests } from '@/data/repository'
 import { createMockRepo } from '@/test/mockRepo'
-import type { GymState, Membership, Session, User, Zone } from '@/domain/models'
+import type { GymState, Membership, MembershipPlan, Session, User, Zone } from '@/domain/models'
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -40,6 +40,22 @@ const zones: Zone[] = [
     defaultCapacity: 18,
     imageHint: 'crossfit',
   },
+  {
+    id: 'zone-muscu',
+    name: 'Musculación',
+    type: 'musculacion',
+    description: 'Pesas',
+    defaultCapacity: 30,
+    imageHint: 'weights',
+  },
+  {
+    id: 'zone-hyrox',
+    name: 'Hyrox',
+    type: 'hyrox',
+    description: 'Hyrox',
+    defaultCapacity: 16,
+    imageHint: 'hyrox',
+  },
 ]
 
 const sessions: Session[] = [
@@ -52,6 +68,30 @@ const sessions: Session[] = [
     startsAt: new Date().toISOString(),
     endsAt: new Date(Date.now() + 3600000).toISOString(),
     capacity: 18,
+    trainerId: null,
+    bookedCount: 0,
+  },
+  {
+    id: 'ses_muscu',
+    templateId: 'tpl_muscu',
+    zoneId: 'zone-muscu',
+    title: 'Acceso libre QA',
+    kind: 'open',
+    startsAt: new Date().toISOString(),
+    endsAt: new Date(Date.now() + 3600000).toISOString(),
+    capacity: 40,
+    trainerId: null,
+    bookedCount: 0,
+  },
+  {
+    id: 'ses_hyrox',
+    templateId: 'tpl_hyrox',
+    zoneId: 'zone-hyrox',
+    title: 'Hyrox QA',
+    kind: 'class',
+    startsAt: new Date().toISOString(),
+    endsAt: new Date(Date.now() + 3600000).toISOString(),
+    capacity: 16,
     trainerId: null,
     bookedCount: 0,
   },
@@ -97,19 +137,19 @@ describe('AgendaPage — socio sin plan puede explorar', () => {
     vi.clearAllMocks()
   })
 
-  it('socio sin plan ve el aviso y el botón "Activar plan" en vez de "Reservar"', async () => {
+  it('socio sin plan ve el botón "Activar plan" en vez de "Reservar"', async () => {
     renderAgenda(memberUser, { memberships: [] })
 
     expect(
-      await screen.findByTestId('plan-required-notice'),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('link', {
+      await screen.findByRole('link', {
         name: /Activar plan para reservar CrossFit WOD Power/i,
       }),
     ).toHaveAttribute('href', '/membresia')
     expect(
       screen.queryByRole('button', { name: /^Reservar$/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('plan-required-notice'),
     ).not.toBeInTheDocument()
   })
 
@@ -127,13 +167,56 @@ describe('AgendaPage — socio sin plan puede explorar', () => {
   })
 
   it('socio con plan activo conserva el botón "Reservar"', async () => {
-    renderAgenda(memberUser, { memberships: [activeMembership] })
+    renderAgenda(memberUser, {
+      memberships: [activeMembership],
+      membershipPlans: [
+        {
+          id: 'plan_1',
+          name: 'Plan Full',
+          priceCents: 7500,
+          durationDays: 30,
+          visitQuota: null,
+          allowedZoneIds: [],
+          active: true,
+        },
+      ],
+    })
 
     expect(
-      await screen.findByRole('button', { name: /^Reservar$/i }),
-    ).toBeInTheDocument()
+      (await screen.findAllByRole('button', { name: /Reservar/i })).length,
+    ).toBeGreaterThan(0)
     expect(
       screen.queryByTestId('plan-required-notice'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('Zero Active solo reserva musculación; Hyrox queda no incluido', async () => {
+    const zeroActive: MembershipPlan = {
+      id: 'plan_za',
+      name: 'Zero Active Mensual',
+      priceCents: 3500,
+      durationDays: 30,
+      visitQuota: null,
+      allowedZoneIds: ['zone-gimnasio', 'zone-muscu', 'zone-bailo'],
+      active: true,
+    }
+    renderAgenda(memberUser, {
+      memberships: [{ ...activeMembership, planId: zeroActive.id }],
+      membershipPlans: [zeroActive],
+    })
+
+    expect(
+      await screen.findByRole('button', {
+        name: /Reservar Acceso libre QA/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', {
+        name: /No incluido en tu plan: Hyrox QA/i,
+      }),
+    ).toHaveAttribute('href', '/membresia')
+    expect(
+      screen.queryByRole('button', { name: /Reservar Hyrox QA/i }),
     ).not.toBeInTheDocument()
   })
 
@@ -141,8 +224,8 @@ describe('AgendaPage — socio sin plan puede explorar', () => {
     renderAgenda(staffUser, { memberships: [] })
 
     expect(
-      await screen.findByRole('button', { name: /^Reservar$/i }),
-    ).toBeInTheDocument()
+      (await screen.findAllByRole('button', { name: /Reservar/i })).length,
+    ).toBeGreaterThan(0)
     expect(
       screen.queryByTestId('plan-required-notice'),
     ).not.toBeInTheDocument()

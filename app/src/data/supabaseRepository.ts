@@ -27,6 +27,7 @@ import type {
 } from '@/domain/models'
 import {
   calculateBmi,
+  assertMemberBookingAllowed,
   canBookSession,
   canManageGoals,
   canManageWeight,
@@ -849,6 +850,16 @@ export class SupabaseRepository implements GymRepository {
     if (already) throw new Error('Ya tienes reserva en esta sesión')
     if (hasOverlap(state.sessions, state.bookings, userId, session)) {
       throw new Error('Se solapa con otra reserva activa')
+    }
+
+    const subject = state.users.find((u) => u.id === userId)
+    if (subject?.role === 'member' || actor.role === 'member') {
+      const membership = (state.memberships ?? []).find((m) => m.userId === userId)
+      const plan = membership
+        ? (state.membershipPlans ?? []).find((p) => p.id === membership.planId)
+        : undefined
+      const allowed = assertMemberBookingAllowed(membership, plan, session.zoneId)
+      if (!allowed.ok) throw new Error(allowed.reason)
     }
 
     const capacity = canBookSession(session, state.bookings)

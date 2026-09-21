@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ExplorePage } from '@/features/catalog/ExplorePage'
@@ -167,7 +167,7 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
     vi.clearAllMocks()
   })
 
-  it('blocks booking in ExplorePage when member has no membership and shows modal', async () => {
+  it('ExplorePage sin plan muestra Activar plan y no reserva', async () => {
     const mockRepo = createMockRepo(memberUser, {
       zones: [gymZone],
       sessions: [sessionTomorrow],
@@ -184,26 +184,14 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
       </MemoryRouter>,
     )
 
-    const reserveButton = await screen.findByRole('button', { name: /^reservar$/i })
-    await userEvent.click(reserveButton)
-
-    // Verify repo.createBooking was NOT called
+    const cta = await screen.findByRole('link', { name: /activar plan/i })
+    expect(cta).toHaveAttribute('href', '/membresia')
+    expect(screen.queryByRole('button', { name: /reservar/i })).not.toBeInTheDocument()
     expect(mockRepo.createBooking).not.toHaveBeenCalled()
-
-    // Verify modal is shown
-    const modal = await screen.findByTestId('booking-gate-modal')
-    expect(modal).toBeInTheDocument()
-    expect(
-      within(modal).getByText(/Para reservar necesitas un plan activo/i),
-    ).toBeInTheDocument()
-
-    // Clicking "Ir a Mi plan" redirects to /membresia
-    const ctaButton = within(modal).getByRole('button', { name: /ir a mi plan/i })
-    await userEvent.click(ctaButton)
-    expect(mockNavigate).toHaveBeenCalledWith('/membresia')
+    expect(screen.queryByTestId('booking-gate-modal')).not.toBeInTheDocument()
   })
 
-  it('blocks booking in ExplorePage when membership is expired', async () => {
+  it('ExplorePage con membresía vencida muestra Renovar plan', async () => {
     const expiredMembership: Membership = {
       id: 'mem_exp',
       userId: memberUser.id,
@@ -231,18 +219,13 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
       </MemoryRouter>,
     )
 
-    const reserveButton = await screen.findByRole('button', { name: /^reservar$/i })
-    await userEvent.click(reserveButton)
-
+    const cta = await screen.findByRole('link', { name: /renovar plan/i })
+    expect(cta).toHaveAttribute('href', '/membresia')
+    expect(screen.queryByRole('button', { name: /reservar/i })).not.toBeInTheDocument()
     expect(mockRepo.createBooking).not.toHaveBeenCalled()
-    const modal = await screen.findByTestId('booking-gate-modal')
-    expect(modal).toBeInTheDocument()
-    expect(
-      within(modal).getByText(/Tu membresía está vencida\. Renueva tu plan/i),
-    ).toBeInTheDocument()
   })
 
-  it('blocks booking in ExplorePage when plan does not allow the session zone', async () => {
+  it('ExplorePage no deja reservar una zona fuera del plan', async () => {
     const activeMembership: Membership = {
       id: 'mem_act',
       userId: memberUser.id,
@@ -270,15 +253,15 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
       </MemoryRouter>,
     )
 
-    const reserveButton = await screen.findByRole('button', { name: /^reservar$/i })
-    await userEvent.click(reserveButton)
-
-    expect(mockRepo.createBooking).not.toHaveBeenCalled()
-    const modal = await screen.findByTestId('booking-gate-modal')
-    expect(modal).toBeInTheDocument()
+    expect(await screen.findByText('No incluida')).toBeInTheDocument()
+    const blocked = await screen.findByRole('link', {
+      name: /No incluido en tu plan: CrossFit WOD/i,
+    })
+    expect(blocked).toHaveAttribute('href', '/membresia')
     expect(
-      within(modal).getByText(/Tu plan actual no incluye acceso al área CrossFit Box\. Consulta en recepción para actualizar tu plan\./i),
-    ).toBeInTheDocument()
+      screen.queryByRole('button', { name: /reservar/i }),
+    ).not.toBeInTheDocument()
+    expect(mockRepo.createBooking).not.toHaveBeenCalled()
   })
 
   it('allows booking in AgendaPage when active and zone is allowed', async () => {
@@ -309,7 +292,7 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
       </MemoryRouter>,
     )
 
-    const reserveButton = await screen.findByRole('button', { name: /^reservar$/i })
+    const reserveButton = await screen.findByRole('button', { name: /reservar/i })
     await userEvent.click(reserveButton)
 
     await waitFor(() => {

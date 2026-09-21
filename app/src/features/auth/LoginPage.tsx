@@ -12,8 +12,23 @@ import {
   getSavedBiometricUser,
   isBiometricsEnabled,
 } from '@/lib/biometrics'
+import { displayFirstName } from '@/domain/rules'
 import { Button, Card, Input } from '@/ui/primitives'
 import { ForgotPasswordModal } from './ForgotPasswordModal'
+
+const IS_STAGING = import.meta.env.MODE === 'staging'
+const DEMO_PASSWORD = IS_STAGING ? 'ZonaCero2026!' : 'demo1234'
+const DEMO_ACCOUNTS = IS_STAGING
+  ? {
+      socio: 'socio.staging@zonacero.test',
+      staff: 'staff.staging@zonacero.test',
+      admin: 'admin.staging@zonacero.test',
+    }
+  : {
+      socio: 'socio@gym.local',
+      staff: 'staff@gym.local',
+      admin: 'admin@gym.local',
+    }
 
 export function LoginPage() {
   const user = useCurrentUser()
@@ -25,14 +40,8 @@ export function LoginPage() {
   const [forgotModalOpen, setForgotModalOpen] = useState(false)
 
   // Login fields — staging usa cuentas @zonacero.test (ver supabase/staging-users.sql)
-  const [loginEmail, setLoginEmail] = useState(
-    import.meta.env.MODE === 'staging'
-      ? 'socio.staging@zonacero.test'
-      : 'socio@gym.local',
-  )
-  const [loginPassword, setLoginPassword] = useState(
-    import.meta.env.MODE === 'staging' ? 'ZonaCero2026!' : 'demo1234',
-  )
+  const [loginEmail, setLoginEmail] = useState(DEMO_ACCOUNTS.socio)
+  const [loginPassword, setLoginPassword] = useState(DEMO_PASSWORD)
 
   // Register fields: Simple initial account creation
   const [fullName, setFullName] = useState('')
@@ -83,10 +92,12 @@ export function LoginPage() {
       const bioAuth = await authenticateWithBiometrics()
       // Try to sign in with standard demo pass or saved session
       try {
-        await repo.signIn({ email: bioAuth.email, password: 'demo1234' })
+        await repo.signIn({ email: bioAuth.email, password: DEMO_PASSWORD })
       } catch {
-        // In local mock or custom credentials, sign in with found email
-        await repo.signIn({ email: bioAuth.email, password: loginPassword || 'demo1234' })
+        await repo.signIn({
+          email: bioAuth.email,
+          password: loginPassword || DEMO_PASSWORD,
+        })
       }
       await refresh()
     } catch (err) {
@@ -143,7 +154,7 @@ export function LoginPage() {
         password: registerPassword,
         fullName: fullName.trim(),
       })
-      // Flujo esperado: crear cuenta → iniciar sesión → ficha en Perfil.
+      // Flujo esperado: crear cuenta → iniciar sesión → ficha en /bienvenida.
       // Si Supabase dejó sesión abierta, la cerramos para forzar el login.
       try {
         await repo.signOut()
@@ -153,7 +164,7 @@ export function LoginPage() {
       await refresh()
       goToLoginAfterSignup(
         email,
-        'Cuenta creada correctamente. Ahora inicia sesión con tu correo y contraseña. Luego podrás completar tu ficha técnica en Perfil.',
+        'Cuenta creada correctamente. Ahora inicia sesión con tu correo y contraseña. Al entrar por primera vez completarás tu ficha técnica.',
       )
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al registrar la cuenta'
@@ -164,6 +175,13 @@ export function LoginPage() {
       // Mensaje legado (deploys anteriores) — tratarlo como éxito, no como error
       if (msg.startsWith('Cuenta creada')) {
         goToLoginAfterSignup(email, msg)
+        return
+      }
+      const lower = msg.toLowerCase()
+      if (lower.includes('rate limit') || lower.includes('over_email_send')) {
+        setError(
+          'Se alcanzó el límite de correos de prueba en QA. En Supabase → Authentication → Providers → Email, desactiva «Confirm email» (solo staging) o espera ~1 hora.',
+        )
         return
       }
       setError(msg)
@@ -233,7 +251,9 @@ export function LoginPage() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-ink">
-                        {bioUser ? `Hola, ${bioUser.fullName.split(' ')[0]}` : 'Acceso Biométrico'}
+                        {bioUser
+                          ? `Hola, ${displayFirstName(bioUser.fullName)}`
+                          : 'Acceso Biométrico'}
                       </p>
                       <p className="text-[11px] text-ink-3">
                         {bioUser ? bioUser.email : 'Ingreso rápido Face ID / Huella'}
@@ -301,15 +321,19 @@ export function LoginPage() {
             {/* Demo Helper */}
             <div className="mt-6 rounded-2xl border border-line bg-bg p-3.5 text-xs text-ink-3 space-y-2">
               <p className="font-bold text-ink-2 flex items-center justify-between">
-                <span>Acceso rápido demo (desarrollo):</span>
-                <span className="text-[10px] text-acc font-mono">demo1234</span>
+                <span>
+                  {IS_STAGING
+                    ? 'Acceso rápido QA (staging):'
+                    : 'Acceso rápido demo (desarrollo):'}
+                </span>
+                <span className="text-[10px] text-acc font-mono">{DEMO_PASSWORD}</span>
               </p>
               <div className="grid grid-cols-3 gap-1.5 pt-1">
                 <button
                   type="button"
                   onClick={() => {
-                    setLoginEmail('socio@gym.local')
-                    setLoginPassword('demo1234')
+                    setLoginEmail(DEMO_ACCOUNTS.socio)
+                    setLoginPassword(DEMO_PASSWORD)
                   }}
                   className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-[11px] font-semibold text-ink hover:border-acc/40 transition"
                 >
@@ -318,8 +342,8 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setLoginEmail('staff@gym.local')
-                    setLoginPassword('demo1234')
+                    setLoginEmail(DEMO_ACCOUNTS.staff)
+                    setLoginPassword(DEMO_PASSWORD)
                   }}
                   className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-[11px] font-semibold text-ink hover:border-acc/40 transition"
                 >
@@ -328,8 +352,8 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setLoginEmail('admin@gym.local')
-                    setLoginPassword('demo1234')
+                    setLoginEmail(DEMO_ACCOUNTS.admin)
+                    setLoginPassword(DEMO_PASSWORD)
                   }}
                   className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-[11px] font-semibold text-ink hover:border-acc/40 transition"
                 >
@@ -347,8 +371,8 @@ export function LoginPage() {
                 <span>Crea tu cuenta de socio</span>
               </div>
               <p className="mt-1 text-ink-3">
-                Después de crear la cuenta, inicia sesión. Desde Perfil podrás completar
-                tu ficha técnica (peso, estatura y metas).
+                Después de crear y confirmar la cuenta, inicia sesión. En el primer
+                ingreso completarás tu ficha técnica (peso, estatura y metas).
               </p>
             </div>
 

@@ -312,7 +312,7 @@ describe('QA ZCAPP-19 — Gate de Reservas', () => {
         }),
       ])
 
-      await userEvent.click(await screen.findByRole('button', { name: /^reservar$/i }))
+      await userEvent.click(await screen.findByRole('button', { name: /reservar/i }))
 
       await waitFor(() => {
         expect(mockRepo.createBooking).toHaveBeenCalledWith(

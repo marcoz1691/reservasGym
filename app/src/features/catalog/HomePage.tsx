@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
 import { ZONE_LABELS } from '@/domain/models'
+import { canUseBookingNav, displayFirstName } from '@/domain/rules'
 import { selectMyMembership } from '@/app/store'
 import { WelcomeNoPlanCard, isOnlinePayEnabled } from '@/features/memberships'
 import { Badge, Button, Card, SkeletonCard } from '@/ui/primitives'
@@ -69,7 +70,8 @@ export function HomePage() {
     .filter((m) => m.userId === user.id)
     .sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))[0]
 
-  const firstName = user.fullName.split(' ')[0]
+  const firstName = displayFirstName(user.fullName)
+  const canBook = canUseBookingNav(user.role, membership)
 
   return (
     <div className="space-y-7">
@@ -108,12 +110,14 @@ export function HomePage() {
                 })}
               </span>
             </p>
-            <Link to="/reservas" className="mt-4 inline-block">
-              <Button variant="primary" size="sm">
-                Ver mis reservas
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            {canBook ? (
+              <Link to="/reservas" className="mt-4 inline-block">
+                <Button variant="primary" size="sm">
+                  Ver mis reservas
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            ) : null}
           </div>
         </Card>
       ) : !membership ? (
@@ -128,9 +132,9 @@ export function HomePage() {
               Agenda tu próxima sesión en cualquiera de las áreas.
             </p>
           </div>
-          <Link to="/agenda">
+          <Link to={canBook ? '/agenda' : '/explorar'}>
             <Button variant="primary" size="sm">
-              Explorar agenda
+              {canBook ? 'Explorar agenda' : 'Explorar áreas'}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
@@ -158,9 +162,15 @@ export function HomePage() {
 
       {/* Accesos rápidos */}
       <div className="flex flex-wrap gap-2">
-        <ActionChip to="/agenda" icon={<CalendarPlus className="h-4 w-4" />}>
-          Reservar clase
-        </ActionChip>
+        {canBook ? (
+          <ActionChip to="/agenda" icon={<CalendarPlus className="h-4 w-4" />}>
+            Reservar clase
+          </ActionChip>
+        ) : (
+          <ActionChip to="/explorar" icon={<Dumbbell className="h-4 w-4" />}>
+            Explorar áreas
+          </ActionChip>
+        )}
         <ActionChip to="/peso" icon={<Plus className="h-4 w-4" />}>
           Registrar peso
         </ActionChip>
@@ -175,12 +185,21 @@ export function HomePage() {
           <h2 className="font-display text-lg font-bold text-ink">
             Próximas sesiones
           </h2>
+          {canBook ? (
           <Link
             to="/agenda"
             className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
           >
             Ver agenda
           </Link>
+          ) : (
+          <Link
+            to="/explorar"
+            className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
+          >
+            Explorar áreas
+          </Link>
+          )}
         </div>
 
         {upcoming.length === 0 ? (

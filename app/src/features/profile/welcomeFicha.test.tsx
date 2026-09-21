@@ -65,6 +65,24 @@ describe('Primer ingreso — ficha técnica', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('socio sin plan no ve Agenda ni Reservas en la navegación', async () => {
+    renderApp(memberConFicha)
+
+    await screen.findByText(/Activa tu plan y empieza a entrenar/i)
+    expect(screen.queryByRole('link', { name: /^Agenda$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /reservas/i })).not.toBeInTheDocument()
+  })
+
+  it('socio sin plan ve un popup de recordatorio, no un banner de error', async () => {
+    renderApp(memberConFicha)
+
+    const reminder = await screen.findByTestId('plan-required-notice')
+    expect(reminder).toHaveAttribute('role', 'dialog')
+    expect(screen.queryByTestId('expiry-banner')).not.toBeInTheDocument()
+    expect(screen.queryByText(/pausadas/i)).not.toBeInTheDocument()
+    expect(reminder.className).not.toMatch(/danger/)
+  })
+
   it('"Completarla después" deja entrar a la app en esta sesión', async () => {
     renderApp(memberSinFicha)
 

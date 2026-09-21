@@ -4,6 +4,7 @@ import {
   EXPIRATION_WARNING_DAYS,
   GRACE_PERIOD_DAYS,
   canBookMembership,
+  canUseBookingNav,
   computeMembershipStatus,
   daysRemaining,
   extendMembership,
@@ -382,6 +383,21 @@ describe('domain/rules/membership', () => {
       }
       const res = extendMembership(null, punchPlan, '2026-09-01T00:00:00.000Z')
       expect(res.visitsLeft).toBe(12)
+    })
+  })
+
+  describe('canUseBookingNav', () => {
+    it('oculta agenda y reservas al socio sin plan activo', () => {
+      expect(canUseBookingNav('member', null)).toBe(false)
+    })
+
+    it('muestra agenda al socio con plan vigente', () => {
+      expect(canUseBookingNav('member', baseMembership)).toBe(true)
+    })
+
+    it('staff y admin siempre ven agenda', () => {
+      expect(canUseBookingNav('staff', null)).toBe(true)
+      expect(canUseBookingNav('admin', null)).toBe(true)
     })
   })
 })

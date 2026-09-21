@@ -130,7 +130,7 @@ export function PlansShowcase({
               </div>
 
               <div className="mt-5 border-t border-line/60 pt-3 space-y-2">
-                {onlinePayEnabled && onPayOnline ? (
+                {onlinePayEnabled && onPayOnline && (!currentPlanId || isCurrent) ? (
                   <button
                     type="button"
                     disabled={Boolean(payingPlanId)}
@@ -151,9 +151,15 @@ export function PlansShowcase({
                   </button>
                 ) : null}
                 <p className="text-[11px] text-ink-3 text-center">
-                  {onlinePayEnabled
-                    ? 'También puedes pagar en recepción (efectivo, transferencia o Datafast)'
-                    : 'Adquiérelo o renuévalo en recepción'}
+                  {isCurrent
+                    ? onlinePayEnabled
+                      ? 'También puedes renovar en recepción'
+                      : 'Renuévalo en recepción'
+                    : currentPlanId
+                      ? 'Para cambiar de plan, acércate a recepción. Al cobrar el nuevo plan, reemplaza el actual y se suma la vigencia.'
+                      : onlinePayEnabled
+                        ? 'También puedes pagar en recepción (efectivo, transferencia o Datafast)'
+                        : 'Adquiérelo o renuévalo en recepción'}
                 </p>
               </div>
             </div>

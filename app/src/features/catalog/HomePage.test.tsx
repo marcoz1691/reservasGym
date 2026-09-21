@@ -113,4 +113,27 @@ describe('HomePage — hero del socio', () => {
       screen.queryByText(/Activa tu plan y empieza a entrenar/i),
     ).not.toBeInTheDocument()
   })
+
+  it('no saluda "Socio" cuando el nombre de cuenta empieza por el rol', async () => {
+    resetRepositoryForTests(
+      createMockRepo(
+        { ...memberUser, fullName: 'Socio Demo Staging' },
+        { memberships: [activeMembership] },
+      ),
+    )
+    renderHome()
+    expect(await screen.findByRole('heading', { level: 1 })).not.toHaveTextContent(
+      /Socio/,
+    )
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/Demo/)
+  })
+
+  it('socio sin plan no ve atajos de agenda ni reservas', async () => {
+    resetRepositoryForTests(createMockRepo(memberUser, { memberships: [] }))
+    renderHome()
+    await screen.findByText(/Activa tu plan y empieza a entrenar/i)
+    expect(screen.queryByRole('link', { name: /Reservar clase/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Ver agenda/i })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /Explorar áreas/i }).length).toBeGreaterThan(0)
+  })
 })
