@@ -6,11 +6,19 @@ Flujo cuando William envía la tabla de membresías (Sprint 2 / ZCAPP-16).
 
 ## 1. Recibir y documentar (PM)
 
-William completa la matriz. Guardar copia en este repo:
+Fuente comercial (2026-09-20): `docs/comercial/planes/INFORMACION DE PLANES nuevo gym (1).docx`.
 
-| Plan | Precio USD | Duración | Acceso | Áreas incluidas | Notas |
-|------|-----------|----------|--------|-----------------|-------|
-| *(ejemplo abajo)* | | | | | |
+Catálogo cargado en **QA / staging** y versionado en `app/supabase/planes-zona-cero.sql`.
+
+| Familia | Mensual | Trimestral | Semestral (7 meses) | Anual (14 meses) | Áreas |
+|---------|---------|------------|---------------------|------------------|-------|
+| Zero Start | $15 | $38.25 | $90 | $180 | Gimnasio |
+| Zero Active | $35 | $89.25 | $210 | $420 | Gimnasio, Musculación, Bailoterapia |
+| Zero Pro | $55 | $140.25 | $330 | $660 | Active + Hyrox + Dragon Fit |
+| Zero Elite | $75 | $191.25 | $450 | $900 | Todas |
+| Zona Day Musculación | $2 | — | — | — | 1 día, musculación |
+| Zona Day Recovery | $5 | — | — | — | 1 día, áreas comunes |
+| Zona Day Full | $10 | — | — | — | 1 día, todas |
 
 **Áreas válidas** (IDs en BD):
 
@@ -38,7 +46,7 @@ William completa la matriz. Guardar copia en este repo:
 
 1. Abrir [Supabase Dashboard](https://supabase.com/dashboard) → proyecto **zona-cero** (staging)
 2. **SQL Editor** → New query
-3. Pegar el contenido de `app/supabase/planes-william-ejemplo.sql` *(prueba)* o el SQL definitivo que armes con la tabla real
+3. Pegar el contenido de `app/supabase/planes-zona-cero.sql` (catálogo real). El ejemplo viejo queda en `app/supabase/planes-william-ejemplo.sql`.
 4. **Run**
 5. Verificar: **Table Editor** → `membership_plans`
 
@@ -58,7 +66,7 @@ Usar SQL cuando son varios planes a la vez; UI para un ajuste puntual.
 |---|--------|------|
 | 1 | Admin ve catálogo correcto | `/admin/planes` |
 | 2 | Socio ve planes activos | `/membresia` con `socio.staging@zonacero.test` |
-| 3 | Plan restringido bloquea área | Socio con plan Plata → Explorar → Hyrox debe bloquear |
+| 3 | Plan restringido bloquea área | Socio con Zero Start → Explorar → Hyrox debe bloquear |
 | 4 | Plan inactivo oculto | Desactivar plan → socio no lo ve |
 | 5 | Cobro extiende membresía | `/admin/cobros` → registrar pago → vigencia actualizada |
 
@@ -89,10 +97,10 @@ npm run dev:staging
 
 ---
 
-## 5. Cuando llegue la tabla real
+## 5. Tabla real (hecho en QA, 2026-09-20)
 
-1. Copiar `planes-william-ejemplo.sql` → `planes-zona-cero-prod.sql` (o staging definitivo)
-2. Sustituir nombres, precios (`price_cents` = USD × 100), duraciones, zonas
-3. Ejecutar en staging → validar con William
-4. Actualizar `seed.sql` en repo para futuros provisiones
-5. Comentario en Jira ZCAPP-16 con capturas + link checklist
+1. SQL definitivo: **`app/supabase/planes-zona-cero.sql`**
+2. Ejecutado en staging (`zona-cero`). Desactiva Gold / Silver / Plata / Dragon Fit / Pase 10; no los borra.
+3. Ajuste puntual: Zero Start Trimestral va a **$38.25** (mensual × 3 − 15%), no $63.75 del Word (inconsistente con el resto).
+4. `seed.sql` local sigue con planes demo para provisionar sin este catálogo. Re-provision de QA debe correr `planes-zona-cero.sql` después del seed.
+5. Validar con William: `/admin/planes` y `/membresia` en https://zona-cero-qa.vercel.app

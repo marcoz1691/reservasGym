@@ -28,7 +28,7 @@ cd app && npm run dev:staging
 npm test -- --run src/domain/rules/membership.test.ts src/domain/rules/membershipPlan.test.ts src/data/localRepository.memberships.test.ts src/features/admin/adminBilling.test.tsx src/features/memberships/MiPlanPage.test.tsx
 ```
 
-**Pendiente comercial (no bloquea dev):** catálogo real de William → cargar vía `/admin/planes` o SQL.
+**Catálogo comercial en QA (2026-09-20):** Zero Start / Active / Pro / Elite + Zona Day vía `app/supabase/planes-zona-cero.sql`. Gold/Silver/Plata desactivados.
 
 ## Reglas dominio (TDD)
 
