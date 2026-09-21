@@ -42,8 +42,8 @@ npm test -- --run src/test/qaZcapp19GateReservas.test.tsx
 
 ### Gate en la agenda del socio
 
-- [x] **ZC19-09** Agenda bloquea al socio vencido, abre el modal de gate y no llama a `createBooking`
-- [x] **ZC19-10** Agenda bloquea al socio sin membresía
+- [x] **ZC19-09** Agenda bloquea al socio vencido: CTA «Renovar plan» a `/membresia`, no llama a `createBooking`
+- [x] **ZC19-10** Agenda bloquea al socio sin membresía: CTA «Activar plan» a `/membresia`
 - [x] **ZC19-11** Agenda permite reservar durante el período de gracia, sin modal
 
 ### Reservas previas al vencimiento

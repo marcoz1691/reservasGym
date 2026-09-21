@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ExpiryBanner } from './ExpiryBanner'
@@ -225,13 +225,13 @@ describe('ExpiryBanner Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/membresia')
   })
 
-  it('renders No Membership Banner when member has no membership', async () => {
+  it('does not render banner when member has no membership (bienvenida en Inicio)', async () => {
     const mockRepo = createMockRepo(memberUser, {
       memberships: [],
     })
     resetRepositoryForTests(mockRepo)
 
-    render(
+    const { container } = render(
       <MemoryRouter>
         <RepositoryProvider>
           <ExpiryBanner now={now} />
@@ -239,14 +239,10 @@ describe('ExpiryBanner Component', () => {
       </MemoryRouter>,
     )
 
-    const banner = await screen.findByTestId('expiry-banner')
-    expect(banner).toBeInTheDocument()
-    expect(banner).toHaveAttribute('data-banner-type', 'none')
-    expect(
-      screen.getByText(
-        /No tienes un plan activo\. Tus reservas están pausadas\. Acércate a recepción para activar tu membresía\./i,
-      ),
-    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByTestId('expiry-banner')).not.toBeInTheDocument()
+    })
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('does not render banner when membership is active with > 7 days remaining', async () => {

@@ -52,7 +52,7 @@ npm test -- --run src/test/qaZcapp18MiPlan.test.tsx
 
 | ID | Observación | Severidad | Estado |
 |----|-------------|-----------|--------|
-| ZC18-O1 | Banner sin membresía decía «Membresía vencida» | Baja | **Corregido** → «No tienes un plan activo…» |
+| ZC18-O1 | Banner sin membresía decía «Membresía vencida» | Baja | **Corregido** → el banner ya no aparece sin plan; Inicio muestra la bienvenida «Activa tu plan y empieza a entrenar» |
 | ZC18-O2 | Umbrales en UTC vs fechas en America/Guayaquil cerca de medianoche | Baja | **Corregido** → `daysRemaining` / días de gracia en calendario `America/Guayaquil` |
 | ZC18-O3 | Barra de progreso fija `Date.now()` al montar | Informativa | **Corregido** → reloj vivo cada 60s en `MembershipCard` |
 

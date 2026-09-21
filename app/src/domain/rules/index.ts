@@ -168,4 +168,5 @@ export * from './membership'
 export * from './membershipPlan'
 export * from './zoneAccess'
 export * from './anthropometrics'
+export * from './profile'
 
