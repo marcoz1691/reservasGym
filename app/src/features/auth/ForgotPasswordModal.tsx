@@ -36,11 +36,18 @@ export function ForgotPasswordModal({
       await repo.resetPassword(email.trim())
       setSuccess(true)
     } catch (err) {
-      setError(
+      const msg =
         err instanceof Error
           ? err.message
-          : 'No se pudo enviar el correo de recuperación',
-      )
+          : 'No se pudo enviar el correo de recuperación'
+      const lower = msg.toLowerCase()
+      if (lower.includes('rate limit') || lower.includes('over_email_send')) {
+        setError(
+          'Límite de correos de prueba en QA (pocos por hora). En Supabase → Authentication → Rate Limits, sube «rate_limit_email_sent», o espera ~1 hora. El enlace de pruebas está en: select * from qa_mail.enlaces;',
+        )
+      } else {
+        setError(msg)
+      }
     } finally {
       setLoading(false)
     }

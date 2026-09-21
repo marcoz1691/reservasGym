@@ -10,17 +10,53 @@ llevaba a `/login` y ahí moría el flujo.
 
 ## Configuración previa en Supabase
 
-Sin esto el enlace del correo falla con `redirect_to not allowed`:
+Sin esto el enlace del correo no llega a `/recuperar`:
 
-1. **Authentication → URL Configuration → Redirect URLs**, agregar:
+1. **Authentication → URL Configuration → Site URL**: tiene que ser la URL real
+   del ambiente (`https://zona-cero-qa.vercel.app` en QA). Es el destino de
+   respaldo cuando el `redirect_to` no está permitido, así que si se queda en el
+   default `http://localhost:3000` el enlace del correo apunta ahí.
+2. **Authentication → URL Configuration → Redirect URLs**, agregar:
+   - `https://zona-cero-qa.vercel.app/**` (**QA — el ambiente oficial de pruebas**)
    - `http://localhost:5180/recuperar` (dev)
    - `http://localhost:5190/recuperar` (staging local)
    - La URL de producción cuando exista: `https://<dominio>/recuperar`
-2. **Authentication → Email Templates → Reset Password**: verificar que el
+3. **Authentication → Email Templates → Reset Password**: verificar que el
    botón use `{{ .ConfirmationURL }}`.
-3. **Project Settings → Authentication → SMTP**: en el SMTP por defecto de
-   Supabase el envío está limitado (pocos correos por hora) y puede caer en
-   spam. Para producción hay que configurar SMTP propio.
+4. **Project Settings → Authentication → SMTP**: el servicio integrado de Supabase
+   permite solo **2 correos por hora y por proyecto**, compartidos entre todos los
+   tipos de correo, y puede caer en spam. Para producción hay que configurar SMTP
+   propio.
+
+### En QA no se envían correos: se leen de la base
+
+Para no agotar ese cupo probando, QA tiene activo un **Send Email hook** que
+intercepta los correos y guarda el enlace en vez de enviarlo
+(`app/supabase/qa-mail-hook.sql`). En el SQL Editor:
+
+```sql
+select * from qa_mail.enlaces;
+```
+
+De ahí sale el enlace de recuperación listo para abrir, sin esperar correo ni
+chocar con el límite. Detalle en [staging-setup.md §6b](../staging-setup.md).
+
+### Cómo se ve cuando la lista blanca está mal
+
+Supabase no rechaza la petición: **sustituye** el `redirect_to` por el Site URL y
+manda el correo igual. El token se canjea bien (queda un login exitoso en los
+logs) pero el navegador termina en el destino equivocado. Para diagnosticarlo,
+comparar en Logs → Auth lo que pidió la app contra lo que quedó en el enlace:
+
+```text
+POST /auth/v1/recover?redirect_to=https%3A%2F%2Fzona-cero-qa.vercel.app%2Frecuperar  → 200
+GET  /auth/v1/verify?token=...&type=recovery&redirect_to=http%3A%2F%2Flocalhost%3A3000 → 303
+```
+
+Ojo también con el enlace de un solo uso: los escáneres de correo (Gmail,
+Outlook Safe Links) lo abren antes que el socio y lo queman. En los logs eso
+aparece como `403: Email link is invalid or has expired` con
+`One-time token not found` desde una IP de Google o Microsoft.
 
 ## Cómo probar
 
@@ -42,7 +78,7 @@ regreso del enlace.
 - [ ] Enviar con un correo registrado muestra la confirmación
 - [ ] Enviar con un correo **no** registrado muestra la **misma** confirmación
       (no debe revelar qué correos existen)
-- [ ] Llega el correo de Supabase con el enlace
+- [ ] Aparece una fila nueva en `qa_mail.enlaces` con tipo `recovery`
 - [ ] El enlace abre `/recuperar` con el formulario, no `/login`
 - [ ] Contraseña menor a 8 caracteres → error, no guarda
 - [ ] Contraseña sin números → error, no guarda
@@ -52,7 +88,8 @@ regreso del enlace.
 - [ ] La contraseña **anterior** ya no sirve
 - [ ] Reutilizar el mismo enlace del correo → «enlace vencido o inválido»
 - [ ] Entrar a `/recuperar` directo, sin enlace → «enlace vencido o inválido»
-- [ ] `npm test` pasa (227 tests)
+- [x] Suite de recuperación pasa — 48/48 (2026-09-18)
+- [x] `npm test` pasa — 36 archivos, 267 PASS (2026-09-18)
 
 ## Cobertura automatizada
 

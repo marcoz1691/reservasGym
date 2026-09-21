@@ -26,8 +26,11 @@ import { getDisciplineMeta } from '@/domain/disciplines'
 import {
   formatEcuadorSessionWhen,
   formatEcuadorTime,
+  ecuadorLocalDateTimeIso,
+  ecuadorTodayYmd,
 } from '@/lib/format'
 import { createId } from '@/lib/id'
+import { resolveSessionTemplateId } from '@/domain/rules/sessionTemplate'
 import { Badge, Button, Card, EmptyState, Input, PageHeader, Select } from '@/ui/primitives'
 import { StaffBookingModal } from '@/features/agenda/StaffBookingModal'
 
@@ -48,7 +51,7 @@ const DEFAULT_FORM: SessionFormData = {
   zoneId: 'zone-gimnasio',
   kind: 'class',
   trainerId: '',
-  date: new Date().toISOString().slice(0, 10),
+  date: ecuadorTodayYmd(),
   startTime: '07:00',
   durationMinutes: 60,
   capacity: 20,
@@ -93,7 +96,7 @@ export function SessionsPage() {
               zoneFilter.replace(/[_-]/g, '').toLowerCase()
           if (!match) return false
         }
-        if (selectedDateFilter && !s.startsAt.startsWith(selectedDateFilter)) {
+        if (selectedDateFilter && ecuadorTodayYmd(new Date(s.startsAt)) !== selectedDateFilter) {
           return false
         }
         if (searchQuery.trim()) {
@@ -120,7 +123,7 @@ export function SessionsPage() {
       ...DEFAULT_FORM,
       zoneId: initialZone,
       capacity: zoneObj?.defaultCapacity ?? 20,
-      date: new Date().toISOString().slice(0, 10),
+      date: ecuadorTodayYmd(),
     })
     setFormError(null)
     setIsModalOpen(true)
@@ -135,18 +138,14 @@ export function SessionsPage() {
       (end.getTime() - start.getTime()) / (1000 * 60),
     )
 
-    // Format hours and minutes in Ecuador local / ISO slice
-    const hours = String(start.getHours()).padStart(2, '0')
-    const minutes = String(start.getMinutes()).padStart(2, '0')
-
     setFormData({
       id: session.id,
       title: session.title,
       zoneId: session.zoneId,
       kind: session.kind,
       trainerId: session.trainerId ?? '',
-      date: session.startsAt.slice(0, 10),
-      startTime: `${hours}:${minutes}`,
+      date: ecuadorTodayYmd(start),
+      startTime: formatEcuadorTime(session.startsAt),
       durationMinutes: durationMin > 0 ? durationMin : 60,
       capacity: session.capacity,
     })
@@ -184,13 +183,12 @@ export function SessionsPage() {
       return
     }
 
-    // Build start and end ISO dates (Ecuador UTC-5)
-    const [hours, minutes] = formData.startTime.split(':').map(Number)
-    const startDate = new Date(formData.date)
-    startDate.setHours(hours ?? 7, minutes ?? 0, 0, 0)
-    const endDate = new Date(
-      startDate.getTime() + formData.durationMinutes * 60 * 1000,
-    )
+    // Build start and end ISO dates (Ecuador UTC-5, no parsear YYYY-MM-DD como UTC)
+    const startsAt = ecuadorLocalDateTimeIso(formData.date, formData.startTime)
+    const startMs = new Date(startsAt).getTime()
+    const endsAt = new Date(
+      startMs + formData.durationMinutes * 60 * 1000,
+    ).toISOString()
 
     setSubmitting(true)
 
@@ -200,12 +198,17 @@ export function SessionsPage() {
 
       const sessionPayload: Session = {
         id: sessionId,
-        templateId: existingSession?.templateId ?? `tpl_custom_${sessionId}`,
+        templateId: resolveSessionTemplateId(
+          data.templates,
+          formData.zoneId,
+          formData.kind,
+          existingSession?.templateId,
+        ),
         zoneId: formData.zoneId,
         title: formData.title.trim(),
         kind: formData.kind,
-        startsAt: startDate.toISOString(),
-        endsAt: endDate.toISOString(),
+        startsAt,
+        endsAt,
         capacity: Number(formData.capacity),
         trainerId: formData.trainerId ? formData.trainerId : null,
         bookedCount: existingSession?.bookedCount ?? 0,

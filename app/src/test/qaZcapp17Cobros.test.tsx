@@ -318,7 +318,7 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
 
       // Vuelve al POS con socio y monto precargados
       expect(await screen.findByText(/Cambiar socio/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/Monto a Cobrar \(USD\)/i)).toHaveValue(45)
+      expect(screen.getByLabelText(/Monto a Cobrar \(USD\)/i)).toHaveValue('45.00')
 
       await user.click(
         screen.getByRole('button', { name: /Confirmar Cobro y Activar Membresía/i }),
@@ -392,7 +392,7 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
       // Ana Socio ya tiene Plan Mensual Ilimitado ($45.00) vigente
       await user.click(await screen.findByText('Ana Socio'))
 
-      expect(screen.getByLabelText(/Monto a Cobrar \(USD\)/i)).toHaveValue(45)
+      expect(screen.getByLabelText(/Monto a Cobrar \(USD\)/i)).toHaveValue('45.00')
       expect(
         screen.getByRole('button', { name: /Confirmar Cobro y Activar Membresía/i }),
       ).toBeEnabled()

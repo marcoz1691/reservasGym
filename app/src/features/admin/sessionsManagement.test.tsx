@@ -161,10 +161,20 @@ describe('Admin Sessions Management — SessionsPage', () => {
   })
 
   it('allows creating a new scheduled session through modal form', async () => {
+    const gymOpenTemplate = {
+      id: 'tpl-gym-open',
+      zoneId: gymZone.id,
+      title: 'Acceso libre gimnasio',
+      kind: 'open' as const,
+      durationMinutes: 60,
+      capacity: 40,
+      trainerId: null,
+    }
     const mockRepo = createMockRepo(adminUser, {
       zones: [gymZone, hyroxZone],
       trainers: [trainerDiego],
       sessions: [testSession],
+      templates: [gymOpenTemplate],
     })
     resetRepositoryForTests(mockRepo)
 
@@ -196,6 +206,7 @@ describe('Admin Sessions Management — SessionsPage', () => {
         expect.objectContaining({
           title: 'Dragon Fit Matutino',
           zoneId: gymZone.id,
+          templateId: 'tpl-gym-open',
         }),
       )
     })

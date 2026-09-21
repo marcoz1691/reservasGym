@@ -2,10 +2,29 @@ import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 export const ECUADOR_TIMEZONE = 'America/Guayaquil'
+/** Ecuador no usa DST; offset fijo para armar instantes desde fecha+hora de pared. */
+export const ECUADOR_OFFSET = '-05:00'
 
 function parseDateInput(input: string | Date): Date {
   return typeof input === 'string' ? parseISO(input) : input
 }
+
+/** Convierte fecha `YYYY-MM-DD` + hora `HH:mm` de Ecuador a ISO UTC. */
+export function ecuadorLocalDateTimeIso(dateYmd: string, timeHm: string): string {
+  const time = timeHm.length === 5 ? `${timeHm}:00` : timeHm
+  return new Date(`${dateYmd}T${time}${ECUADOR_OFFSET}`).toISOString()
+}
+
+/** Hoy calendario en America/Guayaquil (`YYYY-MM-DD`). */
+export function ecuadorTodayYmd(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: ECUADOR_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now)
+}
+
 
 export function formatEcuadorTime(isoOrDate: string | Date): string {
   const date = parseDateInput(isoOrDate)

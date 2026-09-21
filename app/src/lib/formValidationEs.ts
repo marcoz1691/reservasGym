@@ -28,10 +28,12 @@ export function spanishValidityMessage(el: ValidityTarget): string {
   }
   if (v.patternMismatch) return 'El formato no es válido.'
   if (v.tooShort) {
-    return `Usa al menos ${el.minLength} caracteres.`
+    const minLength = 'minLength' in el ? el.minLength : 0
+    return `Usa al menos ${minLength} caracteres.`
   }
   if (v.tooLong) {
-    return `Usa como máximo ${el.maxLength} caracteres.`
+    const maxLength = 'maxLength' in el ? el.maxLength : 0
+    return `Usa como máximo ${maxLength} caracteres.`
   }
   if (v.rangeUnderflow) {
     const min =
