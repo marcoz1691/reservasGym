@@ -269,8 +269,10 @@ export function createSeedState(now = new Date()): GymState {
   ]
 
   const schedule: Array<{ tpl: string; day: number; hour: number }> = [
-    { tpl: 'tpl_gym_open', day: 0, hour: 7 },
-    { tpl: 'tpl_gym_open', day: 0, hour: 18 },
+    ...[0, 1, 2, 3, 4, 5, 6].flatMap((day) => [
+      { tpl: 'tpl_gym_open', day, hour: 7 },
+      { tpl: 'tpl_gym_open', day, hour: 18 },
+    ]),
     { tpl: 'tpl_fisio', day: 0, hour: 10 },
     { tpl: 'tpl_nutri', day: 1, hour: 9 },
     { tpl: 'tpl_bailo', day: 1, hour: 19 },

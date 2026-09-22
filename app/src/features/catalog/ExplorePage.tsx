@@ -57,11 +57,21 @@ export function ExplorePage() {
 
   const [staffModalSession, setStaffModalSession] = useState<Session | null>(null)
 
+  const selectedAreaBlocked =
+    isMember &&
+    !!memberPlan &&
+    zoneType !== 'all' &&
+    !canBookZone(memberPlan, zoneType).allowed
+
   const sessions = useMemo(() => {
     const now = new Date().toISOString()
     return data.sessions
       .filter((s) => s.startsAt >= now)
       .filter((s) => {
+        if (selectedAreaBlocked) return false
+        if (isMember && memberPlan && !canBookZone(memberPlan, s.zoneId).allowed) {
+          return false
+        }
         if (zoneType === 'all') return true
         const z = data.zones.find((x) => x.id === s.zoneId)
         return (
@@ -72,10 +82,22 @@ export function ExplorePage() {
         )
       })
       .slice(0, 50)
-  }, [data, zoneType])
+  }, [data, zoneType, isMember, memberPlan, selectedAreaBlocked])
 
   async function onBookSession(sessionId: string) {
     if (!user) return
+    const alreadyBooked = (data.bookings ?? []).some(
+      (item) =>
+        item.sessionId === sessionId &&
+        item.userId === user.id &&
+        (item.status === 'confirmed' ||
+          item.status === 'pending' ||
+          item.status === 'waitlisted'),
+    )
+    const alreadyWaiting = (data.waitlist ?? []).some(
+      (item) => item.sessionId === sessionId && item.userId === user.id,
+    )
+    if (alreadyBooked || alreadyWaiting) return
     setBusyId(sessionId)
     setMsg('')
 
@@ -261,7 +283,12 @@ export function ExplorePage() {
           Próximas sesiones
         </h2>
 
-        {sessions.length === 0 ? (
+        {selectedAreaBlocked && memberPlan ? (
+          <Card className="p-8 text-center text-xs text-ink-3">
+            Tu plan ({memberPlan.name}) no incluye esta área. Esas clases no se
+            pueden reservar.
+          </Card>
+        ) : sessions.length === 0 ? (
           <Card className="p-8 text-center text-xs text-ink-3">
             No hay sesiones programadas para este filtro en este momento.
           </Card>
@@ -273,6 +300,27 @@ export function ExplorePage() {
               const Icon = meta.icon
               const full = s.bookedCount >= s.capacity
               const trainer = data.trainers.find((t) => t.id === s.trainerId)
+              const mineReserved = Boolean(
+                user &&
+                  (data.bookings ?? []).some(
+                    (item) =>
+                      item.sessionId === s.id &&
+                      item.userId === user.id &&
+                      (item.status === 'confirmed' || item.status === 'pending'),
+                  ),
+              )
+              const mineWaiting = Boolean(
+                user &&
+                  ((data.bookings ?? []).some(
+                    (item) =>
+                      item.sessionId === s.id &&
+                      item.userId === user.id &&
+                      item.status === 'waitlisted',
+                  ) ||
+                    (data.waitlist ?? []).some(
+                      (item) => item.sessionId === s.id && item.userId === user.id,
+                    )),
+              )
 
               return (
                 <Card
@@ -333,12 +381,23 @@ export function ExplorePage() {
                       </ButtonLink>
                     ) : (
                       <Button
-                        variant={full ? 'secondary' : 'primary'}
-                        disabled={busyId === s.id}
+                        variant={
+                          mineReserved || mineWaiting || full ? 'secondary' : 'primary'
+                        }
+                        disabled={mineReserved || mineWaiting}
+                        isLoading={busyId === s.id}
                         onClick={() => void onBookSession(s.id)}
                         className="text-xs py-1.5 px-3"
                       >
-                        {full ? 'Lista de espera' : 'Reservar'}
+                        {busyId === s.id
+                          ? 'Reservando'
+                          : mineReserved
+                            ? 'Reservado'
+                            : mineWaiting
+                              ? 'En espera'
+                              : full
+                                ? 'Lista de espera'
+                                : 'Reservar'}
                       </Button>
                     )}
 

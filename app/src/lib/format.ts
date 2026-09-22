@@ -15,14 +15,14 @@ export function ecuadorLocalDateTimeIso(dateYmd: string, timeHm: string): string
   return new Date(`${dateYmd}T${time}${ECUADOR_OFFSET}`).toISOString()
 }
 
-/** Hoy calendario en America/Guayaquil (`YYYY-MM-DD`). */
-export function ecuadorTodayYmd(now: Date = new Date()): string {
+/** Día calendario en America/Guayaquil (`YYYY-MM-DD`). */
+export function ecuadorTodayYmd(now: string | Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: ECUADOR_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(now)
+  }).format(parseDateInput(now))
 }
 
 

@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { AgendaPage } from '@/features/agenda/AgendaPage'
 import { RepositoryProvider } from '@/data/RepositoryProvider'
 import { resetRepositoryForTests } from '@/data/repository'
 import { createMockRepo } from '@/test/mockRepo'
-import type { GymState, Membership, MembershipPlan, Session, User, Zone } from '@/domain/models'
+import type { Booking, GymState, Membership, MembershipPlan, Session, User, Zone } from '@/domain/models'
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -190,7 +191,7 @@ describe('AgendaPage — socio sin plan puede explorar', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('Zero Active solo reserva musculación; Hyrox queda no incluido', async () => {
+  it('Zero Active reserva musculación y no ofrece Hyrox', async () => {
     const zeroActive: MembershipPlan = {
       id: 'plan_za',
       name: 'Zero Active Mensual',
@@ -210,11 +211,12 @@ describe('AgendaPage — socio sin plan puede explorar', () => {
         name: /Reservar Acceso libre QA/i,
       }),
     ).toBeInTheDocument()
+    expect(screen.queryByText('Hyrox QA')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hyrox' }))
     expect(
-      screen.getByRole('link', {
-        name: /No incluido en tu plan: Hyrox QA/i,
-      }),
-    ).toHaveAttribute('href', '/membresia')
+      await screen.findByText(/no incluye esta área/i),
+    ).toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: /Reservar Hyrox QA/i }),
     ).not.toBeInTheDocument()
@@ -229,5 +231,85 @@ describe('AgendaPage — socio sin plan puede explorar', () => {
     expect(
       screen.queryByTestId('plan-required-notice'),
     ).not.toBeInTheDocument()
+  })
+
+  it('tras reservar el botón dice Reservado y un segundo clic no crea otra reserva', async () => {
+    const user = userEvent.setup()
+    const bookings: Booking[] = []
+    const fullPlan: MembershipPlan = {
+      id: 'plan_1',
+      name: 'Plan Full',
+      priceCents: 7500,
+      durationDays: 30,
+      visitQuota: null,
+      allowedZoneIds: [],
+      active: true,
+    }
+    const repo = createMockRepo(memberUser, {
+      memberships: [activeMembership],
+      membershipPlans: [fullPlan],
+      zones,
+      sessions,
+    })
+    vi.mocked(repo.createBooking).mockImplementation(async (sessionId: string) => {
+      const booking: Booking = {
+        id: `bk_${bookings.length + 1}`,
+        sessionId,
+        userId: memberUser.id,
+        status: 'confirmed',
+        createdAt: new Date().toISOString(),
+        cancelledAt: null,
+        checkInCode: 'qa',
+      }
+      bookings.push(booking)
+      return booking
+    })
+    vi.mocked(repo.load).mockImplementation(async () => ({
+      settings: {
+        name: 'Zona Cero',
+        logoUrl: null,
+        primaryColor: '#000',
+        accentColor: '#F26D17',
+        bookingWindowHours: 72,
+        cancelWindowHours: 2,
+        checkInWindowMinutes: 20,
+      },
+      users: [memberUser],
+      trainers: [],
+      zones,
+      templates: [],
+      sessions,
+      bookings: [...bookings],
+      waitlist: [],
+      checkIns: [],
+      measurements: [],
+      membershipPlans: [fullPlan],
+      memberships: [activeMembership],
+      payments: [],
+    }))
+    resetRepositoryForTests(repo)
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <AgendaPage />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    const reserve = await screen.findByRole('button', {
+      name: /Reservar CrossFit WOD Power/i,
+    })
+    await user.click(reserve)
+
+    expect(
+      await screen.findByRole('button', { name: /Reservado CrossFit WOD Power/i }),
+    ).toBeDisabled()
+    expect(repo.createBooking).toHaveBeenCalledTimes(1)
+
+    await user.click(
+      screen.getByRole('button', { name: /Reservado CrossFit WOD Power/i }),
+    )
+    expect(repo.createBooking).toHaveBeenCalledTimes(1)
   })
 })

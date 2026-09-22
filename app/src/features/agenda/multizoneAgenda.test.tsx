@@ -184,8 +184,7 @@ describe('Multizone Agenda — 9 Disciplines in Zona Cero', () => {
     )
 
     // Verify main header and subtitle
-    expect(await screen.findByText(/Agenda Multizona/i)).toBeInTheDocument()
-    expect(screen.getByText(/9 disciplinas en Zona Cero/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Agenda' })).toBeInTheDocument()
 
     // Verify filter pills are present
     expect(screen.getByRole('button', { name: /todas/i })).toBeInTheDocument()
@@ -240,8 +239,8 @@ describe('Multizone Agenda — 9 Disciplines in Zona Cero', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByText(/Explorar Disciplinas/i)).toBeInTheDocument()
-    expect(screen.getByText(/Las 9 disciplinas oficiales de Zona Cero/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Explorar áreas/i)).toBeInTheDocument()
+    expect(screen.getByText(/Disciplinas de Zona Cero/i)).toBeInTheDocument()
 
     // Verify all 9 disciplines are present in zone list
     for (const z of all9Zones) {

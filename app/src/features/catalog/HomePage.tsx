@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
 import { ZONE_LABELS } from '@/domain/models'
-import { canUseBookingNav, displayFirstName } from '@/domain/rules'
+import { canBookZone, canUseBookingNav, displayFirstName } from '@/domain/rules'
 import { selectMyMembership } from '@/app/store'
 import { WelcomeNoPlanCard, PendingPlanRequestCard, isOnlinePayEnabled } from '@/features/memberships'
 import { selectPendingPlanRequest } from '@/domain/rules/planRequest'
@@ -66,8 +66,15 @@ export function HomePage() {
     .filter((x) => x.session && new Date(x.session.startsAt) >= new Date())
     .sort((a, b) => a.session!.startsAt.localeCompare(b.session!.startsAt))[0]
 
+  const memberPlan = membership
+    ? (data.membershipPlans ?? []).find((plan) => plan.id === membership.planId)
+    : undefined
   const upcoming = data.sessions
     .filter((s) => new Date(s.startsAt) >= new Date())
+    .filter((s) => {
+      if (user.role !== 'member' || !memberPlan) return true
+      return canBookZone(memberPlan, s.zoneId).allowed
+    })
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
     .slice(0, 4)
 
