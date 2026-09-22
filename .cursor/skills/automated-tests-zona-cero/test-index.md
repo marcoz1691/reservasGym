@@ -39,6 +39,8 @@
 | `bookings/CheckInPage.test.tsx` | Check-in |
 | `weight/WeightPage.test.tsx` | Weight module |
 | `profile/FichaTecnicaModal.test.tsx` | Profile modal |
+| `profile/ProfilePage.hiddenBiometrics.test.tsx` | Perfil sin Face ID / huella |
+| `auth/LoginPage.hiddenBiometrics.test.tsx` | Login sin Face ID / huella |
 
 ## Integration / exploratory (`src/test/`)
 
@@ -53,6 +55,7 @@
 | File | Covers |
 |------|--------|
 | `lib/biometrics.test.ts` | Biometric helpers |
+| `lib/biometricAccess.test.ts` | Extra de Face ID apagado en QA |
 
 ## Quick commands by sprint
 

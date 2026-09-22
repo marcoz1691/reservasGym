@@ -18,7 +18,7 @@ import {
 import type { Session } from '@/domain/models'
 import { confirmedCount } from '@/domain/rules'
 import { getDisciplineMeta } from '@/domain/disciplines'
-import { formatEcuadorTime } from '@/lib/format'
+import { ecuadorTodayYmd, formatEcuadorTime } from '@/lib/format'
 import { Badge, Button, Card, EmptyState, PageHeader } from '@/ui/primitives'
 import { StaffBookingModal } from '@/features/agenda/StaffBookingModal'
 
@@ -27,9 +27,9 @@ export function AdminPage() {
   const data = useAppData()
   const local = useLocalRepo()
   const refresh = useRefresh()
-  const today = new Date().toISOString().slice(0, 10)
-  const todaySessions = data.sessions.filter((s) =>
-    s.startsAt.startsWith(today),
+  const today = ecuadorTodayYmd()
+  const todaySessions = data.sessions.filter(
+    (s) => ecuadorTodayYmd(s.startsAt) === today,
   )
   const confirmed = data.bookings.filter((b) => b.status === 'confirmed').length
 

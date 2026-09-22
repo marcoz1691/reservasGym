@@ -124,8 +124,8 @@ function createMockRepo(user: User, state: Partial<GymState>): GymRepository {
   }
 }
 
-// La agenda pinta la semana de lunes a domingo; anclar el reloj a un miércoles
-// evita que la sesión "mañana" caiga fuera de la semana visible.
+// La agenda muestra el día actual. Anclar el reloj deja las fechas de la
+// membresía y de la sesión estables en CI.
 vi.useFakeTimers({ shouldAdvanceTime: true })
 vi.setSystemTime(new Date('2026-09-09T10:00:00'))
 
@@ -237,14 +237,14 @@ describe('QA ZCAPP-19 — Gate de Reservas', () => {
       active: true,
     }
 
-    const sessionTomorrow: Session = {
+    const sessionToday: Session = {
       id: 'sess_1',
       templateId: 'tmpl_1',
       zoneId: 'zone-gimnasio',
       title: 'Functional Training',
       kind: 'class',
-      startsAt: new Date(Date.now() + DAY_MS).toISOString(),
-      endsAt: new Date(Date.now() + DAY_MS + 3600000).toISOString(),
+      startsAt: new Date().toISOString(),
+      endsAt: new Date(Date.now() + 3600000).toISOString(),
       capacity: 10,
       trainerId: null,
       bookedCount: 0,
@@ -253,7 +253,7 @@ describe('QA ZCAPP-19 — Gate de Reservas', () => {
     function renderAgendaWith(memberships: Membership[]): GymRepository {
       const mockRepo = createMockRepo(memberUser, {
         zones: [gymZone],
-        sessions: [sessionTomorrow],
+        sessions: [sessionToday],
         membershipPlans: [standardPlan],
         memberships,
       })
@@ -317,7 +317,7 @@ describe('QA ZCAPP-19 — Gate de Reservas', () => {
 
       await waitFor(() => {
         expect(mockRepo.createBooking).toHaveBeenCalledWith(
-          sessionTomorrow.id,
+          sessionToday.id,
           memberUser.id,
         )
       })

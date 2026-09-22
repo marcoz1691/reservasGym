@@ -52,6 +52,10 @@ export function WeightPage() {
     if (!isStaff) return
     void repo.listMembers().then((list) => {
       setMembers(list)
+      setTargetId((current) => {
+        if (current && list.some((member) => member.id === current)) return current
+        return list[0]?.id ?? current
+      })
     })
   }, [isStaff, repo])
 

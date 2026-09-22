@@ -2,13 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import QRCode from 'qrcode'
+import { rescheduleChoices } from '@/features/agenda/agendaSchedule'
+import { formatSessionWhen } from '@/lib/format'
 import {
   useAppData,
   useCurrentUser,
   useRefresh,
   useRepo,
 } from '@/data/RepositoryProvider'
-import { ZONE_LABELS } from '@/domain/models'
+import { ZONE_LABELS, type MembershipPlan, type Session } from '@/domain/models'
+import { canBookZone } from '@/domain/rules'
+import { selectMyMembership } from '@/app/store'
 import {
   Badge,
   Button,
@@ -67,14 +71,6 @@ export function MyBookingsPage() {
       cancelled = true
     }
   }, [mine])
-
-  const altSessions = useMemo(() => {
-    const now = new Date().toISOString()
-    return data.sessions
-      .filter((s) => s.startsAt >= now)
-      .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
-      .slice(0, 60)
-  }, [data.sessions])
 
   return (
     <div>
@@ -170,57 +166,107 @@ export function MyBookingsPage() {
               </div>
 
               {rescheduleId === booking.id ? (
-                <div className="flex flex-wrap items-end gap-2 border-t border-line pt-3">
-                  <Select
-                    label="Nueva sesión"
-                    className="min-w-[220px] flex-1"
-                    value={newSessionId}
-                    onChange={(e) => setNewSessionId(e.target.value)}
-                  >
-                    <option value="">Elegir…</option>
-                    {altSessions
-                      .filter((s) => s.id !== booking.sessionId)
-                      .map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.title} ·{' '}
-                          {format(parseISO(s.startsAt), 'EEE d HH:mm', {
-                            locale: es,
-                          })}
-                        </option>
-                      ))}
-                  </Select>
-                  <Button
-                    disabled={!newSessionId}
-                    onClick={() => {
-                      void (async () => {
-                        try {
-                          await repo.rescheduleBooking(
-                            booking.id,
-                            newSessionId,
-                          )
-                          setRescheduleId(null)
-                          await refresh()
-                          setMsg('Reserva reagendada')
-                        } catch (e) {
-                          setMsg(e instanceof Error ? e.message : 'Error')
-                        }
-                      })()
-                    }}
-                  >
-                    Confirmar
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setRescheduleId(null)}
-                  >
-                    Cerrar
-                  </Button>
-                </div>
+                <RescheduleRow
+                  sessions={data.sessions}
+                  currentSessionId={booking.sessionId}
+                  zoneId={session?.zoneId ?? ''}
+                  plan={
+                    user.role === 'member'
+                      ? (data.membershipPlans ?? []).find(
+                          (item) =>
+                            item.id === selectMyMembership(data, user.id)?.planId,
+                        )
+                      : undefined
+                  }
+                  value={newSessionId}
+                  onChange={setNewSessionId}
+                  onConfirm={() => {
+                    void (async () => {
+                      try {
+                        await repo.rescheduleBooking(booking.id, newSessionId)
+                        setRescheduleId(null)
+                        await refresh()
+                        setMsg('Reserva reagendada')
+                      } catch (e) {
+                        setMsg(e instanceof Error ? e.message : 'Error')
+                      }
+                    })()
+                  }}
+                  onClose={() => setRescheduleId(null)}
+                />
               ) : null}
             </Card>
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function RescheduleRow({
+  sessions,
+  currentSessionId,
+  zoneId,
+  plan,
+  value,
+  onChange,
+  onConfirm,
+  onClose,
+}: {
+  sessions: Session[]
+  currentSessionId: string
+  zoneId: string
+  plan?: MembershipPlan
+  value: string
+  onChange: (sessionId: string) => void
+  onConfirm: () => void
+  onClose: () => void
+}) {
+  const zoneCheck = plan ? canBookZone(plan, zoneId) : { allowed: true as const }
+  const choices = useMemo(
+    () =>
+      zoneCheck.allowed
+        ? rescheduleChoices(sessions, currentSessionId, zoneId)
+        : [],
+    [sessions, currentSessionId, zoneId, zoneCheck.allowed],
+  )
+
+  return (
+    <div className="flex flex-wrap items-end gap-2 border-t border-line pt-3">
+      {!zoneCheck.allowed ? (
+        <p className="text-sm text-ink-3">
+          {'reason' in zoneCheck && zoneCheck.reason
+            ? zoneCheck.reason
+            : 'Tu plan no incluye esta área, así que no se puede pasar a otra clase.'}{' '}
+          La reserva actual se mantiene.
+        </p>
+      ) : choices.length === 0 ? (
+        <p className="text-sm text-ink-3">
+          No hay otra clase de esta área en los próximos días.
+        </p>
+      ) : (
+        <Select
+          label="Nueva sesión"
+          className="min-w-[220px] flex-1"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">Elegir…</option>
+          {choices.map((session) => (
+            <option key={session.id} value={session.id}>
+              {session.title} · {formatSessionWhen(session.startsAt)}
+            </option>
+          ))}
+        </Select>
+      )}
+      {zoneCheck.allowed ? (
+        <Button disabled={!value || choices.length === 0} onClick={onConfirm}>
+          Confirmar
+        </Button>
+      ) : null}
+      <Button variant="ghost" onClick={onClose}>
+        Cerrar
+      </Button>
     </div>
   )
 }

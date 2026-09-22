@@ -89,11 +89,8 @@ function createMockRepo(user: User, state: Partial<GymState>): GymRepository {
 }
 
 /**
- * AgendaPage pinta la semana de lunes a domingo (weekStartsOn: 1) y los
- * fixtures de abajo crean la sesión "mañana". Corriendo un domingo, ese mañana
- * cae en la semana siguiente: la agenda no lo muestra y no aparece el botón
- * Reservar. El reloj se ancla a un miércoles para que la prueba no dependa del
- * día en que se ejecute.
+ * ExplorePage lista sesiones futuras. El reloj se ancla a un miércoles para
+ * que "mañana" no dependa del día en que corre CI.
  *
  * Va antes del describe a propósito: los fixtures se evalúan al construirse el
  * describe, así que congelarlo en un beforeEach llegaría tarde.
@@ -277,9 +274,15 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
       visitsLeft: null,
     }
 
+    const sessionToday: Session = {
+      ...sessionTomorrow,
+      id: 'sess_today',
+      startsAt: new Date().toISOString(),
+      endsAt: new Date(Date.now() + 3600000).toISOString(),
+    }
     const mockRepo = createMockRepo(memberUser, {
       zones: [gymZone],
-      sessions: [sessionTomorrow],
+      sessions: [sessionToday],
       membershipPlans: [standardPlan],
       memberships: [activeMembership],
     })
@@ -293,11 +296,13 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
       </MemoryRouter>,
     )
 
-    const reserveButton = await screen.findByRole('button', { name: /reservar/i })
+    const reserveButton = await screen.findByRole('button', {
+      name: /Reservar Functional Training/i,
+    })
     await userEvent.click(reserveButton)
 
     await waitFor(() => {
-      expect(mockRepo.createBooking).toHaveBeenCalledWith(sessionTomorrow.id, memberUser.id)
+      expect(mockRepo.createBooking).toHaveBeenCalledWith(sessionToday.id, memberUser.id)
     })
   })
 })

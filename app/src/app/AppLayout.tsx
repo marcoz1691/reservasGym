@@ -37,7 +37,7 @@ const memberDesktopNav = [
   { to: '/agenda', label: 'Agenda', icon: CalendarDays },
   { to: '/reservas', label: 'Mis Reservas', icon: TicketCheck },
   { to: '/membresia', label: 'Mi Plan', icon: CreditCard },
-  { to: '/peso', label: 'Control de Peso', icon: TrendingUp },
+  { to: '/peso', label: 'Medidas corporales', icon: TrendingUp },
   { to: '/explorar', label: 'Explorar Áreas', icon: Dumbbell },
   { to: '/perfil', label: 'Mi Perfil', icon: User },
 ]
@@ -50,7 +50,7 @@ const staffDesktopNav = [
   { to: '/check-in', label: 'Escanear Check-In', icon: QrCode },
   { to: '/agenda', label: 'Agenda General', icon: CalendarDays },
   { to: '/explorar', label: 'Sesiones & Áreas', icon: Dumbbell },
-  { to: '/peso', label: 'Control de Peso', icon: TrendingUp },
+  { to: '/peso', label: 'Medidas corporales', icon: TrendingUp },
   { to: '/admin/marca', label: 'Marca & Config', icon: Settings },
   { to: '/perfil', label: 'Mi Perfil', icon: User },
 ]
@@ -61,14 +61,14 @@ const memberMobileTabs = [
   { to: '/agenda', label: 'Agenda', icon: CalendarDays },
   { to: '/reservas', label: 'Reservas', icon: TicketCheck },
   { to: '/membresia', label: 'Mi Plan', icon: CreditCard },
-  { to: '/peso', label: 'Peso', icon: TrendingUp },
+  { to: '/peso', label: 'Medidas', icon: TrendingUp },
 ]
 
 const memberMobileTabsNoPlan = [
   { to: '/', label: 'Inicio', icon: Home, end: true },
   { to: '/explorar', label: 'Explorar', icon: Dumbbell },
   { to: '/membresia', label: 'Mi Plan', icon: CreditCard },
-  { to: '/peso', label: 'Peso', icon: TrendingUp },
+  { to: '/peso', label: 'Medidas', icon: TrendingUp },
 ]
 
 const staffMobileTabs = [
@@ -76,7 +76,7 @@ const staffMobileTabs = [
   { to: '/admin/cobros', label: 'Cobros', icon: CreditCard },
   { to: '/check-in', label: 'Check-In', icon: QrCode },
   { to: '/agenda', label: 'Agenda', icon: CalendarDays },
-  { to: '/peso', label: 'Peso', icon: TrendingUp },
+  { to: '/peso', label: 'Medidas', icon: TrendingUp },
 ]
 
 export function AppLayout() {

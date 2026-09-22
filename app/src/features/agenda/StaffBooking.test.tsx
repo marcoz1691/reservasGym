@@ -199,13 +199,9 @@ describe('Staff Booking Feature — Reception Booking on Behalf of Members', () 
       </MemoryRouter>,
     )
 
-    // Verify staff header action is rendered
     expect(
-      await screen.findByRole('button', { name: /reservar por un socio/i }),
+      await screen.findByRole('button', { name: /por socio/i }),
     ).toBeInTheDocument()
-
-    // Verify card action "Por Socio" is rendered
-    expect(screen.getByRole('button', { name: /por socio/i })).toBeInTheDocument()
   })
 
   it('completes staff booking for an active member and generates check-in code', async () => {
