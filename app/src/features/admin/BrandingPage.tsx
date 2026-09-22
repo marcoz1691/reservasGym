@@ -2,13 +2,23 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
   useAppData,
+  useCurrentUser,
   useRefresh,
   useRepo,
 } from '@/data/RepositoryProvider'
 import { applyBrandColors } from '@/lib/format'
-import { Button, Card, Input, PageHeader } from '@/ui/primitives'
+import { Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
+
+function settingsErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : 'No se pudo guardar la marca.'
+  if (/coerce the result|JSON object|row-level security|permission/i.test(msg)) {
+    return 'No se pudo guardar la marca. Tu usuario no tiene permiso para cambiarla.'
+  }
+  return msg
+}
 
 export function BrandingPage() {
+  const user = useCurrentUser()
   const data = useAppData()
   const repo = useRepo()
   const refresh = useRefresh()
@@ -22,6 +32,22 @@ export function BrandingPage() {
     setLogoUrl(data.settings.logoUrl ?? '')
     setAccentColor(data.settings.accentColor)
   }, [data.settings])
+
+  if (user && user.role === 'member') {
+    return (
+      <div className="py-12 text-center">
+        <EmptyState
+          title="Acceso restringido"
+          description="La marca del gym solo la puede cambiar el equipo de staff y administradores."
+          action={
+            <Link to="/">
+              <Button>Volver al inicio</Button>
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -52,7 +78,7 @@ export function BrandingPage() {
                 await refresh()
                 setMsg('Marca actualizada')
               } catch (err) {
-                setMsg(err instanceof Error ? err.message : 'Error')
+                setMsg(settingsErrorMessage(err))
               }
             })()
           }}

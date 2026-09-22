@@ -1,8 +1,8 @@
 import type { User } from '../models'
 
 /**
- * Ficha técnica inicial pendiente. Se deriva de los dos campos que el paso 1
- * del wizard siempre guarda, así que no hace falta una marca en la base.
+ * Ficha técnica inicial pendiente. Se deriva de estatura y masa corporal,
+ * los dos datos que completan el ingreso.
  */
 export function isFichaPending(user: User | null | undefined): boolean {
   if (!user || user.role !== 'member') return false
@@ -14,7 +14,8 @@ const ROLE_NAME_PREFIX = /^(socio|staff|admin)$/i
 function visibleNameParts(fullName: string | null | undefined): string[] {
   const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return []
-  if (ROLE_NAME_PREFIX.test(parts[0]) && parts.length > 1) {
+  const first = parts[0]
+  if (first && ROLE_NAME_PREFIX.test(first) && parts.length > 1) {
     return parts.slice(1)
   }
   return parts

@@ -208,4 +208,52 @@ describe('LocalRepository memberships and billing', () => {
     const booked = await member.createBooking(muscu!.id, 'user_member_2')
     expect('status' in booked && booked.status).toBe('confirmed')
   })
+
+  it('un socio deja una solicitud de plan pendiente y recepción la cobra', async () => {
+    const memberRepo = new LocalRepository()
+    const member = await memberRepo.signIn({
+      email: 'luis@gym.local',
+      password: DEMO_PASSWORD,
+    })
+    const plans = await memberRepo.getMembershipPlans()
+    const plan = plans.find((p) => p.active)!
+
+    const request = await memberRepo.requestPlanPayment({
+      planId: plan.id,
+      manualMethod: 'transfer',
+    })
+
+    expect(request.status).toBe('pending')
+    expect(request.provider).toBe('manual')
+    expect(request.manualMethod).toBe('transfer')
+    expect(request.planId).toBe(plan.id)
+    expect(request.amountCents).toBe(plan.priceCents)
+    expect(request.membershipId).toBeNull()
+    expect(await memberRepo.getMemberMembership(member.id)).toBeNull()
+
+    const replaced = await memberRepo.requestPlanPayment({
+      planId: plan.id,
+      manualMethod: 'cash',
+    })
+    expect(replaced.id).toBe(request.id)
+    expect(replaced.manualMethod).toBe('cash')
+    const pending = (await memberRepo.getMemberPayments(member.id)).filter(
+      (p) => p.status === 'pending',
+    )
+    expect(pending).toHaveLength(1)
+
+    const staff = new LocalRepository()
+    await staff.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+    const charged = await staff.registerManualPayment({
+      userId: member.id,
+      planId: plan.id,
+      amountCents: plan.priceCents,
+      manualMethod: 'cash',
+    })
+
+    expect(charged.payment.id).toBe(request.id)
+    expect(charged.payment.status).toBe('approved')
+    expect(charged.membership.status).toBe('active')
+    expect(charged.payment.membershipId).toBe(charged.membership.id)
+  })
 })

@@ -71,6 +71,7 @@ export function createMockRepo(
     listMemberships: vi.fn().mockResolvedValue(fullState.memberships),
     listPayments: vi.fn().mockResolvedValue([]),
     listMembers: vi.fn().mockResolvedValue([user]),
+    requestPlanPayment: vi.fn(),
     registerManualPayment: vi.fn(),
   }
 }

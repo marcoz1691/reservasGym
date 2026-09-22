@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import {
   useAppData,
+  useCurrentUser,
   useLocalRepo,
   useRefresh,
 } from '@/data/RepositoryProvider'
@@ -18,10 +19,11 @@ import type { Session } from '@/domain/models'
 import { confirmedCount } from '@/domain/rules'
 import { getDisciplineMeta } from '@/domain/disciplines'
 import { formatEcuadorTime } from '@/lib/format'
-import { Badge, Button, Card, PageHeader } from '@/ui/primitives'
+import { Badge, Button, Card, EmptyState, PageHeader } from '@/ui/primitives'
 import { StaffBookingModal } from '@/features/agenda/StaffBookingModal'
 
 export function AdminPage() {
+  const user = useCurrentUser()
   const data = useAppData()
   const local = useLocalRepo()
   const refresh = useRefresh()
@@ -32,6 +34,22 @@ export function AdminPage() {
   const confirmed = data.bookings.filter((b) => b.status === 'confirmed').length
 
   const [staffBookingSession, setStaffBookingSession] = useState<Session | null>(null)
+
+  if (user && user.role === 'member') {
+    return (
+      <div className="py-12 text-center">
+        <EmptyState
+          title="Acceso restringido"
+          description="Este módulo es exclusivo para el equipo de staff y administradores de Zona Cero."
+          action={
+            <Link to="/">
+              <Button>Volver al inicio</Button>
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

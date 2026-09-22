@@ -96,6 +96,10 @@ export interface GymRepository {
   getMemberPayments(userId: string): Promise<Payment[]>
   listMemberships(): Promise<Membership[]>
   listPayments(): Promise<Payment[]>
+  requestPlanPayment(params: {
+    planId: string
+    manualMethod: ManualPaymentMethod
+  }): Promise<Payment>
   registerManualPayment(params: {
     userId: string
     planId: string

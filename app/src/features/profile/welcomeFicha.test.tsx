@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRouter } from '@/app/router'
@@ -83,6 +83,16 @@ describe('Primer ingreso — ficha técnica', () => {
     expect(reminder.className).not.toMatch(/danger/)
   })
 
+  it('ver planes cierra el recordatorio y muestra Mi Plan', async () => {
+    renderApp(memberConFicha)
+
+    const reminder = await screen.findByTestId('plan-required-notice')
+    await userEvent.click(within(reminder).getByRole('link', { name: /ver planes/i }))
+
+    expect(screen.queryByTestId('plan-required-notice')).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Mi Plan' })).toBeInTheDocument()
+  })
+
   it('"Completarla después" deja entrar a la app en esta sesión', async () => {
     renderApp(memberSinFicha)
 
@@ -121,8 +131,18 @@ describe('Primer ingreso — ficha técnica', () => {
     )
 
     await screen.findByText('Ficha Técnica Inicial de Ingreso')
+    await userEvent.type(
+      screen.getByLabelText(/Fecha de Nacimiento/i),
+      '1992-03-10',
+    )
+    await userEvent.type(
+      screen.getByLabelText(/Sector \/ Ciudad de Residencia/i),
+      'Tumbaco',
+    )
     await userEvent.click(screen.getByRole('button', { name: /Siguiente/i }))
     await userEvent.click(screen.getByRole('button', { name: /Siguiente/i }))
+    await userEvent.type(screen.getByLabelText(/Estatura/i), '180')
+    await userEvent.type(screen.getByLabelText(/Masa corporal/i), '72')
     await userEvent.click(screen.getByRole('button', { name: /Siguiente/i }))
     await userEvent.click(
       screen.getByRole('button', { name: /Guardar Ficha Técnica/i }),

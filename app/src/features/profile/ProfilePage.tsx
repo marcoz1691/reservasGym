@@ -75,11 +75,15 @@ export function ProfilePage() {
       setBioActive(false)
       setSuccessMsg('Acceso biométrico deshabilitado para este dispositivo')
     } else {
-      await registerBiometrics({
+      const paired = await registerBiometrics({
         id: user.id,
         email: user.email,
         fullName: user.fullName,
       })
+      if (!paired) {
+        setErrorMsg('Este dispositivo no confirmó la biometría.')
+        return
+      }
       setBioActive(true)
       setSuccessMsg('Face ID / Huella configurada exitosamente para inicio de sesión')
     }

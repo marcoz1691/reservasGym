@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, Link } from 'react-router-dom'
+import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import {
   CalendarClock,
   CalendarDays,
@@ -24,7 +24,7 @@ import {
   useRepo,
 } from '@/data/RepositoryProvider'
 import { selectMyMembership } from '@/app/store'
-import { canUseBookingNav, displayInitials } from '@/domain/rules'
+import { canUseBookingNav, displayInitials, selectPendingPlanRequest } from '@/domain/rules'
 import { ExpiryBanner, PlanRequiredNotice } from '@/features/memberships'
 import {
   markNoPlanReminderDismissed,
@@ -81,6 +81,7 @@ const staffMobileTabs = [
 
 export function AppLayout() {
   const user = useCurrentUser()
+  const { pathname } = useLocation()
   const repo = useRepo()
   const refresh = useRefresh()
   const { state, loading } = useGym()
@@ -92,13 +93,17 @@ export function AppLayout() {
   const isMember = user?.role === 'member'
   const membership =
     user && state ? selectMyMembership(state, user.id) : undefined
+  const pendingRequest =
+    user && state ? selectPendingPlanRequest(state.payments ?? [], user.id) : null
   const showBookingNav = canUseBookingNav(user?.role, membership)
   const showNoPlanReminder =
     !loading &&
     Boolean(state) &&
     isMember &&
     !membership &&
-    !noPlanReminderDismissed
+    !pendingRequest &&
+    !noPlanReminderDismissed &&
+    pathname !== '/membresia'
   const desktopNav = (isMember ? memberDesktopNav : staffDesktopNav).filter(
     (item) =>
       showBookingNav || (item.to !== '/agenda' && item.to !== '/reservas'),

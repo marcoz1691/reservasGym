@@ -15,9 +15,10 @@ describe('FichaTecnicaModal (Post-Registration Onboarding & Anthropometrics)', (
     resetRepositoryForTests()
   })
 
-  it('renders step 1 (Anthropometrics & Live BMI) and navigates across all steps', async () => {
+  it('empieza por datos personales, sigue con salud y deja las medidas al final', async () => {
     const repo = new LocalRepository()
     await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
+    resetRepositoryForTests(repo)
     const user = userEvent.setup()
     const onClose = vi.fn()
 
@@ -29,37 +30,76 @@ describe('FichaTecnicaModal (Post-Registration Onboarding & Anthropometrics)', (
       </MemoryRouter>,
     )
 
-    // Step 1: Weight & Height
     expect(await screen.findByText('Ficha Técnica Inicial de Ingreso')).toBeInTheDocument()
-    expect(screen.getByText('Estatura (cm) *')).toBeInTheDocument()
-    expect(screen.getByText('Peso Actual (kg) *')).toBeInTheDocument()
-    expect(screen.getByText('Índice de Masa Corporal (IMC)')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /1\. Datos personales/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /2\. Salud/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /3\. Medidas corporales/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /peso/i })).not.toBeInTheDocument()
 
-    // Navigate to Step 2
-    const nextBtn = screen.getByRole('button', { name: /Siguiente/i })
-    await user.click(nextBtn)
-
-    // Step 2: Personal details
     expect(screen.getByText('Fecha de Nacimiento *')).toBeInTheDocument()
     expect(screen.getByText('Sector / Ciudad de Residencia *')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Fecha de Nacimiento/i)).toHaveValue('1995-04-12')
+    })
 
-    // Navigate to Step 3
     await user.click(screen.getByRole('button', { name: /Siguiente/i }))
 
-    // Step 3: Health & Goals
     expect(screen.getByText('Objetivos Principales de Entrenamiento')).toBeInTheDocument()
     expect(
       screen.getByText('Antecedentes Médicos, Lesiones o Dolencias'),
     ).toBeInTheDocument()
 
-    // Navigate to Step 4
     await user.click(screen.getByRole('button', { name: /Siguiente/i }))
 
-    // Step 4: Biometrics
+    expect(screen.getByText('Estatura (cm) *')).toBeInTheDocument()
+    expect(screen.getByText('Masa corporal (kg) *')).toBeInTheDocument()
+    expect(screen.queryByText(/Peso Actual/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Siguiente/i }))
+
     expect(screen.getByText('Acceso Rápido con Biometría')).toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: /Habilitar Face ID/i }),
+    ).not.toBeChecked()
     expect(
       screen.getByRole('button', { name: /Guardar Ficha Técnica/i }),
     ).toBeInTheDocument()
+  })
+
+  it('no escribe estatura, masa corporal, nacimiento, sector ni meta en una cuenta nueva', async () => {
+    const repo = new LocalRepository()
+    await repo.signUp({
+      fullName: 'Socio Nuevo',
+      email: 'nuevo.ficha@zonacero.test',
+      password: 'password123',
+    })
+    resetRepositoryForTests(repo)
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <FichaTecnicaModal open={true} onClose={vi.fn()} isInitialOnboarding={true} />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByLabelText(/Fecha de Nacimiento/i)).toHaveValue('')
+    expect(screen.getByLabelText(/Sector \/ Ciudad de Residencia/i)).toHaveValue('')
+    expect(screen.getByLabelText(/Sector \/ Ciudad de Residencia/i)).toHaveAttribute(
+      'placeholder',
+      expect.stringMatching(/Ej\./),
+    )
+
+    await user.click(screen.getByRole('button', { name: /Siguiente/i }))
+    expect(
+      screen.getByRole('button', { name: /Acondicionamiento Hyrox/i }),
+    ).toHaveAttribute('aria-pressed', 'false')
+
+    await user.click(screen.getByRole('button', { name: /Siguiente/i }))
+    expect(screen.getByLabelText(/Estatura/i)).toHaveValue('')
+    expect(screen.getByLabelText(/Masa corporal/i)).toHaveValue('')
+    expect(screen.getByLabelText(/Estatura/i)).toHaveAttribute('placeholder', 'Ej. 175')
   })
 
   it('saves completed ficha técnica and registers biometrics', async () => {
@@ -77,6 +117,9 @@ describe('FichaTecnicaModal (Post-Registration Onboarding & Anthropometrics)', (
     )
 
     await screen.findByText('Ficha Técnica Inicial de Ingreso')
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Fecha de Nacimiento/i)).toHaveValue('1995-04-12')
+    })
 
     // Advance to Step 4
     await user.click(screen.getByRole('button', { name: /Siguiente/i }))
@@ -92,7 +135,6 @@ describe('FichaTecnicaModal (Post-Registration Onboarding & Anthropometrics)', (
       expect(screen.getByText('¡Ficha Técnica Guardada!')).toBeInTheDocument()
     })
 
-    // Verify biometrics was registered
-    expect(isBiometricsEnabled()).toBe(true)
+    expect(isBiometricsEnabled()).toBe(false)
   })
 })

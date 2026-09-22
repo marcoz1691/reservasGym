@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { AdminPage } from './AdminPage'
+import { BrandingPage } from './BrandingPage'
 import { CobrosPage } from './CobrosPage'
 import { PlanesPage } from './PlanesPage'
 import { RepositoryProvider } from '@/data/RepositoryProvider'
@@ -274,6 +276,55 @@ describe('Admin Billing & Membership Plans UI', () => {
       expect(
         await screen.findByText(/Acceso exclusivo para Administradores/i),
       ).toBeInTheDocument()
+    })
+  })
+
+  describe('Admin y marca', () => {
+    it('bloquea al socio en el panel y en la marca', async () => {
+      await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
+
+      const { unmount } = render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin']}>
+            <Routes>
+              <Route path="/admin" element={<AdminPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+
+      expect(await screen.findByText(/Acceso restringido/i)).toBeInTheDocument()
+      expect(screen.queryByText('Panel de Administración')).not.toBeInTheDocument()
+      unmount()
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/marca']}>
+            <Routes>
+              <Route path="/admin/marca" element={<BrandingPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+
+      expect(await screen.findByText(/Acceso restringido/i)).toBeInTheDocument()
+      expect(screen.queryByText('Marca del gym')).not.toBeInTheDocument()
+    })
+
+    it('deja entrar a staff al panel de administración', async () => {
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin']}>
+            <Routes>
+              <Route path="/admin" element={<AdminPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+
+      expect(await screen.findByText('Panel de Administración')).toBeInTheDocument()
     })
   })
 })

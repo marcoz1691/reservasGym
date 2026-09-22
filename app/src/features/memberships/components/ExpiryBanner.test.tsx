@@ -81,6 +81,7 @@ function createMockRepo(user: User | null, state: Partial<GymState>): GymReposit
     listMemberships: vi.fn().mockResolvedValue([]),
     listPayments: vi.fn().mockResolvedValue([]),
     listMembers: vi.fn().mockResolvedValue([]),
+    requestPlanPayment: vi.fn(),
     registerManualPayment: vi.fn(),
   }
 }
