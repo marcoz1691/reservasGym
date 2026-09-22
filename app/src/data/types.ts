@@ -34,6 +34,10 @@ export interface GymRepository {
   signIn(creds: AuthCredentials): Promise<User>
   signUp(creds: AuthCredentials): Promise<User>
   signOut(): Promise<void>
+  /** Guarda la sesión actual para volver a entrar con Face ID o huella. */
+  rememberBiometricSession?(): Promise<void>
+  /** Abre la sesión guardada. Falla si venció o no existe. */
+  restoreBiometricSession?(): Promise<User>
   /** Envía el correo con el enlace de recuperación. */
   resetPassword(email: string): Promise<void>
   /**

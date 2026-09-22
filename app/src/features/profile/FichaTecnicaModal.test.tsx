@@ -55,15 +55,13 @@ describe('FichaTecnicaModal (Post-Registration Onboarding & Anthropometrics)', (
     expect(screen.getByText('Masa corporal (kg) *')).toBeInTheDocument()
     expect(screen.queryByText(/Peso Actual/i)).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /Siguiente/i }))
-
-    expect(screen.getByText('Acceso Rápido con Biometría')).toBeInTheDocument()
-    expect(
-      screen.getByRole('checkbox', { name: /Habilitar Face ID/i }),
-    ).not.toBeChecked()
     expect(
       screen.getByRole('button', { name: /Guardar Ficha Técnica/i }),
     ).toBeInTheDocument()
+    expect(screen.queryByText('Acceso Rápido con Biometría')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('checkbox', { name: /Habilitar Face ID/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('no escribe estatura, masa corporal, nacimiento, sector ni meta en una cuenta nueva', async () => {
@@ -121,8 +119,6 @@ describe('FichaTecnicaModal (Post-Registration Onboarding & Anthropometrics)', (
       expect(screen.getByLabelText(/Fecha de Nacimiento/i)).toHaveValue('1995-04-12')
     })
 
-    // Advance to Step 4
-    await user.click(screen.getByRole('button', { name: /Siguiente/i }))
     await user.click(screen.getByRole('button', { name: /Siguiente/i }))
     await user.click(screen.getByRole('button', { name: /Siguiente/i }))
 

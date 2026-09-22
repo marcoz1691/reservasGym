@@ -13,7 +13,8 @@ import {
 } from 'lucide-react'
 import { useCurrentUser, useGym, useRefresh } from '@/data/RepositoryProvider'
 import { calculateBmi, getBmiCategory } from '@/domain/rules/anthropometrics'
-import { registerBiometrics } from '@/lib/biometrics'
+import { isBiometricAccessEnabled } from '@/lib/biometricAccess'
+import { disableBiometrics, registerBiometrics } from '@/lib/biometrics'
 import { Badge, Button, Card, Input } from '@/ui/primitives'
 
 interface FichaTecnicaModalProps {
@@ -67,6 +68,8 @@ export function FichaTecnicaModal({
   const [healthNotes, setHealthNotes] = useState('')
 
   const [enableBiometrics, setEnableBiometrics] = useState(false)
+  const biometricAccess = isBiometricAccessEnabled()
+  const lastStep = biometricAccess ? 4 : 3
 
   useEffect(() => {
     if (!user || hydratedUserId.current === user.id) return
@@ -154,7 +157,7 @@ export function FichaTecnicaModal({
       }
 
       // 3. Register biometrics if enabled
-      if (enableBiometrics) {
+      if (biometricAccess && enableBiometrics) {
         const paired = await registerBiometrics({
           id: user.id,
           email: user.email,
@@ -164,6 +167,15 @@ export function FichaTecnicaModal({
           setBioWarning(
             'No se activó la biometría: este dispositivo no la confirmó.',
           )
+        } else {
+          try {
+            await repo.rememberBiometricSession?.()
+          } catch {
+            disableBiometrics()
+            setBioWarning(
+              'No se activó la biometría: no se pudo guardar el acceso rápido.',
+            )
+          }
         }
       }
 
@@ -238,7 +250,11 @@ export function FichaTecnicaModal({
         </div>
 
         {/* Progress Stepper */}
-        <div className="grid grid-cols-4 border-b border-line bg-bg/80 text-xs font-semibold">
+        <div
+          className={`grid border-b border-line bg-bg/80 text-xs font-semibold ${
+            biometricAccess ? 'grid-cols-4' : 'grid-cols-3'
+          }`}
+        >
           <button
             type="button"
             onClick={() => setStep(1)}
@@ -278,6 +294,7 @@ export function FichaTecnicaModal({
             <span className="hidden sm:inline">3. Medidas corporales</span>
             <span className="sm:hidden">3. Medidas</span>
           </button>
+          {biometricAccess ? (
           <button
             type="button"
             onClick={() => setStep(4)}
@@ -291,6 +308,7 @@ export function FichaTecnicaModal({
             <span className="hidden sm:inline">4. Biometría</span>
             <span className="sm:hidden">4. Acceso</span>
           </button>
+          ) : null}
         </div>
 
         {/* Body Form */}
@@ -600,7 +618,7 @@ export function FichaTecnicaModal({
               )}
 
               {/* STEP 4: Biometrics Setup */}
-              {step === 4 && (
+              {biometricAccess && step === 4 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-4 rounded-2xl border border-acc/30 bg-acc/10 p-5">
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-acc/20 text-acc">
@@ -669,7 +687,7 @@ export function FichaTecnicaModal({
                   </div>
                 )}
 
-                {step < 4 ? (
+                {step < lastStep ? (
                   <Button
                     type="button"
                     onClick={() => setStep((s) => (s + 1) as any)}

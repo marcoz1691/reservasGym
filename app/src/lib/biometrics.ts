@@ -5,6 +5,14 @@
 
 const STORAGE_KEY_BIOMETRIC_USER = 'reservasgym_biometric_user'
 const STORAGE_KEY_BIOMETRIC_ENABLED = 'reservasgym_biometric_enabled'
+const STORAGE_KEY_BIOMETRIC_SESSION = 'reservasgym_biometric_session'
+
+export const BIOMETRIC_SESSION_EXPIRED_MESSAGE =
+  'Tu acceso rápido venció. Entra con tu contraseña.'
+
+export type StoredBiometricSession =
+  | { kind: 'local'; userId: string }
+  | { kind: 'supabase'; accessToken: string; refreshToken: string }
 
 export interface BiometricUser {
   userId: string
@@ -154,4 +162,53 @@ export function disableBiometrics(): void {
   if (typeof window === 'undefined') return
   localStorage.removeItem(STORAGE_KEY_BIOMETRIC_USER)
   localStorage.removeItem(STORAGE_KEY_BIOMETRIC_ENABLED)
+  clearBiometricSession()
+}
+
+export function saveBiometricSession(session: StoredBiometricSession): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEY_BIOMETRIC_SESSION, JSON.stringify(session))
+}
+
+export function readBiometricSession(): StoredBiometricSession | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_BIOMETRIC_SESSION)
+    if (!raw) return null
+    const parsed: unknown = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    const value = parsed as Record<string, unknown>
+    if (value.kind === 'local' && typeof value.userId === 'string' && value.userId) {
+      return { kind: 'local', userId: value.userId }
+    }
+    if (
+      value.kind === 'supabase' &&
+      typeof value.accessToken === 'string' &&
+      value.accessToken &&
+      typeof value.refreshToken === 'string' &&
+      value.refreshToken
+    ) {
+      return {
+        kind: 'supabase',
+        accessToken: value.accessToken,
+        refreshToken: value.refreshToken,
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+export function clearBiometricSession(): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(STORAGE_KEY_BIOMETRIC_SESSION)
+}
+
+/** Etiqueta del botón según el dispositivo. El diálogo lo muestra el sistema. */
+export function biometricLoginLabel(userAgent: string): string {
+  const ua = userAgent.toLowerCase()
+  if (/iphone|ipad|ipod/.test(ua)) return 'Entrar con Face ID'
+  if (/android/.test(ua)) return 'Entrar con huella'
+  return 'Entrar con Face ID o huella'
 }

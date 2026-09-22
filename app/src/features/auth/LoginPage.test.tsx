@@ -1,9 +1,17 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/lib/biometricAccess', () => ({
+  isBiometricAccessEnabled: () => true,
+}))
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { RepositoryProvider } from '@/data/RepositoryProvider'
+import { LocalRepository } from '@/data/localRepository'
+import { DEMO_PASSWORD } from '@/data/seed'
+import { resetRepositoryForTests } from '@/data/repository'
 import { LoginPage } from './LoginPage'
+import { saveBiometricSession } from '@/lib/biometrics'
 
 function renderPage() {
   return render(
@@ -18,6 +26,8 @@ function renderPage() {
 describe('Login · ojo para ver la contraseña', () => {
   beforeEach(() => {
     localStorage.clear()
+    resetRepositoryForTests()
+    vi.unstubAllGlobals()
   })
 
   it('muestra y oculta la contraseña al iniciar sesión', async () => {
@@ -56,5 +66,87 @@ describe('Login · ojo para ver la contraseña', () => {
       screen.getByRole('button', { name: /mostrar contraseña/i }),
     )
     expect(confirmation).toHaveAttribute('type', 'text')
+  })
+})
+
+describe('Login · acceso biométrico', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetRepositoryForTests()
+    vi.unstubAllGlobals()
+  })
+
+  async function enableQuickAccess() {
+    const repo = new LocalRepository()
+    const user = await repo.signIn({
+      email: 'socio@gym.local',
+      password: DEMO_PASSWORD,
+    })
+    await repo.rememberBiometricSession()
+    await repo.signOut()
+    localStorage.setItem(
+      'reservasgym_biometric_user',
+      JSON.stringify({
+        userId: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        savedAt: new Date().toISOString(),
+      }),
+    )
+    localStorage.setItem('reservasgym_biometric_enabled', 'true')
+    vi.stubGlobal(
+      'PublicKeyCredential',
+      class {
+        static async isUserVerifyingPlatformAuthenticatorAvailable() {
+          return true
+        }
+      },
+    )
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+      credentials: {
+        get: vi.fn().mockResolvedValue({ type: 'public-key' }),
+        create: vi.fn().mockResolvedValue({ type: 'public-key' }),
+      },
+    })
+  }
+
+  it('entra con Face ID sin pedir la contraseña', async () => {
+    await enableQuickAccess()
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(await screen.findByText('Hola, Ana')).toBeInTheDocument()
+    expect(screen.getByText('socio@gym.local')).toBeInTheDocument()
+    const faceId = screen.getByRole('button', { name: /entrar con face id/i })
+
+    await user.click(faceId)
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /entrar con face id/i })).not.toBeInTheDocument()
+    })
+  })
+
+  it('no muestra el acceso rápido al crear cuenta', async () => {
+    await enableQuickAccess()
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /crear cuenta/i }))
+    expect(screen.queryByRole('button', { name: /entrar con face id/i })).not.toBeInTheDocument()
+  })
+
+  it('avisa y deja la contraseña si la sesión rápida venció', async () => {
+    await enableQuickAccess()
+    saveBiometricSession({ kind: 'local', userId: 'user_missing' })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /entrar con face id/i }))
+
+    expect(await screen.findByText(/acceso rápido venció/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/correo electrónico/i)).toHaveValue('socio@gym.local')
+    expect(screen.getByRole('button', { name: /^entrar$/i })).toBeInTheDocument()
   })
 })

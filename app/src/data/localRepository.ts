@@ -37,6 +37,11 @@ import {
   verifySecret,
 } from './demoAuth'
 import { scopeGymState } from './scopeGymState'
+import {
+  BIOMETRIC_SESSION_EXPIRED_MESSAGE,
+  readBiometricSession,
+  saveBiometricSession,
+} from '@/lib/biometrics'
 
 const STORAGE_KEY = 'reservasgym.intermedia.v2'
 const SESSION_KEY = 'reservasgym.session.v2'
@@ -307,6 +312,24 @@ export class LocalRepository implements GymRepository {
     await this.ensureReady()
     this.clearSession()
     this.persistState()
+  }
+
+  async rememberBiometricSession(): Promise<void> {
+    const user = await this.requireUser()
+    saveBiometricSession({ kind: 'local', userId: user.id })
+  }
+
+  async restoreBiometricSession(): Promise<User> {
+    await this.ensureReady()
+    const saved = readBiometricSession()
+    if (!saved || saved.kind !== 'local') {
+      throw new Error(BIOMETRIC_SESSION_EXPIRED_MESSAGE)
+    }
+    const user = this.state.users.find((candidate) => candidate.id === saved.userId)
+    if (!user) throw new Error(BIOMETRIC_SESSION_EXPIRED_MESSAGE)
+    await this.setSession(user.id)
+    this.persistState()
+    return { ...user }
   }
 
   async resetPassword(email: string): Promise<void> {
@@ -635,15 +658,38 @@ export class LocalRepository implements GymRepository {
     bookingId: string,
     newSessionId: string,
   ): Promise<Booking> {
-    await this.cancelBooking(bookingId)
-    const actor = await this.requireUser()
     const old = this.state.bookings.find((b) => b.id === bookingId)
-    const userId = old?.userId ?? actor.id
+    if (!old) throw new Error('Reserva no encontrada')
+    const next = this.state.sessions.find((s) => s.id === newSessionId)
+    if (!next) throw new Error('Sesión no encontrada')
+    if (new Date(next.startsAt).getTime() <= Date.now()) {
+      throw new Error('Esa clase ya empezó')
+    }
+    const previousStatus = old.status
+    await this.cancelBooking(bookingId)
+    try {
+    const actor = await this.requireUser()
+    const userId = old.userId ?? actor.id
     const result = await this.createBooking(newSessionId, userId)
     if ('position' in result) {
       throw new Error('La nueva sesión está llena; quedaste en lista de espera')
     }
     return result
+    } catch (error) {
+      const current = this.state.bookings.find((b) => b.id === bookingId)
+      if (current?.status === 'cancelled') {
+        current.status = previousStatus
+        current.cancelledAt = null
+        const session = this.state.sessions.find((s) => s.id === current.sessionId)
+        if (session) {
+          session.bookedCount = this.state.bookings.filter(
+            (b) => b.sessionId === session.id && b.status === 'confirmed',
+          ).length
+        }
+        this.persistState()
+      }
+      throw error
+    }
   }
 
   async checkIn(bookingId: string, code: string): Promise<CheckIn> {

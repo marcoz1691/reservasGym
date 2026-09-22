@@ -1,14 +1,17 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Fingerprint, Sparkles } from 'lucide-react'
+import { Fingerprint, ScanFace, Sparkles } from 'lucide-react'
 import {
   useAppData,
   useCurrentUser,
   useGym,
   useRefresh,
 } from '@/data/RepositoryProvider'
+import { isBiometricAccessEnabled } from '@/lib/biometricAccess'
 import {
   authenticateWithBiometrics,
+  BIOMETRIC_SESSION_EXPIRED_MESSAGE,
+  biometricLoginLabel,
   getSavedBiometricUser,
   isBiometricsEnabled,
 } from '@/lib/biometrics'
@@ -57,15 +60,26 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [bioUser, setBioUser] = useState<{ fullName: string; email: string } | null>(null)
+  const [bioUser, setBioUser] = useState<{ fullName: string; email: string; userId: string } | null>(null)
   const [bioAvailable, setBioAvailable] = useState(false)
+  const [bioWaiting, setBioWaiting] = useState(false)
+  const biometricLabel = biometricLoginLabel(
+    typeof navigator === 'undefined' ? '' : navigator.userAgent,
+  )
+  const BiometricIcon = /android/i.test(
+    typeof navigator === 'undefined' ? '' : navigator.userAgent,
+  )
+    ? Fingerprint
+    : ScanFace
 
   useEffect(() => {
+    if (!isBiometricAccessEnabled()) return
     const enabled = isBiometricsEnabled()
     const saved = getSavedBiometricUser()
-    setBioAvailable(enabled || saved !== null)
-    if (saved) {
+    setBioAvailable(enabled && saved !== null)
+    if (saved && enabled) {
       setBioUser(saved)
+      setLoginEmail(saved.email)
     }
   }, [])
 
@@ -79,7 +93,15 @@ export function LoginPage() {
     setSuccess('')
     setSubmitting(true)
     try {
-      await repo.signIn({ email: loginEmail, password: loginPassword })
+      const signedIn = await repo.signIn({ email: loginEmail, password: loginPassword })
+      const saved = getSavedBiometricUser()
+      if (
+        isBiometricAccessEnabled() &&
+        isBiometricsEnabled() &&
+        saved?.userId === signedIn.id
+      ) {
+        await repo.rememberBiometricSession?.()
+      }
       await refresh()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al iniciar sesión'
@@ -93,11 +115,14 @@ export function LoginPage() {
     setError('')
     setSuccess('')
     setSubmitting(true)
+    setBioWaiting(true)
     try {
-      const bioAuth = await authenticateWithBiometrics()
-      setLoginEmail(bioAuth.email)
-      setLoginPassword('')
-      setSuccess('Biometría confirmada. Ingresa tu contraseña para entrar.')
+      await authenticateWithBiometrics()
+      if (!repo.restoreBiometricSession) {
+        throw new Error(BIOMETRIC_SESSION_EXPIRED_MESSAGE)
+      }
+      await repo.restoreBiometricSession()
+      await refresh()
     } catch (err) {
       setError(
         err instanceof Error
@@ -105,6 +130,7 @@ export function LoginPage() {
           : 'No se pudo verificar la identidad biométrica',
       )
     } finally {
+      setBioWaiting(false)
       setSubmitting(false)
     }
   }
@@ -239,37 +265,34 @@ export function LoginPage() {
         {mode === 'login' ? (
           /* LOGIN FORM */
           <form className="space-y-4" onSubmit={handleLogin}>
-            {/* Biometric Quick Login Button */}
-            {bioAvailable && (
-              <div className="rounded-2xl border border-acc/30 bg-acc/10 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-acc/20 text-acc">
-                      <Fingerprint className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-ink">
-                        {bioUser
-                          ? `Hola, ${displayFirstName(bioUser.fullName)}`
-                          : 'Acceso Biométrico'}
-                      </p>
-                      <p className="text-[11px] text-ink-3">
-                        {bioUser ? bioUser.email : 'Ingreso rápido Face ID / Huella'}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={handleBiometricLogin}
-                    disabled={submitting}
-                    className="h-9 px-3 text-xs font-bold flex items-center gap-1.5"
-                  >
-                    <Fingerprint className="h-4 w-4" />
-                    <span>Ingresar</span>
-                  </Button>
+            {isBiometricAccessEnabled() && bioAvailable && bioUser ? (
+              <div className="space-y-4">
+                <div className="text-center">
+                  <p className="text-sm font-bold text-ink">
+                    Hola, {displayFirstName(bioUser.fullName)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-ink-3">{bioUser.email}</p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleBiometricLogin}
+                  disabled={submitting}
+                  className="w-full font-bold"
+                >
+                  <BiometricIcon className="h-5 w-5" />
+                  <span>
+                    {bioWaiting
+                      ? 'Esperando confirmación del dispositivo…'
+                      : biometricLabel}
+                  </span>
+                </Button>
+                <div className="flex items-center gap-3">
+                  <span className="h-px flex-1 bg-line" />
+                  <span className="text-xs font-semibold text-ink-3">o</span>
+                  <span className="h-px flex-1 bg-line" />
                 </div>
               </div>
-            )}
+            ) : null}
 
             <Input
               label="Correo electrónico"
