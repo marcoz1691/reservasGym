@@ -16,7 +16,8 @@ import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
 import { ZONE_LABELS } from '@/domain/models'
 import { canUseBookingNav, displayFirstName } from '@/domain/rules'
 import { selectMyMembership } from '@/app/store'
-import { WelcomeNoPlanCard, isOnlinePayEnabled } from '@/features/memberships'
+import { WelcomeNoPlanCard, PendingPlanRequestCard, isOnlinePayEnabled } from '@/features/memberships'
+import { selectPendingPlanRequest } from '@/domain/rules/planRequest'
 import { Badge, Button, Card, SkeletonCard } from '@/ui/primitives'
 
 function greeting(hour: number): string {
@@ -52,6 +53,10 @@ export function HomePage() {
   )
 
   const membership = selectMyMembership(data, user.id)
+  const pendingRequest = selectPendingPlanRequest(data.payments ?? [], user.id)
+  const pendingPlanName =
+    (data.membershipPlans ?? []).find((plan) => plan.id === pendingRequest?.planId)
+      ?.name ?? 'Plan solicitado'
 
   const next = mine
     .map((b) => ({
@@ -120,6 +125,11 @@ export function HomePage() {
             ) : null}
           </div>
         </Card>
+      ) : !membership && pendingRequest ? (
+        <PendingPlanRequestCard
+          payment={pendingRequest}
+          planName={pendingPlanName}
+        />
       ) : !membership ? (
         <WelcomeNoPlanCard onlinePayEnabled={isOnlinePayEnabled()} />
       ) : (

@@ -41,4 +41,16 @@ describe('PlanRequiredNotice', () => {
     await userEvent.click(screen.getByRole('button', { name: /ahora no/i }))
     expect(onDismiss).toHaveBeenCalledTimes(1)
   })
+
+  it('cierra el recordatorio al pulsar Ver planes', async () => {
+    const onDismiss = vi.fn()
+    render(
+      <MemoryRouter>
+        <PlanRequiredNotice onDismiss={onDismiss} />
+      </MemoryRouter>,
+    )
+
+    await userEvent.click(screen.getByRole('link', { name: /ver planes/i }))
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+  })
 })

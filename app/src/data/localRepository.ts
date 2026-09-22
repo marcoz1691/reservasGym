@@ -945,6 +945,50 @@ export class LocalRepository implements GymRepository {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }
 
+  async requestPlanPayment(params: {
+    planId: string
+    manualMethod: ManualPaymentMethod
+  }): Promise<Payment> {
+    const actor = await this.requireUser()
+    if (actor.role !== 'member') {
+      throw new Error('Solo un socio puede solicitar un plan')
+    }
+    const plan = (this.state.membershipPlans ?? []).find(
+      (p) => p.id === params.planId && p.active,
+    )
+    if (!plan) throw new Error('Plan no encontrado')
+    if (!this.state.payments) this.state.payments = []
+
+    const existingIdx = this.state.payments.findIndex(
+      (p) =>
+        p.userId === actor.id &&
+        p.status === 'pending' &&
+        p.provider === 'manual' &&
+        p.membershipId == null,
+    )
+    const existing = existingIdx >= 0 ? this.state.payments[existingIdx] : null
+    const payment: Payment = {
+      id: existing?.id ?? uid('pay'),
+      userId: actor.id,
+      planId: plan.id,
+      membershipId: null,
+      amountCents: plan.priceCents,
+      status: 'pending',
+      provider: 'manual',
+      manualMethod: params.manualMethod,
+      reference: null,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+      approvedAt: null,
+    }
+    if (existingIdx >= 0) {
+      this.state.payments[existingIdx] = payment
+    } else {
+      this.state.payments.push(payment)
+    }
+    this.persistState()
+    return { ...payment }
+  }
+
   async registerManualPayment(params: {
     userId: string
     planId: string
@@ -996,8 +1040,16 @@ export class LocalRepository implements GymRepository {
       this.state.memberships.push(membership)
     }
 
+    const pendingIdx = this.state.payments.findIndex(
+      (p) =>
+        p.userId === params.userId &&
+        p.status === 'pending' &&
+        p.provider === 'manual' &&
+        p.membershipId == null,
+    )
+    const pending = pendingIdx >= 0 ? this.state.payments[pendingIdx] : null
     const payment: Payment = {
-      id: uid('pay'),
+      id: pending?.id ?? uid('pay'),
       userId: params.userId,
       planId: plan.id,
       membershipId: membership.id,
@@ -1005,12 +1057,15 @@ export class LocalRepository implements GymRepository {
       status: 'approved',
       provider: 'manual',
       manualMethod: params.manualMethod,
-      reference: params.reference ?? null,
-      createdAt: new Date().toISOString(),
+      reference: params.reference ?? pending?.reference ?? null,
+      createdAt: pending?.createdAt ?? new Date().toISOString(),
       approvedAt: new Date().toISOString(),
     }
-
-    this.state.payments.push(payment)
+    if (pendingIdx >= 0) {
+      this.state.payments[pendingIdx] = payment
+    } else {
+      this.state.payments.push(payment)
+    }
     this.persistState()
 
     return {

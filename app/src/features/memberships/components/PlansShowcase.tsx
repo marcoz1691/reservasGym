@@ -9,6 +9,8 @@ interface PlansShowcaseProps {
   zones: Zone[]
   /** When set, shows online pay CTA per plan */
   onPayOnline?: (planId: string) => void | Promise<void>
+  /** El socio deja una solicitud para pagar en recepción */
+  onChoosePlan?: (planId: string) => void
   payingPlanId?: string | null
   onlinePayEnabled?: boolean
 }
@@ -18,6 +20,7 @@ export function PlansShowcase({
   currentPlanId,
   zones,
   onPayOnline,
+  onChoosePlan,
   payingPlanId = null,
   onlinePayEnabled = false,
 }: PlansShowcaseProps) {
@@ -150,16 +153,27 @@ export function PlansShowcase({
                     )}
                   </button>
                 ) : null}
+                {onChoosePlan && !onlinePayEnabled ? (
+                  <button
+                    type="button"
+                    onClick={() => onChoosePlan(plan.id)}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-acc px-4 py-2.5 text-sm font-bold text-[var(--color-acc-contrast)] transition hover:brightness-110 active:scale-[0.98]"
+                  >
+                    Elegir este plan
+                  </button>
+                ) : null}
                 <p className="text-[11px] text-ink-3 text-center">
                   {isCurrent
                     ? onlinePayEnabled
                       ? 'También puedes renovar en recepción'
                       : 'Renuévalo en recepción'
                     : currentPlanId
-                      ? 'Para cambiar de plan, acércate a recepción. Al cobrar el nuevo plan, reemplaza el actual y se suma la vigencia.'
-                      : onlinePayEnabled
-                        ? 'También puedes pagar en recepción (efectivo, transferencia o Datafast)'
-                        : 'Adquiérelo o renuévalo en recepción'}
+                      ? 'Para cambiar de plan, elige otro abajo. Recepción lo activa al cobrar.'
+                      : onChoosePlan && !onlinePayEnabled
+                        ? 'Elige el plan y cómo vas a pagar. El cobro se completa en recepción.'
+                        : onlinePayEnabled
+                          ? 'También puedes pagar en recepción (efectivo, transferencia o Datafast)'
+                          : 'Adquiérelo o renuévalo en recepción'}
                 </p>
               </div>
             </div>

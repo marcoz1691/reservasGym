@@ -60,7 +60,11 @@ export function PlanRequiredNotice({ onDismiss }: PlanRequiredNoticeProps) {
               Ahora no
             </Button>
           ) : null}
-          <ButtonLink to="/membresia" className="flex-1 justify-center">
+          <ButtonLink
+            to="/membresia"
+            className="flex-1 justify-center"
+            onClick={() => onDismiss?.()}
+          >
             Ver planes
             <ArrowRight className="h-4 w-4" />
           </ButtonLink>

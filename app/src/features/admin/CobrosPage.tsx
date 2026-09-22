@@ -440,6 +440,52 @@ export function CobrosPage() {
 
       {/* TAB 1: REGISTRAR COBRO (POS) */}
       {activeTab === 'pos' && (
+        <div className="space-y-6">
+          {payments.some((p) => p.status === 'pending' && p.provider === 'manual') ? (
+            <Card className="space-y-3 p-5">
+              <h2 className="text-lg font-extrabold text-ink">Solicitudes de socios</h2>
+              <p className="text-xs text-ink-3">
+                El socio ya eligió plan y forma de pago. Al cobrar, se activa su membresía.
+              </p>
+              <div className="grid gap-2">
+                {payments
+                  .filter((p) => p.status === 'pending' && p.provider === 'manual' && p.membershipId == null)
+                  .map((payment) => {
+                    const member = members.find((m) => m.id === payment.userId)
+                    const plan = plans.find((p) => p.id === payment.planId)
+                    return (
+                      <button
+                        key={payment.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedMemberId(payment.userId)
+                          setMemberSearchQuery('')
+                          handleSelectPlan(payment.planId)
+                          if (payment.manualMethod) setPaymentMethod(payment.manualMethod)
+                          setReceipt(null)
+                        }}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-bg px-4 py-3 text-left hover:border-acc"
+                      >
+                        <span>
+                          <span className="block text-sm font-bold text-ink">
+                            {member?.fullName ?? 'Socio'}
+                          </span>
+                          <span className="text-xs text-ink-3">
+                            {plan?.name ?? 'Plan'} ·{' '}
+                            {payment.manualMethod === 'cash'
+                              ? 'Efectivo'
+                              : payment.manualMethod === 'transfer'
+                                ? 'Transferencia'
+                                : 'Tarjeta Datafast'}
+                          </span>
+                        </span>
+                        <span className="text-sm font-bold text-acc">Cobrar</span>
+                      </button>
+                    )
+                  })}
+              </div>
+            </Card>
+          ) : null}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main POS Form */}
           <div className="lg:col-span-2 space-y-6">
@@ -915,6 +961,7 @@ export function CobrosPage() {
               </div>
             </Card>
           </div>
+        </div>
         </div>
       )}
 

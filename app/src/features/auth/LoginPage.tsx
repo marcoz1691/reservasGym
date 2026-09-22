@@ -17,6 +17,7 @@ import { Button, Card, Input } from '@/ui/primitives'
 import { ForgotPasswordModal } from './ForgotPasswordModal'
 
 const IS_STAGING = import.meta.env.MODE === 'staging'
+const SHOW_DEMO_ACCESS = import.meta.env.DEV || IS_STAGING
 const DEMO_PASSWORD = IS_STAGING ? 'ZonaCero2026!' : 'demo1234'
 const DEMO_ACCOUNTS = IS_STAGING
   ? {
@@ -40,8 +41,12 @@ export function LoginPage() {
   const [forgotModalOpen, setForgotModalOpen] = useState(false)
 
   // Login fields — staging usa cuentas @zonacero.test (ver supabase/staging-users.sql)
-  const [loginEmail, setLoginEmail] = useState(DEMO_ACCOUNTS.socio)
-  const [loginPassword, setLoginPassword] = useState(DEMO_PASSWORD)
+  const [loginEmail, setLoginEmail] = useState(
+    SHOW_DEMO_ACCESS ? DEMO_ACCOUNTS.socio : '',
+  )
+  const [loginPassword, setLoginPassword] = useState(
+    SHOW_DEMO_ACCESS ? DEMO_PASSWORD : '',
+  )
 
   // Register fields: Simple initial account creation
   const [fullName, setFullName] = useState('')
@@ -90,16 +95,9 @@ export function LoginPage() {
     setSubmitting(true)
     try {
       const bioAuth = await authenticateWithBiometrics()
-      // Try to sign in with standard demo pass or saved session
-      try {
-        await repo.signIn({ email: bioAuth.email, password: DEMO_PASSWORD })
-      } catch {
-        await repo.signIn({
-          email: bioAuth.email,
-          password: loginPassword || DEMO_PASSWORD,
-        })
-      }
-      await refresh()
+      setLoginEmail(bioAuth.email)
+      setLoginPassword('')
+      setSuccess('Biometría confirmada. Ingresa tu contraseña para entrar.')
     } catch (err) {
       setError(
         err instanceof Error
@@ -318,7 +316,7 @@ export function LoginPage() {
               {submitting ? 'Iniciando sesión…' : 'Entrar'}
             </Button>
 
-            {/* Demo Helper */}
+            {SHOW_DEMO_ACCESS ? (
             <div className="mt-6 rounded-2xl border border-line bg-bg p-3.5 text-xs text-ink-3 space-y-2">
               <p className="font-bold text-ink-2 flex items-center justify-between">
                 <span>
@@ -361,6 +359,7 @@ export function LoginPage() {
                 </button>
               </div>
             </div>
+            ) : null}
           </form>
         ) : (
           /* STREAMLINED REGISTRATION FORM */
@@ -372,7 +371,7 @@ export function LoginPage() {
               </div>
               <p className="mt-1 text-ink-3">
                 Después de crear y confirmar la cuenta, inicia sesión. En el primer
-                ingreso completarás tu ficha técnica (peso, estatura y metas).
+                ingreso completarás tu ficha técnica (datos, salud y medidas corporales).
               </p>
             </div>
 

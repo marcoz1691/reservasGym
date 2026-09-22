@@ -423,3 +423,17 @@ create policy "payments select own or staff" on payments for select using (
 create policy "payments write staff" on payments for all using (
   public.is_staff()
 );
+create policy "payments insert own plan request" on payments for insert with check (
+  user_id = auth.uid()
+  and status = 'pending'
+  and provider = 'manual'
+  and membership_id is null
+);
+create policy "payments update own plan request" on payments for update using (
+  user_id = auth.uid() and status = 'pending' and provider = 'manual'
+) with check (
+  user_id = auth.uid()
+  and status = 'pending'
+  and provider = 'manual'
+  and membership_id is null
+);

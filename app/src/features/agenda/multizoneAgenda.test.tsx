@@ -84,6 +84,7 @@ function createMockRepo(user: User, state: Partial<GymState>): GymRepository {
     listMemberships: vi.fn().mockResolvedValue([]),
     listPayments: vi.fn().mockResolvedValue([]),
     listMembers: vi.fn().mockResolvedValue(fullState.users.filter((u) => u.role === 'member')),
+    requestPlanPayment: vi.fn(),
     registerManualPayment: vi.fn(),
   }
 }

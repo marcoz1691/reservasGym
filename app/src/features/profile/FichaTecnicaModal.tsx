@@ -1,4 +1,4 @@
-import { useState, useId, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import {
   Activity,
   Calendar,
@@ -47,29 +47,44 @@ export function FichaTecnicaModal({
   const [nowMs] = useState(() => Date.now())
   const [saving, setSaving] = useState(false)
   const [savedSuccess, setSavedSuccess] = useState(false)
+  const [bioWarning, setBioWarning] = useState('')
+  const [formError, setFormError] = useState('')
+  const hydratedUserId = useRef<string | null>(null)
 
-  // Step 1: Anthropometrics
-  const [heightCm, setHeightCm] = useState(user?.heightCm?.toString() ?? '175')
-  const [weightKg, setWeightKg] = useState(user?.initialWeightKg?.toString() ?? '75')
+  const [heightCm, setHeightCm] = useState('')
+  const [weightKg, setWeightKg] = useState('')
   const [waistCm, setWaistCm] = useState('')
   const [hipCm, setHipCm] = useState('')
   const [chestCm, setChestCm] = useState('')
   const [armCm, setArmCm] = useState('')
   const [thighCm, setThighCm] = useState('')
 
-  // Step 2: Personal
-  const [birthDate, setBirthDate] = useState(user?.birthDate ?? '1995-06-15')
-  const [residence, setResidence] = useState(user?.residence ?? 'Quito - Pomasqui')
+  const [birthDate, setBirthDate] = useState('')
+  const [residence, setResidence] = useState('')
 
-  // Step 3: Health & Goals
-  const [selectedGoals, setSelectedGoals] = useState<string[]>(
-    user?.goals ? [user.goals] : ['Acondicionamiento Hyrox / CrossFit'],
-  )
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([])
   const [customGoal, setCustomGoal] = useState('')
-  const [healthNotes, setHealthNotes] = useState(user?.healthNotes ?? '')
+  const [healthNotes, setHealthNotes] = useState('')
 
-  // Step 4: Biometrics
-  const [enableBiometrics, setEnableBiometrics] = useState(true)
+  const [enableBiometrics, setEnableBiometrics] = useState(false)
+
+  useEffect(() => {
+    if (!user || hydratedUserId.current === user.id) return
+    hydratedUserId.current = user.id
+    setHeightCm(user.heightCm != null ? String(user.heightCm) : '')
+    setWeightKg(user.initialWeightKg != null ? String(user.initialWeightKg) : '')
+    setBirthDate(user.birthDate ?? '')
+    setResidence(user.residence ?? '')
+    setHealthNotes(user.healthNotes ?? '')
+    setSelectedGoals(
+      user.goals
+        ? user.goals
+            .split(', ')
+            .map((goal) => goal.trim())
+            .filter(Boolean)
+        : [],
+    )
+  }, [user])
 
   const hNum = Number(heightCm) || 0
   const wNum = Number(weightKg) || 0
@@ -94,6 +109,12 @@ export function FichaTecnicaModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!user) return
+    if (isInitialOnboarding && (hNum <= 0 || wNum <= 0)) {
+      setStep(3)
+      setFormError('Ingresa tu estatura y masa corporal para terminar la ficha.')
+      return
+    }
+    setFormError('')
     setSaving(true)
 
     try {
@@ -134,11 +155,16 @@ export function FichaTecnicaModal({
 
       // 3. Register biometrics if enabled
       if (enableBiometrics) {
-        await registerBiometrics({
+        const paired = await registerBiometrics({
           id: user.id,
           email: user.email,
           fullName: user.fullName,
         })
+        if (!paired) {
+          setBioWarning(
+            'No se activó la biometría: este dispositivo no la confirmó.',
+          )
+        }
       }
 
       if (isInitialOnboarding) {
@@ -222,9 +248,9 @@ export function FichaTecnicaModal({
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
-            <Scale className="h-4 w-4" />
-            <span className="hidden sm:inline">1. Antropometría</span>
-            <span className="sm:hidden">1. Peso</span>
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline">1. Datos personales</span>
+            <span className="sm:hidden">1. Datos</span>
           </button>
           <button
             type="button"
@@ -235,9 +261,9 @@ export function FichaTecnicaModal({
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
-            <Calendar className="h-4 w-4" />
-            <span className="hidden sm:inline">2. Datos</span>
-            <span className="sm:hidden">2. Datos</span>
+            <HeartPulse className="h-4 w-4" />
+            <span className="hidden sm:inline">2. Salud</span>
+            <span className="sm:hidden">2. Salud</span>
           </button>
           <button
             type="button"
@@ -248,9 +274,9 @@ export function FichaTecnicaModal({
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
-            <HeartPulse className="h-4 w-4" />
-            <span className="hidden sm:inline">3. Salud & Metas</span>
-            <span className="sm:hidden">3. Salud</span>
+            <Scale className="h-4 w-4" />
+            <span className="hidden sm:inline">3. Medidas corporales</span>
+            <span className="sm:hidden">3. Medidas</span>
           </button>
           <button
             type="button"
@@ -276,21 +302,26 @@ export function FichaTecnicaModal({
               </div>
               <h3 className="text-xl font-bold text-ink">¡Ficha Técnica Guardada!</h3>
               <p className="mt-2 text-sm text-ink-3">
-                Tus datos de peso, composición corporal y metas han sido registrados con
-                éxito.
+                Tus medidas corporales y metas han sido registradas con éxito.
+                {bioWarning ? ` ${bioWarning}` : ''}
               </p>
             </div>
           ) : (
             <>
-              {/* STEP 1: Anthropometrics */}
-              {step === 1 && (
+              {formError ? (
+                <p className="mb-4 rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
+                  {formError}
+                </p>
+              ) : null}
+              {/* STEP 3: Medidas corporales */}
+              {step === 3 && (
                 <div className="space-y-6">
                   <div className="rounded-2xl border border-acc/20 bg-acc/5 p-4 text-xs text-ink-2">
                     <p className="font-semibold text-acc">
                       Evaluación inicial de composición corporal
                     </p>
                     <p className="mt-1 text-ink-3">
-                      Ingresa tu estatura y peso actual para calcular tu Índice de Masa
+                      Ingresa tu estatura y masa corporal para calcular tu Índice de Masa
                       Corporal (IMC) y monitorear tu evolución atlética.
                     </p>
                   </div>
@@ -318,7 +349,7 @@ export function FichaTecnicaModal({
 
                     <div>
                       <label htmlFor={weightId} className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-3">
-                        Peso Actual (kg) *
+                        Masa corporal (kg) *
                       </label>
                       <div className="relative">
                         <Input
@@ -448,8 +479,8 @@ export function FichaTecnicaModal({
                 </div>
               )}
 
-              {/* STEP 2: Personal Details */}
-              {step === 2 && (
+              {/* STEP 1: Datos personales */}
+              {step === 1 && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
@@ -502,8 +533,8 @@ export function FichaTecnicaModal({
                 </div>
               )}
 
-              {/* STEP 3: Goals & Health Notes */}
-              {step === 3 && (
+              {/* STEP 2: Salud */}
+              {step === 2 && (
                 <div className="space-y-6">
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-ink-3">
@@ -516,6 +547,7 @@ export function FichaTecnicaModal({
                           <button
                             key={goal}
                             type="button"
+                            aria-pressed={selected}
                             onClick={() => toggleGoal(goal)}
                             className={`flex items-center gap-2 rounded-xl border p-3 text-left text-xs font-semibold transition-all ${
                               selected
@@ -598,6 +630,7 @@ export function FichaTecnicaModal({
                       <input
                         id={bioSwitchId}
                         type="checkbox"
+                        aria-label="Habilitar Face ID / Huella en este teléfono"
                         checked={enableBiometrics}
                         onChange={(e) => setEnableBiometrics(e.target.checked)}
                         className="peer sr-only"

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { MiPlanPage } from './MiPlanPage'
 import { RepositoryProvider } from '@/data/RepositoryProvider'
@@ -109,5 +110,45 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
     expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
     expect(screen.queryByText('Plan Trimestral')).not.toBeInTheDocument()
     expect(screen.getAllByText('Plan Mensual Ilimitado').length).toBeGreaterThan(0)
+  })
+
+  it('el socio elige un plan y deja pendiente la forma de pago', async () => {
+    const user = userEvent.setup()
+    const repo = new LocalRepository()
+    await repo.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+    resetRepositoryForTests(repo)
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <MiPlanPage />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    await user.click((await screen.findAllByRole('button', { name: 'Elegir este plan' }))[0]!)
+
+    expect(screen.getByRole('heading', { name: /Cómo vas a pagar/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Elegir este plan' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Planes disponibles')).not.toBeInTheDocument()
+    const send = screen.getByRole('button', { name: 'Enviar solicitud' })
+    expect(send).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Cambiar' }))
+    expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Elegir este plan' }).length).toBeGreaterThan(0)
+
+    await user.click(screen.getAllByRole('button', { name: 'Elegir este plan' })[0]!)
+    await user.click(screen.getByRole('button', { name: 'Efectivo' }))
+    expect(screen.getByRole('button', { name: 'Enviar solicitud' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Enviar solicitud' }))
+
+    expect(await screen.findByText('Solicitud enviada')).toBeInTheDocument()
+    expect(screen.getByText(/Pendiente de pago en recepción/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Elegir este plan' })).not.toBeInTheDocument()
+    expect(await repo.getMemberMembership('user_member_2')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Cambiar' }))
+    expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
   })
 })

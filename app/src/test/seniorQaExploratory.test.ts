@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { LocalRepository } from '../data/localRepository'
 import { resetRepositoryForTests } from '../data/repository'
 import { DEMO_PASSWORD } from '../data/seed'
@@ -99,12 +99,26 @@ describe('Senior QA Engineer - Full Exploratory & Edge-Case Testing Cycle', () =
       expect(isBiometricsEnabled()).toBe(false)
       expect(getSavedBiometricUser()).toBeNull()
 
-      // Register biometrics
+      vi.stubGlobal(
+        'PublicKeyCredential',
+        class {
+          static async isUserVerifyingPlatformAuthenticatorAvailable() {
+            return true
+          }
+        },
+      )
+      Object.defineProperty(navigator, 'credentials', {
+        configurable: true,
+        value: {
+          get: vi.fn().mockResolvedValue({ type: 'public-key' }),
+          create: vi.fn().mockResolvedValue({ type: 'public-key' }),
+        },
+      })
+
       const paired = await registerBiometrics(mockUser)
       expect(paired).toBe(true)
       expect(isBiometricsEnabled()).toBe(true)
 
-      // Authenticate via Biometrics
       const auth = await authenticateWithBiometrics()
       expect(auth.userId).toBe('usr_qa_bio')
       expect(auth.email).toBe('bio.qa@zonacero.ec')
@@ -113,6 +127,7 @@ describe('Senior QA Engineer - Full Exploratory & Edge-Case Testing Cycle', () =
       disableBiometrics()
       expect(isBiometricsEnabled()).toBe(false)
       await expect(authenticateWithBiometrics()).rejects.toThrow(/No hay una cuenta asociada/i)
+      vi.unstubAllGlobals()
     })
   })
 

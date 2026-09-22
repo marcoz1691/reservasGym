@@ -1397,6 +1397,51 @@ export class SupabaseRepository implements GymRepository {
     return (data ?? []).map(mapPayment)
   }
 
+  async requestPlanPayment(params: {
+    planId: string
+    manualMethod: ManualPaymentMethod
+  }): Promise<Payment> {
+    const user = await this.requireUser()
+    if (user.role !== 'member') {
+      throw new Error('Solo un socio puede solicitar un plan')
+    }
+    const { data: planRow, error: planError } = await this.client
+      .from('membership_plans')
+      .select('*')
+      .eq('id', params.planId)
+      .eq('active', true)
+      .single()
+    if (planError || !planRow) throw new Error('Plan no encontrado')
+    const plan = mapMembershipPlan(planRow)
+
+    const { data: existing, error: existingError } = await this.client
+      .from('payments')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+      .eq('provider', 'manual')
+      .is('membership_id', null)
+      .maybeSingle()
+    if (existingError) throw new Error(existingError.message)
+
+    const payload = {
+      user_id: user.id,
+      plan_id: plan.id,
+      membership_id: null,
+      amount_cents: plan.priceCents,
+      status: 'pending',
+      provider: 'manual',
+      manual_method: params.manualMethod,
+      reference: null,
+    }
+    const query = existing
+      ? this.client.from('payments').update(payload).eq('id', existing.id)
+      : this.client.from('payments').insert(payload)
+    const { data, error } = await query.select('*').single()
+    if (error) throw new Error(error.message)
+    return mapPayment(data)
+  }
+
   async registerManualPayment(params: {
     userId: string
     planId: string
@@ -1441,23 +1486,35 @@ export class SupabaseRepository implements GymRepository {
     if (memError) throw new Error(memError.message)
     const membership = mapMembership(memData)
 
-    // 4. Insert payment
-    const { data: payData, error: payError } = await this.client
+    // 4. Aprueba la solicitud pendiente o registra un cobro nuevo
+    const { data: pending, error: pendingError } = await this.client
       .from('payments')
-      .insert({
-        user_id: params.userId,
-        plan_id: plan.id,
-        membership_id: membership.id,
-        amount_cents: params.amountCents,
-        status: 'approved',
-        provider: 'manual',
-        manual_method: params.manualMethod,
-        reference: params.reference ?? null,
-        created_at: new Date().toISOString(),
-        approved_at: new Date().toISOString(),
-      })
-      .select('*')
-      .single()
+      .select('id, created_at, reference')
+      .eq('user_id', params.userId)
+      .eq('status', 'pending')
+      .eq('provider', 'manual')
+      .is('membership_id', null)
+      .maybeSingle()
+    if (pendingError) throw new Error(pendingError.message)
+
+    const paymentPayload = {
+      user_id: params.userId,
+      plan_id: plan.id,
+      membership_id: membership.id,
+      amount_cents: params.amountCents,
+      status: 'approved',
+      provider: 'manual',
+      manual_method: params.manualMethod,
+      reference: params.reference ?? pending?.reference ?? null,
+      approved_at: new Date().toISOString(),
+    }
+    const paymentQuery = pending
+      ? this.client.from('payments').update(paymentPayload).eq('id', pending.id)
+      : this.client.from('payments').insert({
+          ...paymentPayload,
+          created_at: new Date().toISOString(),
+        })
+    const { data: payData, error: payError } = await paymentQuery.select('*').single()
     if (payError) throw new Error(payError.message)
     const payment = mapPayment(payData)
 

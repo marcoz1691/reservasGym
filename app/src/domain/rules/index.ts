@@ -160,13 +160,10 @@ export function canRecordWeight(
   return canManageWeight(actor.role, actor.id, targetUserId)
 }
 
-export const canEditWeight = canManageWeight
-export const canDeleteWeight = canManageWeight
-export const countActiveBookingsForSession = confirmedCount
-
 export * from './membership'
 export * from './membershipPlan'
 export * from './zoneAccess'
 export * from './anthropometrics'
 export * from './profile'
+export * from './planRequest'
 

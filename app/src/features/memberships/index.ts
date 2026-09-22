@@ -11,5 +11,6 @@ export {
   PaymentRow,
   PaymentHistory,
   WelcomeNoPlanCard,
+  PendingPlanRequestCard,
   PlanRequiredNotice,
 } from './components'
