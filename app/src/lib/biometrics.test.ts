@@ -6,6 +6,9 @@ import {
   registerBiometrics,
   authenticateWithBiometrics,
   disableBiometrics,
+  saveBiometricSession,
+  readBiometricSession,
+  biometricLoginLabel,
 } from './biometrics'
 
 function stubWebAuthn(result: Credential | null | Error) {
@@ -117,10 +120,21 @@ describe('Biometrics Authentication Helper', () => {
       email: 'test@zonacero.ec',
       fullName: 'Test User',
     })
+    saveBiometricSession({ kind: 'local', userId: 'user_789' })
     expect(isBiometricsEnabled()).toBe(true)
+    expect(readBiometricSession()).toEqual({ kind: 'local', userId: 'user_789' })
 
     disableBiometrics()
     expect(isBiometricsEnabled()).toBe(false)
     expect(getSavedBiometricUser()).toBeNull()
+    expect(readBiometricSession()).toBeNull()
+  })
+
+  it('names the login button for the device', () => {
+    expect(biometricLoginLabel('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)')).toBe(
+      'Entrar con Face ID',
+    )
+    expect(biometricLoginLabel('Mozilla/5.0 (Linux; Android 14)')).toBe('Entrar con huella')
+    expect(biometricLoginLabel('Mozilla/5.0 (Macintosh)')).toBe('Entrar con Face ID o huella')
   })
 })

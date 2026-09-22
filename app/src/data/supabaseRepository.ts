@@ -41,6 +41,13 @@ import {
 import type { AuthCredentials, GymRepository } from './types'
 import { isSupabaseEnvConfigured } from './selectRepositoryBackend'
 import { scopeGymState } from './scopeGymState'
+import {
+  BIOMETRIC_SESSION_EXPIRED_MESSAGE,
+  clearBiometricSession,
+  isBiometricsEnabled,
+  readBiometricSession,
+  saveBiometricSession,
+} from '@/lib/biometrics'
 
 function uid(prefix: string): string {
   return `${prefix}-${crypto.randomUUID().slice(0, 8)}`
@@ -607,8 +614,45 @@ export class SupabaseRepository implements GymRepository {
   }
 
   async signOut(): Promise<void> {
-    const { error } = await this.client.auth.signOut()
+    const keepQuickAccess =
+      isBiometricsEnabled() && readBiometricSession()?.kind === 'supabase'
+    const { error } = await this.client.auth.signOut(
+      keepQuickAccess ? { scope: 'local' } : undefined,
+    )
     if (error) throw new Error(error.message)
+  }
+
+  async rememberBiometricSession(): Promise<void> {
+    const { data, error } = await this.client.auth.getSession()
+    if (error || !data.session?.access_token || !data.session.refresh_token) {
+      throw new Error('No hay sesión activa')
+    }
+    saveBiometricSession({
+      kind: 'supabase',
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+    })
+  }
+
+  async restoreBiometricSession(): Promise<User> {
+    const saved = readBiometricSession()
+    if (!saved || saved.kind !== 'supabase') {
+      throw new Error(BIOMETRIC_SESSION_EXPIRED_MESSAGE)
+    }
+    const { error } = await this.client.auth.setSession({
+      access_token: saved.accessToken,
+      refresh_token: saved.refreshToken,
+    })
+    if (error) {
+      clearBiometricSession()
+      throw new Error(BIOMETRIC_SESSION_EXPIRED_MESSAGE)
+    }
+    const user = await this.getCurrentUser()
+    if (!user) {
+      clearBiometricSession()
+      throw new Error(BIOMETRIC_SESSION_EXPIRED_MESSAGE)
+    }
+    return user
   }
 
   async resetPassword(email: string): Promise<void> {
@@ -1003,12 +1047,28 @@ export class SupabaseRepository implements GymRepository {
     bookingId: string,
     newSessionId: string,
   ): Promise<Booking> {
-    await this.cancelBooking(bookingId)
     const actor = await this.requireUser()
     const state = await this.fetchState()
     const old = state.bookings.find((b) => b.id === bookingId)
-    const userId = old?.userId ?? actor.id
-    const result = await this.createBooking(newSessionId, userId)
+    if (!old) throw new Error('Reserva no encontrada')
+    const next = state.sessions.find((s) => s.id === newSessionId)
+    if (!next) throw new Error('Sesión no encontrada')
+    if (new Date(next.startsAt).getTime() <= Date.now()) {
+      throw new Error('Esa clase ya empezó')
+    }
+    const previousStatus = old.status
+    await this.cancelBooking(bookingId)
+    const userId = old.userId ?? actor.id
+    let result: Booking | WaitlistEntry
+    try {
+      result = await this.createBooking(newSessionId, userId)
+    } catch (error) {
+      await this.client
+        .from('bookings')
+        .update({ status: previousStatus, cancelled_at: null })
+        .eq('id', bookingId)
+      throw error
+    }
     if ('position' in result) {
       throw new Error('La nueva sesión está llena; quedaste en lista de espera')
     }

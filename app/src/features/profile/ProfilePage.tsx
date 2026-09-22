@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react'
 import { useCurrentUser, useGym, useRefresh } from '@/data/RepositoryProvider'
+import { isBiometricAccessEnabled } from '@/lib/biometricAccess'
 import {
   disableBiometrics,
   getSavedBiometricUser,
@@ -84,6 +85,13 @@ export function ProfilePage() {
         setErrorMsg('Este dispositivo no confirmó la biometría.')
         return
       }
+      try {
+        await repo.rememberBiometricSession?.()
+      } catch {
+        disableBiometrics()
+        setErrorMsg('No se pudo guardar el acceso rápido en este dispositivo.')
+        return
+      }
       setBioActive(true)
       setSuccessMsg('Face ID / Huella configurada exitosamente para inicio de sesión')
     }
@@ -123,7 +131,11 @@ export function ProfilePage() {
     <div className="space-y-6 max-w-4xl">
       <PageHeader
         title="Mi Perfil"
-        subtitle="Información de cuenta, ficha antropométrica y seguridad biométrica"
+        subtitle={
+          isBiometricAccessEnabled()
+            ? 'Información de cuenta, ficha antropométrica y seguridad biométrica'
+            : 'Información de cuenta y ficha antropométrica'
+        }
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -230,7 +242,7 @@ export function ProfilePage() {
         </Card>
       </div>
 
-      {/* Biometric Security Card */}
+      {isBiometricAccessEnabled() ? (
       <Card className="p-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -259,6 +271,7 @@ export function ProfilePage() {
           </Button>
         </div>
       </Card>
+      ) : null}
 
       {/* Detail information / Edit Form */}
       {isEditing ? (
