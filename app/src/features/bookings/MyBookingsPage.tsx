@@ -7,12 +7,14 @@ import { formatSessionWhen } from '@/lib/format'
 import {
   useAppData,
   useCurrentUser,
+  useGym,
   useRefresh,
   useRepo,
 } from '@/data/RepositoryProvider'
 import { ZONE_LABELS, type MembershipPlan, type Session } from '@/domain/models'
 import { canBookZone } from '@/domain/rules'
 import { selectMyMembership } from '@/app/store'
+import { ButtonLink } from '@/ui/ButtonLink'
 import {
   Badge,
   Button,
@@ -20,13 +22,16 @@ import {
   EmptyState,
   PageHeader,
   Select,
+  SkeletonCard,
 } from '@/ui/primitives'
+import { TicketCheck } from 'lucide-react'
 
 export function MyBookingsPage() {
-  const user = useCurrentUser()!
+  const user = useCurrentUser()
   const data = useAppData()
   const repo = useRepo()
   const refresh = useRefresh()
+  const { loading } = useGym()
   const [msg, setMsg] = useState('')
   const [qrMap, setQrMap] = useState<Record<string, string>>({})
   const [rescheduleId, setRescheduleId] = useState<string | null>(null)
@@ -34,7 +39,9 @@ export function MyBookingsPage() {
 
   const mine = useMemo(
     () =>
-      data.bookings
+      !user
+        ? []
+        : data.bookings
         .filter((b) => b.userId === user.id && b.status !== 'cancelled')
         .map((b) => ({
           booking: b,
@@ -48,7 +55,7 @@ export function MyBookingsPage() {
         .sort((a, b) =>
           (a.session?.startsAt ?? '').localeCompare(b.session?.startsAt ?? ''),
         ),
-    [data, user.id],
+    [data, user],
   )
 
   useEffect(() => {
@@ -72,18 +79,34 @@ export function MyBookingsPage() {
     }
   }, [mine])
 
+  if (!user) {
+    return (
+      <div>
+        <PageHeader
+          title="Tus clases"
+          subtitle="QR, cancelar o cambiar hora. Para una clase nueva, ve a Reservar."
+        />
+        <SkeletonCard />
+      </div>
+    )
+  }
+
   return (
     <div>
       <PageHeader
-        title="Mis reservas"
-        subtitle="Cancelar, reagendar y mostrar QR de check-in"
+        title="Tus clases"
+        subtitle="QR, cancelar o cambiar hora. Para una clase nueva, ve a Reservar."
       />
       {msg ? <p className="mb-3 text-sm text-acc">{msg}</p> : null}
 
-      {mine.length === 0 ? (
+      {loading && mine.length === 0 ? (
+        <SkeletonCard />
+      ) : mine.length === 0 ? (
         <EmptyState
-          title="Sin reservas"
-          description="Explora el catálogo o la agenda para reservar una clase."
+          title="Todavía no apartaste ninguna clase"
+          description="Las clases se reservan en Reservar. Cuando apartes una, el QR sale aquí."
+          icon={<TicketCheck className="h-6 w-6" />}
+          action={<ButtonLink to="/agenda">Ir a Reservar</ButtonLink>}
         />
       ) : (
         <div className="space-y-3">

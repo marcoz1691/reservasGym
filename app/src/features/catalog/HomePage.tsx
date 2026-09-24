@@ -9,8 +9,6 @@ import {
   Dumbbell,
   Plus,
   Sparkles,
-  TicketCheck,
-  TrendingUp,
 } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
 import { ZONE_LABELS } from '@/domain/models'
@@ -125,7 +123,7 @@ export function HomePage() {
             {canBook ? (
               <Link to="/reservas" className="mt-4 inline-block">
                 <Button variant="primary" size="sm">
-                  Ver mis reservas
+                  Ver mis clases
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
@@ -140,66 +138,86 @@ export function HomePage() {
       ) : !membership ? (
         <WelcomeNoPlanCard onlinePayEnabled={isOnlinePayEnabled()} />
       ) : (
-        <Card className="flex flex-col items-start gap-3 border-dashed sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-display text-lg font-bold text-ink">
-              Sin reservas próximas
-            </p>
-            <p className="text-sm text-ink-3">
-              Agenda tu próxima sesión en cualquiera de las áreas.
-            </p>
+        <div className="relative overflow-hidden rounded-3xl border border-line bg-bg-2 shadow-2xl">
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-acc" />
+          <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-acc/10 blur-3xl" />
+          <div className="relative flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+            <div>
+              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-acc">
+                Agenda libre
+              </p>
+              <p className="mt-2 font-display text-2xl font-black tracking-tight text-ink">
+                Sin clases próximas
+              </p>
+              <p className="mt-1 text-sm text-ink-2">
+                Aparta tu próxima sesión en Reservar.
+              </p>
+            </div>
+            <Link to={canBook ? '/agenda' : '/explorar'}>
+              <Button variant="primary" size="lg">
+                {canBook ? 'Reservar clase' : 'Explorar áreas'}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
-          <Link to={canBook ? '/agenda' : '/explorar'}>
-            <Button variant="primary" size="sm">
-              {canBook ? 'Explorar agenda' : 'Explorar áreas'}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-        </Card>
+        </div>
       )}
 
-      {/* Métricas */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard
-          icon={<TicketCheck className="h-4 w-4" />}
-          label="Reservas activas"
-          value={String(mine.length)}
-        />
-        <StatCard
-          icon={<Dumbbell className="h-4 w-4" />}
-          label="Áreas disponibles"
-          value={String(data.zones.length)}
-        />
-        <StatCard
-          icon={<TrendingUp className="h-4 w-4" />}
-          label="Último peso"
-          value={lastWeight ? `${lastWeight.weightKg} kg` : '—'}
-        />
-      </div>
-
-      {/* Accesos rápidos */}
-      <div className="flex flex-wrap gap-2">
-        {canBook ? (
-          <ActionChip to="/agenda" icon={<CalendarPlus className="h-4 w-4" />}>
-            Reservar clase
+      <section
+        aria-label="Tu actividad"
+        className="overflow-hidden rounded-3xl border border-line bg-bg-2 shadow-2xl"
+      >
+        <div className="grid divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <PulseLink
+            to={canBook ? '/reservas' : '/explorar'}
+            label="Reservas activas"
+            value={String(mine.length)}
+            hint={bookingHint(mine.length)}
+          />
+          <PulseLink
+            to="/explorar"
+            label="Áreas disponibles"
+            value={String(data.zones.length)}
+            hint="En el complejo"
+          />
+          <PulseLink
+            to="/peso"
+            label="Último peso"
+            value={lastWeight ? String(lastWeight.weightKg) : '—'}
+            unit={lastWeight ? 'kg' : undefined}
+            hint={
+              lastWeight
+                ? formatDistanceToNow(parseISO(lastWeight.measuredAt), {
+                    locale: es,
+                    addSuffix: true,
+                  })
+                : 'Todavía sin registro'
+            }
+          />
+        </div>
+        <div className="flex flex-wrap gap-2 border-t border-line px-4 py-3 sm:px-5">
+          {canBook ? (
+            <ActionChip to="/agenda" icon={<CalendarPlus className="h-4 w-4" />}>
+              Reservar clase
+            </ActionChip>
+          ) : (
+            <ActionChip to="/explorar" icon={<Dumbbell className="h-4 w-4" />}>
+              Explorar áreas
+            </ActionChip>
+          )}
+          <ActionChip to="/peso" icon={<Plus className="h-4 w-4" />}>
+            Registrar peso
           </ActionChip>
-        ) : (
-          <ActionChip to="/explorar" icon={<Dumbbell className="h-4 w-4" />}>
-            Explorar áreas
+          <ActionChip to="/membresia" icon={<CreditCard className="h-4 w-4" />}>
+            Mi plan
           </ActionChip>
-        )}
-        <ActionChip to="/peso" icon={<Plus className="h-4 w-4" />}>
-          Registrar peso
-        </ActionChip>
-        <ActionChip to="/membresia" icon={<CreditCard className="h-4 w-4" />}>
-          Mi plan
-        </ActionChip>
-      </div>
+        </div>
+      </section>
 
       {/* Próximas sesiones */}
       <section>
         <div className="mb-3 flex items-end justify-between">
-          <h2 className="font-display text-lg font-bold text-ink">
+          <h2 className="font-display text-xl font-black tracking-tight text-ink">
             Próximas sesiones
           </h2>
           {canBook ? (
@@ -280,27 +298,41 @@ export function HomePage() {
   )
 }
 
-function StatCard({
-  icon,
+function bookingHint(count: number): string {
+  if (count === 0) return 'Ninguna apartada'
+  if (count === 1) return 'Una clase en tu agenda'
+  return `${count} clases en tu agenda`
+}
+
+function PulseLink({
+  to,
   label,
   value,
+  unit,
+  hint,
 }: {
-  icon: ReactNode
+  to: string
   label: string
   value: string
+  unit?: string
+  hint: string
 }) {
   return (
-    <Card className="p-4">
-      <div className="flex items-center gap-2 text-ink-3">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-surface-elevated text-acc">
-          {icon}
-        </span>
-        <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
-      </div>
-      <div className="mt-2 font-display text-3xl font-extrabold tracking-tight text-ink">
+    <Link
+      to={to}
+      className="focus-ring group block px-5 py-5 transition-colors hover:bg-surface/60 sm:px-6 sm:py-6"
+    >
+      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-ink-3">
+        {label}
+      </p>
+      <p className="mt-2 flex items-baseline gap-1.5 font-display text-4xl font-black tabular-nums tracking-tight text-ink">
         {value}
-      </div>
-    </Card>
+        {unit ? (
+          <span className="text-base font-bold text-ink-3">{unit}</span>
+        ) : null}
+      </p>
+      <p className="mt-1 text-sm text-ink-2">{hint}</p>
+    </Link>
   )
 }
 

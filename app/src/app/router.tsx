@@ -4,7 +4,17 @@ import { AppLayout } from './AppLayout'
 import { RequireAuth } from './RequireAuth'
 import { NotFoundPage } from './NotFoundPage'
 import { useCurrentUser, useGym } from '@/data/RepositoryProvider'
-import { Spinner } from '@/ui/primitives'
+import { Skeleton, SkeletonCard, Spinner } from '@/ui/primitives'
+
+function RouteFallback() {
+  return (
+    <div className="space-y-3 p-1" aria-busy="true" aria-label="Cargando">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-4 w-72" />
+      <SkeletonCard />
+    </div>
+  )
+}
 
 // Carga diferida por ruta: cada página entra en su propio chunk y solo se
 // descarga cuando el usuario navega a ella.
@@ -90,7 +100,7 @@ function RootRedirect() {
 
 export function AppRouter() {
   return (
-    <Suspense fallback={<Spinner />}>
+    <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         {/* Pública: se llega desde el enlace del correo, sin sesión iniciada. */}

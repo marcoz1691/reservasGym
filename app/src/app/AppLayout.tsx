@@ -34,8 +34,8 @@ import { Button } from '@/ui/primitives'
 
 const memberDesktopNav = [
   { to: '/', label: 'Inicio', icon: Home, end: true },
-  { to: '/agenda', label: 'Agenda', icon: CalendarDays },
-  { to: '/reservas', label: 'Mis Reservas', icon: TicketCheck },
+  { to: '/agenda', label: 'Reservar', icon: CalendarDays },
+  { to: '/reservas', label: 'Mis clases', icon: TicketCheck },
   { to: '/membresia', label: 'Mi Plan', icon: CreditCard },
   { to: '/peso', label: 'Medidas corporales', icon: TrendingUp },
   { to: '/explorar', label: 'Explorar Áreas', icon: Dumbbell },
@@ -48,7 +48,7 @@ const staffDesktopNav = [
   { to: '/admin/planes', label: 'Planes', icon: Layers },
   { to: '/admin/sesiones', label: 'Sesiones', icon: CalendarClock },
   { to: '/check-in', label: 'Escanear Check-In', icon: QrCode },
-  { to: '/agenda', label: 'Agenda General', icon: CalendarDays },
+  { to: '/agenda', label: 'Reservar clases', icon: CalendarDays },
   { to: '/explorar', label: 'Sesiones & Áreas', icon: Dumbbell },
   { to: '/peso', label: 'Medidas corporales', icon: TrendingUp },
   { to: '/admin/marca', label: 'Marca & Config', icon: Settings },
@@ -58,8 +58,8 @@ const staffDesktopNav = [
 // 5 tabs for Mobile
 const memberMobileTabs = [
   { to: '/', label: 'Inicio', icon: Home, end: true },
-  { to: '/agenda', label: 'Agenda', icon: CalendarDays },
-  { to: '/reservas', label: 'Reservas', icon: TicketCheck },
+  { to: '/agenda', label: 'Reservar', icon: CalendarDays },
+  { to: '/reservas', label: 'Mis clases', icon: TicketCheck },
   { to: '/membresia', label: 'Mi Plan', icon: CreditCard },
   { to: '/peso', label: 'Medidas', icon: TrendingUp },
 ]
@@ -75,7 +75,7 @@ const staffMobileTabs = [
   { to: '/admin', label: 'Admin', icon: LayoutDashboard, end: true },
   { to: '/admin/cobros', label: 'Cobros', icon: CreditCard },
   { to: '/check-in', label: 'Check-In', icon: QrCode },
-  { to: '/agenda', label: 'Agenda', icon: CalendarDays },
+  { to: '/agenda', label: 'Reservar', icon: CalendarDays },
   { to: '/peso', label: 'Medidas', icon: TrendingUp },
 ]
 
