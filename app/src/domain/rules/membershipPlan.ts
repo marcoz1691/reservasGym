@@ -68,6 +68,8 @@ export interface PlanOffer {
   plan: MembershipPlan
   familyId: PlanFamilyId
   durationLabel: string
+  /** Meses que cubre la oferta; null en pases diarios o duraciones sueltas. */
+  months: number | null
   badge: string | null
   equivalentPerMonthCents: number | null
   featured: boolean
@@ -136,6 +138,7 @@ export function describePlanOffer(plan: MembershipPlan): PlanOffer {
     plan,
     familyId: planFamilyId(plan.name),
     durationLabel: known?.label ?? `${plan.durationDays} días`,
+    months,
     badge: known?.badge ?? null,
     equivalentPerMonthCents:
       months && months > 0 ? Math.round(plan.priceCents / months) : null,

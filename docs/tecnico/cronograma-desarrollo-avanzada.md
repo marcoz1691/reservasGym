@@ -6,6 +6,7 @@
 **Project Manager / Lead Architect:** Marco Vinicio Zurita Rojas  
 **Sponsor / Product Owner:** William Ricardo Ramírez Salguero (Zona Cero)  
 **Presupuesto Contractual:** $6.800,00 USD (IVA 15% incluido) — pagos 30/50/20: $2.040 / $3.400 / $1.360  
+**Anexo extra (cotización COT-ZC-REC-2026-001 rev. 5):** recurrencia esencial Pagomedios · **$300,00 USD IVA incluido** — 50/50: $150,00 / $150,00 · Sprints 3–4  
 **Fecha de Firma del Contrato:** 28 de Agosto de 2026 (Quito, parroquia Calderón)  
 **Fecha de Línea Base (Start Baseline):** 01 de Septiembre de 2026  
 **Fecha de Entrega Técnica (Fast-Track Target):** 20 de Noviembre de 2026 (Semana 12)  
@@ -48,7 +49,8 @@ Entregar y poner en producción la solución digital integral para **Zona Cero P
  │    ├── 1.2.1 Catálogo de Planes y Duraciones (Reglas de Dominio TDD)
  │    ├── 1.2.2 Panel de Cobros Recepción (Efectivo, Transferencia, Datafast POS)
  │    ├── 1.2.3 Pantalla Socio "Mi Plan" e Historial de Pagos
- │    └── 1.2.4 Gate de Seguridad de Reservas (Validación de Vencimiento y Gracia 3 días)
+ │    ├── 1.2.4 Gate de Seguridad de Reservas (Validación de Vencimiento y Gracia 3 días)
+ │    └── 1.2.5 Recurrencia Pagomedios (anexo COT-ZC-REC-2026-001 · Sprints 3–4)
  ├── 1.3 MOTOR DE RESERVAS MULTIZONA Y CONTROL DE ASISTENCIA
  │    ├── 1.3.1 Parametrización 8 Áreas en Timezone Ecuador (America/Guayaquil)
  │    ├── 1.3.2 Motor de Agendamiento, Aforos, Solapamientos y Lista de Espera
@@ -81,8 +83,8 @@ Entregar y poner en producción la solución digital integral para **Zona Cero P
 |---|---|:---:|:---:|---|
 | **Sprint 1: Base de Datos & Auth** | 01 Sep - 13 Sep | 13 | Inicio | BD Supabase desplegada, tablas relacionales con RLS, login JWT y recuperación de clave funcional. |
 | **Sprint 2: Membresías & Planes** | 14 Sep - 24 Sep | 11 | Sprint 1 | Catálogo de planes, estados `active`/`grace`/`expired`, pruebas unitarias TDD aprobadas. |
-| **Sprint 3: Cobros POS & Gate** | 25 Sep - 04 Oct | 10 | Sprint 2 | Panel de cobros en recepción (Datafast físico/efectivo), vista socio "Mi Plan" y bloqueo a vencidos. |
-| **Sprint 4: Agenda 8 Áreas & QR** | 05 Oct - 15 Oct | 11 | Sprint 3 | Motor de reservas en horario Ecuador (UTC-5), control de aforos, waitlist y generación de Check-in QR. |
+| **Sprint 3: Cobros POS, Gate y arranque recurrencia** | 25 Sep - 04 Oct | 10 | Sprint 2 | Panel de cobros en recepción (Datafast físico/efectivo), vista socio "Mi Plan", bloqueo a vencidos, botón Pagomedios (pago único) y **modelo de suscripción** (reglas de alta, fallo y cancelación). |
+| **Sprint 4: Agenda 8 Áreas, QR y cierre recurrencia esencial** | 05 Oct - 15 Oct | 11 | Sprint 3 | Motor de reservas en horario Ecuador (UTC-5), aforos, waitlist y Check-in QR. **Anexo 1.2.5 esencial:** aviso de cargo Pagomedios y extender membresía (sin cancelar en app ni panel de recepción). |
 | **Sprint 5: Antropometría & UI/UX** | 16 Oct - 28 Oct | 13 | Sprint 4 | Módulo de peso/IMC, design system premium oscuro y branding corporativo de Zona Cero aplicado. |
 | **Sprint 6: Staging QA & Capacitación** | 29 Oct - 15 Nov | 18 | Sprint 5 | App desplegada en Staging, pruebas E2E en dispositivos reales y personal de recepción capacitado. |
 | **★ HITO FAST-TRACK: ENVÍO A TIENDAS** | **20 Nov 2026** | **Milestone** | **Sprint 6** | **Binarios Capacitor subidos a App Store Connect y Google Play Console.** |
@@ -112,6 +114,7 @@ $$\text{Ruta Crítica: } \text{WBS 1.1.2} \rightarrow \text{1.1.3} \rightarrow \
 | **R3** | Inconsistencia en cobros por falta de conectividad en recepción | Baja | Medio | **Baja** | Repositorio offline-first con sincronización automática en cuanto recupera conexión. | Lead Dev |
 | **R4** | Resistencia al cambio del personal de recepción con el nuevo panel | Media | Medio | **Media** | Capacitación práctica anticipada en Semana 11 y manual operativo simplificado. | PM / Cliente |
 | **R5** | Desfase horario en reservas de socios | Baja | Alto | **Baja** | Fijación estricta de zona horaria `America/Guayaquil` (UTC-5) en base de datos y clientes. | Lead Dev |
+| **R6** | Pagomedios no entrega a tiempo token/avisos de recurrencia | Media | Alto | **Alta** | El anexo 1.2.5 arranca en Sprint 3 con el modelo; el enrolamiento real (Sprint 4) espera credenciales. Si no llegan al 05 Oct, el módulo queda en staging mock y no bloquea Agenda/QR ni el Go-Live del 31 Dic. | PM / Cliente / Pagomedios |
 
 ---
 
@@ -124,6 +127,7 @@ $$\text{Ruta Crítica: } \text{WBS 1.1.2} \rightarrow \text{1.1.3} \rightarrow \
 | **Arquitectura, BD & Auth** | **R / A** | **I** | **I** | - |
 | **Definición de Planes y Horarios** | **C** | **R / A** | **C** | - |
 | **Motor de Membresías & Cobros** | **R / A** | **C** | **I** | - |
+| **Recurrencia Pagomedios (anexo 1.2.5)** | **R / A** | **A** | **I** | - |
 | **Reservas, QR y Antropometría** | **R / A** | **I** | **I** | - |
 | **Aporte de Logotipo y Marca** | **C** | **R / A** | - | - |
 | **Pruebas de Aceptación (Staging)** | **R** | **A** | **C** | - |
@@ -139,10 +143,11 @@ $$\text{Ruta Crítica: } \text{WBS 1.1.2} \rightarrow \text{1.1.3} \rightarrow \
 
 1. **Checkpoints Semanales:** Reporte de avance y estado de tareas (vía WhatsApp / Correo).
 2. **Sprint Demos (Bisemanales):** Demostración interactiva en videollamada con el cliente al finalizar cada hito funcional.
-3. **Quality Gate 1 (04 Octubre):** Aprobación del módulo de cobranzas y membresías.
-4. **Quality Gate 2 (15 Noviembre):** Aprobación formal de la App en Staging previa a la compilación de producción.
-5. **Quality Gate 3 (20 Noviembre):** Firma de autorización de subida a tiendas de aplicaciones.
-6. **Quality Gate 4 (31 Diciembre):** Firma de Acta de Entrega y Cierre Definitivo del Proyecto.
+3. **Quality Gate 1 (04 Octubre):** Aprobación del módulo de cobranzas, membresías, botón Pagomedios (pago único) y modelo de suscripción (arranque 1.2.5).
+4. **Quality Gate 1b (15 Octubre):** Aprobación del débito automático en staging (enrolar, cargo ok/fallo, cancelar, panel recepción). Condicionado a token de recurrencia Pagomedios (R6).
+5. **Quality Gate 2 (15 Noviembre):** Aprobación formal de la App en Staging previa a la compilación de producción.
+6. **Quality Gate 3 (20 Noviembre):** Firma de autorización de subida a tiendas de aplicaciones.
+7. **Quality Gate 4 (31 Diciembre):** Firma de Acta de Entrega y Cierre Definitivo del Proyecto.
 
 ---
 
