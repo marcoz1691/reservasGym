@@ -26,7 +26,8 @@ import {
   hasOverlap,
   isCheckInWindow,
   nextWaitlistPosition,
-  promoteFirstWaitlist,
+  pickWaitlistPromotion,
+  reindexWaitlist,
 } from '../domain/rules'
 import type { AuthCredentials, GymRepository } from './types'
 import { createSeedState, DEMO_PASSWORD } from './seed'
@@ -553,13 +554,7 @@ export class LocalRepository implements GymRepository {
 
     const subject = this.state.users.find((u) => u.id === userId)
     if (subject?.role === 'member' || actor.role === 'member') {
-      const membership = (this.state.memberships ?? []).find(
-        (m) => m.userId === userId,
-      )
-      const plan = membership
-        ? (this.state.membershipPlans ?? []).find((p) => p.id === membership.planId)
-        : undefined
-      const allowed = assertMemberBookingAllowed(membership, plan, session.zoneId)
+      const allowed = this.memberBookingAllowed(userId, session.zoneId)
       if (!allowed.ok) throw new Error(allowed.reason)
     }
 
@@ -619,30 +614,8 @@ export class LocalRepository implements GymRepository {
       (w) => !(w.sessionId === booking.sessionId && w.userId === booking.userId),
     )
 
-    if (wasConfirmed) {
-      const promoted = promoteFirstWaitlist(this.state.waitlist, booking.sessionId)
-      if (promoted) {
-        this.state.waitlist = this.state.waitlist.filter((w) => w.id !== promoted.id)
-        const waitBooking = this.state.bookings.find(
-          (b) =>
-            b.sessionId === booking.sessionId &&
-            b.userId === promoted.userId &&
-            b.status === 'waitlisted',
-        )
-        if (waitBooking) waitBooking.status = 'confirmed'
-        else {
-          this.state.bookings.push({
-            id: uid('bk'),
-            sessionId: booking.sessionId,
-            userId: promoted.userId,
-            status: 'confirmed',
-            createdAt: new Date().toISOString(),
-            cancelledAt: null,
-            checkInCode: uid('QR').toUpperCase(),
-          })
-        }
-      }
-    }
+    if (wasConfirmed) this.promoteFromWaitlist(booking.sessionId)
+    this.state.waitlist = reindexWaitlist(this.state.waitlist, booking.sessionId)
 
     const session = this.state.sessions.find((s) => s.id === booking.sessionId)
     if (session) {
@@ -652,6 +625,65 @@ export class LocalRepository implements GymRepository {
     }
     this.persistState()
     return { ...booking }
+  }
+
+  private memberBookingAllowed(userId: string, zoneId: string) {
+    const membership = (this.state.memberships ?? []).find((m) => m.userId === userId)
+    const plan = membership
+      ? (this.state.membershipPlans ?? []).find((p) => p.id === membership.planId)
+      : undefined
+    return assertMemberBookingAllowed(membership, plan, zoneId)
+  }
+
+  /**
+   * Sube al primero elegible de la cola. Quien se solapa con otra reserva o ya
+   * no puede reservar sale de la cola y su reserva en espera se cancela (ZCAPP-54).
+   */
+  private promoteFromWaitlist(sessionId: string): void {
+    const session = this.state.sessions.find((s) => s.id === sessionId)
+    if (!session) return
+    const { promoted, skipped } = pickWaitlistPromotion(
+      this.state.waitlist,
+      sessionId,
+      (entry) => {
+        if (hasOverlap(this.state.sessions, this.state.bookings, entry.userId, session)) {
+          return false
+        }
+        const subject = this.state.users.find((u) => u.id === entry.userId)
+        return subject?.role !== 'member' || this.memberBookingAllowed(entry.userId, session.zoneId).ok
+      },
+    )
+
+    const leaving = new Set([...skipped, promoted].map((w) => w?.id))
+    this.state.waitlist = this.state.waitlist.filter((w) => !leaving.has(w.id))
+    const waitingBooking = (userId: string) =>
+      this.state.bookings.find(
+        (b) => b.sessionId === sessionId && b.userId === userId && b.status === 'waitlisted',
+      )
+
+    const now = new Date().toISOString()
+    for (const entry of skipped) {
+      const skippedBooking = waitingBooking(entry.userId)
+      if (skippedBooking) {
+        skippedBooking.status = 'cancelled'
+        skippedBooking.cancelledAt = now
+      }
+    }
+
+    if (!promoted) return
+    const promotedBooking = waitingBooking(promoted.userId)
+    if (promotedBooking) promotedBooking.status = 'confirmed'
+    else {
+      this.state.bookings.push({
+        id: uid('bk'),
+        sessionId,
+        userId: promoted.userId,
+        status: 'confirmed',
+        createdAt: now,
+        cancelledAt: null,
+        checkInCode: uid('QR').toUpperCase(),
+      })
+    }
   }
 
   async rescheduleBooking(

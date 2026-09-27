@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { nextWaitlistPosition, nextWaitlistPromotion } from './index'
+import {
+  nextWaitlistPosition,
+  nextWaitlistPromotion,
+  pickWaitlistPromotion,
+} from './index'
 import type { WaitlistEntry } from '../models'
 
 const entries: WaitlistEntry[] = [
@@ -26,5 +30,17 @@ describe('waitlist', () => {
 
   it('assigns next position', () => {
     expect(nextWaitlistPosition(entries, 's1')).toBe(3)
+  })
+
+  it('salta a quien no es elegible y promueve al siguiente (ZCAPP-54)', () => {
+    const result = pickWaitlistPromotion(entries, 's1', (e) => e.userId !== 'u2')
+    expect(result.promoted?.id).toBe('a')
+    expect(result.skipped.map((e) => e.id)).toEqual(['b'])
+  })
+
+  it('sin elegibles no promueve a nadie y devuelve toda la cola', () => {
+    const result = pickWaitlistPromotion(entries, 's1', () => false)
+    expect(result.promoted).toBeNull()
+    expect(result.skipped.map((e) => e.id)).toEqual(['b', 'a'])
   })
 })

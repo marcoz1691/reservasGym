@@ -179,7 +179,7 @@ function mapSession(row: {
   }
 }
 
-function mapBooking(row: {
+type BookingRow = {
   id: string
   session_id: string
   user_id: string
@@ -187,7 +187,22 @@ function mapBooking(row: {
   created_at: string
   cancelled_at: string | null
   check_in_code: string
-}): Booking {
+}
+
+type WaitlistRow = {
+  id: string
+  session_id: string
+  user_id: string
+  position: number
+  created_at: string
+}
+
+/** PostgREST no encuentra la función: booking-rpc.sql aún no se aplicó. */
+function isMissingRpc(error: { code?: string }): boolean {
+  return error.code === 'PGRST202' || error.code === '42883'
+}
+
+function mapBooking(row: BookingRow): Booking {
   return {
     id: row.id,
     sessionId: row.session_id,
@@ -199,13 +214,7 @@ function mapBooking(row: {
   }
 }
 
-function mapWaitlist(row: {
-  id: string
-  session_id: string
-  user_id: string
-  position: number
-  created_at: string
-}): WaitlistEntry {
+function mapWaitlist(row: WaitlistRow): WaitlistEntry {
   return {
     id: row.id,
     sessionId: row.session_id,
@@ -871,7 +880,44 @@ export class SupabaseRepository implements GymRepository {
     return (data ?? []).map(mapBooking)
   }
 
+  /**
+   * Cupo, lista de espera y promoción se deciden en la base (booking-rpc.sql),
+   * bloqueando la sesión: dos reservas simultáneas no pueden pasarse del aforo
+   * (ZCAPP-53) y la promoción revisa solapamiento y membresía (ZCAPP-54).
+   */
   async createBooking(
+    sessionId: string,
+    userId: string,
+  ): Promise<Booking | WaitlistEntry> {
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('book_session', {
+      p_session_id: sessionId,
+      p_user_id: userId,
+    })
+    if (error) {
+      if (isMissingRpc(error)) return this.createBookingLegacy(sessionId, userId)
+      throw new Error(error.message)
+    }
+    const result = data as { booking?: BookingRow; waitlist?: WaitlistRow }
+    if (result.waitlist) return mapWaitlist(result.waitlist)
+    return mapBooking(result.booking!)
+  }
+
+  async cancelBooking(bookingId: string): Promise<Booking> {
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('cancel_booking', {
+      p_booking_id: bookingId,
+    })
+    if (error) {
+      if (isMissingRpc(error)) return this.cancelBookingLegacy(bookingId)
+      throw new Error(error.message)
+    }
+    return mapBooking(data as BookingRow)
+  }
+
+  // TODO: borrar los *Legacy cuando booking-rpc.sql esté aplicado en staging y prod.
+  // Sin esas funciones en la base se mantiene el comportamiento anterior.
+  private async createBookingLegacy(
     sessionId: string,
     userId: string,
   ): Promise<Booking | WaitlistEntry> {
@@ -975,7 +1021,7 @@ export class SupabaseRepository implements GymRepository {
     return booking
   }
 
-  async cancelBooking(bookingId: string): Promise<Booking> {
+  private async cancelBookingLegacy(bookingId: string): Promise<Booking> {
     const actor = await this.requireUser()
     const state = await this.fetchState()
     const booking = state.bookings.find((b) => b.id === bookingId)

@@ -57,6 +57,7 @@ npm run provision:staging
 En **SQL Editor** del proyecto staging, ejecutar en orden:
 
 1. `app/supabase/schema.sql` — tablas + RLS + triggers
+1. `app/supabase/booking-rpc.sql` — reservas y lista de espera atómicas (`book_session`, `cancel_booking`)
 2. `app/supabase/seed.sql` — catálogo Zona Cero (8 áreas, planes demo)
 3. `app/supabase/staging-users.sql` — roles staff/admin *(después del paso 3)*
 

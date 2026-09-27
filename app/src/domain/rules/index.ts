@@ -84,6 +84,27 @@ export function promoteFirstWaitlist(
 
 export const nextWaitlistPromotion = promoteFirstWaitlist
 
+/**
+ * Primer socio de la cola que puede pasar a confirmado. Los que ya no son
+ * elegibles (se solapan con otra reserva o su plan no les permite reservar)
+ * vuelven en `skipped` para sacarlos de la cola (ZCAPP-54).
+ */
+export function pickWaitlistPromotion(
+  waitlist: WaitlistEntry[],
+  sessionId: string,
+  isEligible: (entry: WaitlistEntry) => boolean,
+): { promoted: WaitlistEntry | null; skipped: WaitlistEntry[] } {
+  const skipped: WaitlistEntry[] = []
+  const ordered = waitlist
+    .filter((w) => w.sessionId === sessionId)
+    .sort((a, b) => a.position - b.position)
+  for (const entry of ordered) {
+    if (isEligible(entry)) return { promoted: entry, skipped }
+    skipped.push(entry)
+  }
+  return { promoted: null, skipped }
+}
+
 export function reindexWaitlist(
   waitlist: WaitlistEntry[],
   sessionId: string,
