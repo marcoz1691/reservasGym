@@ -112,7 +112,7 @@ export function Input({
           onBeforeInput={(e) => {
             if (!isNumber) return
             const data = e.nativeEvent.data
-            if (data && /[eE+\-]|[^\d.]/.test(data)) {
+            if (data && /[eE+\-]|[^\d.,]/.test(data)) {
               e.preventDefault()
             }
           }}

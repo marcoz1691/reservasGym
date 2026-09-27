@@ -98,6 +98,12 @@ describe('bloqueo de teclas en type=number', () => {
     expect(sanitizeDecimalInput('1.2.3')).toBe('1.23')
     expect(sanitizeDecimalInput('-40')).toBe('40')
   })
+
+  it('sanitizeDecimalInput acepta coma decimal (ZCAPP-52)', () => {
+    expect(sanitizeDecimalInput('68,5')).toBe('68.5')
+    expect(sanitizeDecimalInput('68,')).toBe('68.')
+    expect(sanitizeDecimalInput('1,2.3')).toBe('1.23')
+  })
 })
 
 describe('applyDecimalRangeValidity', () => {
