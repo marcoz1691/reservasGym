@@ -38,6 +38,7 @@ import {
   nextWaitlistPosition,
   promoteFirstWaitlist,
 } from '@/domain/rules'
+import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
 import type { AuthCredentials, GymRepository } from './types'
 import { isSupabaseEnvConfigured } from './selectRepositoryBackend'
 import { scopeGymState } from './scopeGymState'
@@ -664,20 +665,39 @@ export class SupabaseRepository implements GymRepository {
     return user
   }
 
+  /**
+   * Envía el correo de recuperación. La plantilla "Reset Password" de Supabase
+   * lleva el código ({{ .Token }}), no un enlace: así funciona igual dentro de
+   * la app nativa, donde un enlace a la web no vuelve a la app.
+   */
   async resetPassword(email: string): Promise<void> {
-    const { error } = await this.client.auth.resetPasswordForEmail(
-      email.trim(),
-      {
-        // Apunta a la pantalla donde el socio escribe la contraseña nueva.
-        // Esta URL debe estar en Authentication → URL Configuration →
-        // Redirect URLs del proyecto Supabase, o el enlace del correo falla.
-        redirectTo:
-          typeof window !== 'undefined'
-            ? `${window.location.origin}/recuperar`
-            : undefined,
-      },
-    )
+    const { error } = await this.client.auth.resetPasswordForEmail(email.trim())
     if (error) throw new Error(error.message)
+  }
+
+  async completePasswordReset(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<void> {
+    const { error: otpError } = await this.client.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: 'recovery',
+    })
+    if (otpError) throw new Error(RECOVERY_CODE_INVALID)
+
+    // El código ya abrió sesión: se cierra pase lo que pase, porque es de un
+    // solo uso y el socio debe entrar desde el login con la clave nueva.
+    const { error } = await this.client.auth.updateUser({ password: newPassword })
+    await this.client.auth.signOut()
+    if (error) {
+      throw new Error(
+        error.code === 'same_password'
+          ? 'La contraseña nueva debe ser distinta a la anterior. Pide un código nuevo e inténtalo otra vez.'
+          : error.message,
+      )
+    }
   }
 
   async updatePassword(newPassword: string): Promise<void> {
@@ -685,16 +705,6 @@ export class SupabaseRepository implements GymRepository {
       password: newPassword,
     })
     if (error) throw new Error(error.message)
-  }
-
-  /**
-   * Al abrir el enlace del correo, supabase-js canjea el token del hash
-   * por una sesión (detectSessionInUrl). Si hay sesión al entrar a
-   * /recuperar, el enlace era válido.
-   */
-  async hasRecoverySession(): Promise<boolean> {
-    const { data } = await this.client.auth.getSession()
-    return Boolean(data.session)
   }
 
   async deleteAccount(): Promise<void> {

@@ -29,6 +29,7 @@ import {
   pickWaitlistPromotion,
   reindexWaitlist,
 } from '../domain/rules'
+import { RECOVERY_CODE_INVALID } from '../domain/rules/password'
 import type { AuthCredentials, GymRepository } from './types'
 import { createSeedState, DEMO_PASSWORD } from './seed'
 import {
@@ -47,8 +48,24 @@ import {
 const STORAGE_KEY = 'reservasgym.intermedia.v2'
 const SESSION_KEY = 'reservasgym.session.v2'
 const CREDS_KEY = 'reservasgym.creds.v1'
-/** Solo demo: simula el enlace de recuperación que en prod manda Supabase. */
-const RECOVERY_KEY = 'reservasgym.recovery.v1'
+/** Solo demo: simula el código de recuperación que en prod llega por correo. */
+const RECOVERY_KEY = 'reservasgym.recovery.v2'
+
+type RecoveryPayload = { userId: string; code: string }
+
+function readRecovery(): RecoveryPayload | null {
+  try {
+    const raw = localStorage.getItem(RECOVERY_KEY)
+    return raw ? (JSON.parse(raw) as RecoveryPayload) : null
+  } catch {
+    return null
+  }
+}
+
+function newRecoveryCode(): string {
+  const n = crypto.getRandomValues(new Uint32Array(1))[0]! % 1_000_000
+  return String(n).padStart(6, '0')
+}
 /** Legacy key — cleared so plain user-id sessions cannot be forged. */
 const LEGACY_SESSION_KEY = 'reservasgym.sessionUserId'
 
@@ -344,22 +361,48 @@ export class LocalRepository implements GymRepository {
       // registrados permitiría enumerar socios.
       return
     }
-    // En demo no hay correo. Se marca al usuario como "en recuperación"
-    // para que /recuperar pueda simular el flujo completo sin Supabase.
-    localStorage.setItem(RECOVERY_KEY, user.id)
+    // En demo no hay correo: el código queda guardado y la pantalla lo muestra
+    // (peekRecoveryCode). Pedir otro reemplaza al anterior.
+    const payload: RecoveryPayload = { userId: user.id, code: newRecoveryCode() }
+    localStorage.setItem(RECOVERY_KEY, JSON.stringify(payload))
+  }
+
+  /** Solo demo: el código que en producción llegaría por correo. */
+  peekRecoveryCode(): string | null {
+    return readRecovery()?.code ?? null
+  }
+
+  async completePasswordReset(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<void> {
+    await this.ensureReady()
+    const recovery = readRecovery()
+    const user = this.state.users.find(
+      (u) => u.email.toLowerCase() === email.trim().toLowerCase(),
+    )
+    if (!recovery || !user || recovery.userId !== user.id || recovery.code !== code.trim()) {
+      throw new Error(RECOVERY_CODE_INVALID)
+    }
+    await this.writePassword(user.id, newPassword)
+    // Un solo uso, y sin sesión: el socio entra desde el login con la clave nueva.
+    localStorage.removeItem(RECOVERY_KEY)
+    this.clearSession()
+    this.persistState()
   }
 
   async updatePassword(newPassword: string): Promise<void> {
     await this.ensureReady()
-
-    // Puede venir de una sesión normal (cambio desde el perfil) o de una
-    // sesión de recuperación (volviendo del enlace).
-    const recoveringId = localStorage.getItem(RECOVERY_KEY)
-    const session = readSession()
-    const userId = recoveringId ?? session?.userId
-
+    const userId = readSession()?.userId
     if (!userId) throw new Error('No hay sesión activa')
+    await this.writePassword(userId, newPassword)
+    // Se vuelve a abrir la sesión de este dispositivo; las demás quedan cerradas.
+    await this.setSession(userId)
+    this.persistState()
+  }
 
+  private async writePassword(userId: string, newPassword: string): Promise<void> {
     const user = this.state.users.find((u) => u.id === userId)
     if (!user) throw new Error('Usuario no encontrado')
 
@@ -373,16 +416,6 @@ export class LocalRepository implements GymRepository {
       sessionToken: null,
     }
     writeCreds(creds)
-
-    localStorage.removeItem(RECOVERY_KEY)
-    // Deja la sesión abierta: tras fijar la contraseña el socio entra directo.
-    await this.setSession(userId)
-    this.persistState()
-  }
-
-  async hasRecoverySession(): Promise<boolean> {
-    await this.ensureReady()
-    return localStorage.getItem(RECOVERY_KEY) !== null
   }
 
   async deleteAccount(): Promise<void> {

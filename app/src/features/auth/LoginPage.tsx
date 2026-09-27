@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Fingerprint, ScanFace, Sparkles } from 'lucide-react'
 import {
   useAppData,
@@ -17,7 +17,6 @@ import {
 } from '@/lib/biometrics'
 import { displayFirstName } from '@/domain/rules'
 import { Button, Card, Input } from '@/ui/primitives'
-import { ForgotPasswordModal } from './ForgotPasswordModal'
 
 const IS_STAGING = import.meta.env.MODE === 'staging'
 const SHOW_DEMO_ACCESS = import.meta.env.DEV || IS_STAGING
@@ -41,14 +40,17 @@ export function LoginPage() {
   const { settings } = useAppData()
 
   const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [forgotModalOpen, setForgotModalOpen] = useState(false)
+  const navigate = useNavigate()
+  // Al volver de /recuperar con la contraseña ya cambiada.
+  const recoveredEmail = (useLocation().state as { recoveredEmail?: string } | null)
+    ?.recoveredEmail
 
   // Login fields — staging usa cuentas @zonacero.test (ver supabase/staging-users.sql)
   const [loginEmail, setLoginEmail] = useState(
-    SHOW_DEMO_ACCESS ? DEMO_ACCOUNTS.socio : '',
+    recoveredEmail ?? (SHOW_DEMO_ACCESS ? DEMO_ACCOUNTS.socio : ''),
   )
   const [loginPassword, setLoginPassword] = useState(
-    SHOW_DEMO_ACCESS ? DEMO_PASSWORD : '',
+    SHOW_DEMO_ACCESS && !recoveredEmail ? DEMO_PASSWORD : '',
   )
 
   // Register fields: Simple initial account creation
@@ -315,7 +317,9 @@ export function LoginPage() {
               <div className="mt-1.5 text-right">
                 <button
                   type="button"
-                  onClick={() => setForgotModalOpen(true)}
+                  onClick={() =>
+                    navigate('/recuperar', { state: { email: loginEmail } })
+                  }
                   className="text-xs text-acc hover:underline font-semibold"
                 >
                   ¿Olvidaste tu contraseña?
@@ -326,6 +330,12 @@ export function LoginPage() {
             {success ? (
               <p className="rounded-xl border border-success/40 bg-success-soft p-3 text-xs text-success font-semibold">
                 {success}
+              </p>
+            ) : null}
+
+            {recoveredEmail && !error ? (
+              <p className="rounded-xl border border-success/40 bg-success-soft p-3 text-xs text-success font-semibold">
+                Tu contraseña se actualizó. Entra con la nueva.
               </p>
             ) : null}
 
@@ -449,11 +459,6 @@ export function LoginPage() {
           </form>
         )}
       </Card>
-
-      <ForgotPasswordModal
-        isOpen={forgotModalOpen}
-        onClose={() => setForgotModalOpen(false)}
-      />
     </div>
   )
 }

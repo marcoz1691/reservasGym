@@ -163,6 +163,17 @@ select * from qa_mail.enlaces;
 Devuelve fecha, tipo (`recovery`, `signup`, `email_change`), correo destino, el
 enlace listo para abrir y el código OTP. Las filas se borran solas a los 7 días.
 
+**Olvido de contraseña:** la app pide un **código de 6 dígitos**, no un enlace.
+Para probarlo en QA, tras tocar «Enviar código» en la app:
+
+```sql
+select codigo_otp from qa_mail.enlaces where tipo = 'recovery' and correo = 'socio.staging@zonacero.test' limit 1;
+```
+
+La plantilla del correo con el código está en
+`app/supabase/email-templates/recovery.html` (Authentication → Email Templates →
+Reset Password) y el largo en Authentication → Email → **Email OTP Length = 6**.
+
 | Ítem | Valor |
 |------|-------|
 | Activación | Authentication → Hooks → Send Email → Postgres function `qa_mail.send_email_hook` |
@@ -210,6 +221,7 @@ el esquema. Antes del Go-Live hay que confirmar:
 - [ ] Authentication → Hooks **vacío** (sin Send Email hook)
 - [ ] Project Settings → Authentication → **SMTP propio** configurado y probado
 - [ ] El schema `qa_mail` **no** existe en prod
+- [ ] Email Templates → **Reset Password** con el código (`app/supabase/email-templates/recovery.html`). Supabase solo deja editarla con SMTP propio o plan Pro; sin ella el correo lleva un enlace y la recuperación de la app no funciona. Email OTP Length = 6 (ya aplicado).
 - [ ] Site URL y Redirect URLs apuntan al dominio real, no a QA
 
 ---

@@ -38,16 +38,18 @@ export interface GymRepository {
   rememberBiometricSession?(): Promise<void>
   /** Abre la sesión guardada. Falla si venció o no existe. */
   restoreBiometricSession?(): Promise<User>
-  /** Envía el correo con el enlace de recuperación. */
+  /**
+   * Envía al correo el código de recuperación. Resuelve igual si la cuenta no
+   * existe, para no revelar qué correos están registrados.
+   */
   resetPassword(email: string): Promise<void>
   /**
-   * Fija una contraseña nueva para la sesión activa.
-   * Se usa tanto al volver del enlace de recuperación (Supabase abre una
-   * sesión temporal al validar el token) como al cambiarla desde el perfil.
+   * Valida el código del correo y fija la contraseña nueva. Deja la sesión
+   * cerrada: el socio entra luego desde el login con la clave nueva.
    */
+  completePasswordReset(email: string, code: string, newPassword: string): Promise<void>
+  /** Fija una contraseña nueva para la sesión activa (cambio con sesión iniciada). */
   updatePassword(newPassword: string): Promise<void>
-  /** True si hay una sesión abierta por un enlace de recuperación. */
-  hasRecoverySession?(): Promise<boolean>
   deleteAccount(): Promise<void>
   updateProfile?(patch: Partial<Omit<User, 'id' | 'email' | 'role' | 'createdAt'>>): Promise<User>
 
