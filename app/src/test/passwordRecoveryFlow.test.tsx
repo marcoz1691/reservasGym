@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -8,19 +8,17 @@ import { LocalRepository } from '../data/localRepository'
 import { resetRepositoryForTests } from '../data/repository'
 import { SupabaseRepository } from '../data/supabaseRepository'
 import { DEMO_PASSWORD } from '../data/seed'
+import { RECOVERY_CODE_INVALID } from '../domain/rules/password'
 import { LoginPage } from '../features/auth/LoginPage'
-import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
+import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
 
 /**
- * ZCAPP-46 — pruebas de integración de la recuperación de contraseña.
+ * Recuperación de contraseña con código (OTP) — pruebas de integración.
  *
- * Las pruebas unitarias ya cubren las reglas (`domain/rules/password`) y el
- * repositorio en aislamiento (`data/passwordRecovery`). Aquí se prueba lo que
- * solo falla cuando las piezas se juntan:
- *
- *  1. El recorrido completo por la UI, cruzando router y componentes.
- *  2. El contrato real contra Supabase (con cliente inyectado, sin red).
- *  3. Que el cambio de contraseña realmente corta las sesiones abiertas.
+ *  1. El recorrido completo por la UI: login → olvidé → correo → contraseña
+ *     → código → listo → login con la clave nueva.
+ *  2. Que el cambio corta las sesiones abiertas.
+ *  3. El contrato real contra Supabase (cliente inyectado, sin red).
  */
 
 const SOCIO = 'socio@gym.local'
@@ -32,305 +30,190 @@ function renderApp(initialPath = '/login') {
       <RepositoryProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/recuperar" element={<ResetPasswordPage />} />
+          <Route path="/recuperar" element={<ForgotPasswordPage />} />
           <Route path="/" element={<div>Inicio</div>} />
+          <Route path="/admin" element={<div>Admin</div>} />
         </Routes>
       </RepositoryProvider>
     </MemoryRouter>,
   )
 }
 
-describe('ZCAPP-46 · integración · recorrido completo por la UI', () => {
+describe('Recuperación con código · recorrido completo por la UI', () => {
   beforeEach(() => {
     localStorage.clear()
     resetRepositoryForTests()
   })
 
-  it('recorre pedir enlace → fijar contraseña → entrar con la nueva', async () => {
-    const user = userEvent.setup()
-
-    // ── 1. El socio pide el enlace desde el login ──────────────────────
-    const { unmount } = renderApp('/login')
-
-    await user.click(
-      await screen.findByRole('button', { name: /olvidaste tu contraseña/i }),
-    )
-
-    // El login también tiene un campo de correo, así que se busca dentro
-    // del diálogo para no confundirlos.
-    const modal = await screen.findByRole('dialog')
-    const campoCorreo = within(modal).getByLabelText(/correo electrónico/i)
-    await user.clear(campoCorreo)
-    await user.type(campoCorreo, SOCIO)
-    await user.click(within(modal).getByRole('button', { name: /enviar enlace/i }))
-
-    expect(await screen.findByText(/enlace enviado/i)).toBeInTheDocument()
-    unmount()
-
-    // ── 2. Abre el enlace del correo, que lo lleva a /recuperar ────────
-    renderApp('/recuperar')
-
-    await user.type(
-      await screen.findByLabelText(/nueva contraseña/i),
-      NUEVA,
-    )
-    await user.type(screen.getByLabelText(/repite la contraseña/i), NUEVA)
-    await user.click(screen.getByRole('button', { name: /guardar contraseña/i }))
-
-    expect(await screen.findByText(/quedó actualizada/i)).toBeInTheDocument()
-
-    // ── 3. La contraseña nueva sirve y la anterior ya no ───────────────
-    const verificador = new LocalRepository()
-    const socio = await verificador.signIn({ email: SOCIO, password: NUEVA })
-    expect(socio.email).toBe(SOCIO)
-
-    const otro = new LocalRepository()
-    await expect(
-      otro.signIn({ email: SOCIO, password: DEMO_PASSWORD }),
-    ).rejects.toThrow(/incorrecta/i)
-  })
-
-  it('el enlace es de un solo uso: al volver a /recuperar ya no sirve', async () => {
-    const user = userEvent.setup()
-
-    await new LocalRepository().resetPassword(SOCIO)
-
-    const { unmount } = renderApp('/recuperar')
-    await user.type(await screen.findByLabelText(/nueva contraseña/i), NUEVA)
-    await user.type(screen.getByLabelText(/repite la contraseña/i), NUEVA)
-    await user.click(screen.getByRole('button', { name: /guardar contraseña/i }))
-    await screen.findByText(/quedó actualizada/i)
-    unmount()
-
-    // Reabrir el mismo enlace del correo
-    renderApp('/recuperar')
-    expect(
-      await screen.findByText(/enlace vencido o inválido/i),
-    ).toBeInTheDocument()
-  })
-
-  it('entrar a /recuperar sin haber pedido el enlace no deja cambiar nada', async () => {
-    renderApp('/recuperar')
-
-    expect(
-      await screen.findByText(/enlace vencido o inválido/i),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByLabelText(/nueva contraseña/i),
-    ).not.toBeInTheDocument()
-
-    // Y la contraseña original sigue intacta
-    const repo = new LocalRepository()
-    const socio = await repo.signIn({ email: SOCIO, password: DEMO_PASSWORD })
-    expect(socio.email).toBe(SOCIO)
-  })
-
-  it('pedir el enlace de un correo no registrado se ve igual, y no habilita nada', async () => {
+  it('login → olvidé → correo → contraseña → código → listo → entra con la nueva', async () => {
     const user = userEvent.setup()
     renderApp('/login')
 
-    await user.click(
-      await screen.findByRole('button', { name: /olvidaste tu contraseña/i }),
-    )
-    const modal = await screen.findByRole('dialog')
-    const campoCorreo = within(modal).getByLabelText(/correo electrónico/i)
-    await user.clear(campoCorreo)
-    await user.type(campoCorreo, 'desconocido@ejemplo.com')
-    await user.click(within(modal).getByRole('button', { name: /enviar enlace/i }))
+    // Correo escrito en el login: viaja prellenado a la recuperación.
+    const loginCorreo = await screen.findByLabelText(/correo electrónico/i)
+    await user.clear(loginCorreo)
+    await user.type(loginCorreo, SOCIO)
+    await user.click(screen.getByRole('button', { name: /olvidaste tu contraseña/i }))
 
-    // Misma confirmación: no se puede deducir si el correo existe
-    expect(await screen.findByText(/enlace enviado/i)).toBeInTheDocument()
+    // 1. Correo
+    expect(await screen.findByLabelText(/correo electrónico/i)).toHaveValue(SOCIO)
+    await user.click(screen.getByRole('button', { name: /continuar/i }))
 
-    // pero no abrió ninguna ventana de recuperación
-    expect(await new LocalRepository().hasRecoverySession()).toBe(false)
+    // 2. Nueva contraseña + confirmación
+    await user.type(await screen.findByLabelText(/nueva contraseña/i), NUEVA)
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), NUEVA)
+    await user.click(screen.getByRole('button', { name: /enviar código/i }))
+
+    // 3. Código (en demo se muestra en pantalla; en prod llega al correo)
+    const aviso = await screen.findByText(/modo demo/i)
+    const code = aviso.textContent!.match(/\d{6}/)![0]
+    await user.type(screen.getByLabelText(/código/i), code)
+    await user.click(screen.getByRole('button', { name: /cambiar contraseña/i }))
+
+    // 4. Confirmación
+    expect(await screen.findByText(/contraseña actualizada/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /ir a iniciar sesión/i }))
+
+    // 5. Login con el correo prellenado, aviso de éxito y la clave nueva
+    expect(await screen.findByText(/entra con la nueva/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/correo electrónico/i)).toHaveValue(SOCIO)
+    await user.type(screen.getByLabelText(/^contraseña$/i), NUEVA)
+    await user.click(screen.getByRole('button', { name: /^entrar$/i }))
+
+    expect(await screen.findByText('Inicio')).toBeInTheDocument()
+
+    // La anterior ya no sirve
+    await expect(
+      new LocalRepository().signIn({ email: SOCIO, password: DEMO_PASSWORD }),
+    ).rejects.toThrow(/incorrecta/i)
   })
 
-  it('no guarda si la confirmación no coincide, ni siquiera tocando dos veces', async () => {
+  it('un correo no registrado se ve igual y no habilita ningún cambio', async () => {
     const user = userEvent.setup()
-    await new LocalRepository().resetPassword(SOCIO)
     renderApp('/recuperar')
 
+    await user.type(await screen.findByLabelText(/correo electrónico/i), 'desconocido@ejemplo.com')
+    await user.click(screen.getByRole('button', { name: /continuar/i }))
     await user.type(await screen.findByLabelText(/nueva contraseña/i), NUEVA)
-    await user.type(screen.getByLabelText(/repite la contraseña/i), 'OtraCosa2026')
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), NUEVA)
+    await user.click(screen.getByRole('button', { name: /enviar código/i }))
 
-    const guardar = screen.getByRole('button', { name: /guardar contraseña/i })
-    await user.click(guardar)
-    await user.click(guardar)
+    // Misma pantalla de código: no se puede deducir si el correo existe
+    expect(await screen.findByText(/enviamos un código/i)).toBeInTheDocument()
+    expect(screen.queryByText(/modo demo/i)).not.toBeInTheDocument()
 
-    expect(await screen.findByText(/no coinciden/i)).toBeInTheDocument()
-
-    // La contraseña original sigue funcionando
-    const repo = new LocalRepository()
-    const socio = await repo.signIn({ email: SOCIO, password: DEMO_PASSWORD })
-    expect(socio.email).toBe(SOCIO)
+    await user.type(screen.getByLabelText(/código/i), '123456')
+    await user.click(screen.getByRole('button', { name: /cambiar contraseña/i }))
+    expect(await screen.findByText(RECOVERY_CODE_INVALID)).toBeInTheDocument()
   })
 })
 
-describe('ZCAPP-46 · integración · sesiones abiertas', () => {
+describe('Recuperación con código · sesiones abiertas', () => {
   beforeEach(() => {
     localStorage.clear()
     resetRepositoryForTests()
   })
 
-  it('cambiar la contraseña cierra las otras sesiones del socio', async () => {
-    // El socio tiene sesión abierta en otro dispositivo
+  it('cambiar la contraseña cierra las sesiones abiertas en otros dispositivos', async () => {
     const otroDispositivo = new LocalRepository()
     await otroDispositivo.signIn({ email: SOCIO, password: DEMO_PASSWORD })
     expect(await otroDispositivo.getCurrentUser()).not.toBeNull()
 
-    // Recupera la contraseña desde este
     const esteDispositivo = new LocalRepository()
     await esteDispositivo.resetPassword(SOCIO)
-    await esteDispositivo.updatePassword(NUEVA)
+    await esteDispositivo.completePasswordReset(
+      SOCIO,
+      esteDispositivo.peekRecoveryCode()!,
+      NUEVA,
+    )
 
-    // Queda dentro en el dispositivo donde hizo el cambio
-    expect((await esteDispositivo.getCurrentUser())?.email).toBe(SOCIO)
-
-    // Y la sesión del otro dispositivo quedó invalidada
     expect(await otroDispositivo.getCurrentUser()).toBeNull()
-  })
-
-  it('la sesión anterior no puede seguir operando con su token viejo', async () => {
-    const otroDispositivo = new LocalRepository()
-    await otroDispositivo.signIn({ email: SOCIO, password: DEMO_PASSWORD })
-
-    const esteDispositivo = new LocalRepository()
-    await esteDispositivo.resetPassword(SOCIO)
-    await esteDispositivo.updatePassword(NUEVA)
-
-    // Cualquier operación que exija usuario debe fallar en el dispositivo viejo
     await expect(otroDispositivo.deleteAccount()).rejects.toThrow()
   })
 })
 
 /* ──────────────────────────────────────────────────────────────────────
- * Contrato contra Supabase. Se inyecta un cliente falso: no hay red, pero
- * se verifica exactamente lo que la app le pide al SDK. Sin esto, un
- * cambio en el redirectTo rompería el correo en producción sin que
- * ninguna prueba lo notara — que es justo el bug que ZCAPP-46 corrigió.
+ * Contrato contra Supabase: se verifica exactamente lo que la app le pide
+ * al SDK. El correo debe llevar código (sin redirectTo, que en la app
+ * nativa apuntaba a localhost) y el cambio sigue verifyOtp → updateUser →
+ * signOut.
  * ────────────────────────────────────────────────────────────────────── */
-describe('ZCAPP-46 · integración · contrato con Supabase', () => {
+describe('Recuperación con código · contrato con Supabase', () => {
   function fakeClient(overrides: Record<string, unknown> = {}) {
+    const calls: string[] = []
+    const track =
+      (name: string, result: unknown) =>
+      (...args: unknown[]) => {
+        calls.push(name)
+        void args
+        return Promise.resolve(result)
+      }
     const auth = {
-      resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
-      updateUser: vi.fn().mockResolvedValue({ error: null }),
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+      resetPasswordForEmail: vi.fn(track('resetPasswordForEmail', { error: null })),
+      verifyOtp: vi.fn(track('verifyOtp', { data: {}, error: null })),
+      updateUser: vi.fn(track('updateUser', { error: null })),
+      signOut: vi.fn(track('signOut', { error: null })),
       ...overrides,
     }
-    return { auth } as unknown as SupabaseClient & {
-      auth: typeof auth
-    }
+    return { client: { auth } as unknown as SupabaseClient & { auth: typeof auth }, calls }
   }
 
-  it('el enlace del correo apunta a /recuperar, no al login', async () => {
-    const client = fakeClient()
-    await new SupabaseRepository(client).resetPassword(SOCIO)
-
-    expect(client.auth.resetPasswordForEmail).toHaveBeenCalledWith(
-      SOCIO,
-      expect.objectContaining({
-        redirectTo: expect.stringMatching(/\/recuperar$/),
-      }),
-    )
-    expect(client.auth.resetPasswordForEmail).not.toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        redirectTo: expect.stringMatching(/\/login/),
-      }),
-    )
-  })
-
-  it('recorta espacios del correo antes de enviarlo', async () => {
-    const client = fakeClient()
+  it('pide el código sin redirectTo y con el correo recortado', async () => {
+    const { client } = fakeClient()
     await new SupabaseRepository(client).resetPassword('  socio@gym.local  ')
-
-    expect(client.auth.resetPasswordForEmail).toHaveBeenCalledWith(
-      SOCIO,
-      expect.anything(),
-    )
+    expect(client.auth.resetPasswordForEmail).toHaveBeenCalledWith(SOCIO)
   })
 
-  it('propaga el error de Supabase al pedir el enlace', async () => {
-    const client = fakeClient({
-      resetPasswordForEmail: vi
-        .fn()
-        .mockResolvedValue({ error: { message: 'rate limit exceeded' } }),
+  it('propaga el error de Supabase al pedir el código', async () => {
+    const { client } = fakeClient({
+      resetPasswordForEmail: vi.fn().mockResolvedValue({ error: { message: 'rate limit exceeded' } }),
     })
-
-    await expect(
-      new SupabaseRepository(client).resetPassword(SOCIO),
-    ).rejects.toThrow(/rate limit/i)
+    await expect(new SupabaseRepository(client).resetPassword(SOCIO)).rejects.toThrow(/rate limit/i)
   })
 
-  it('al guardar, pide a Supabase actualizar la contraseña del usuario', async () => {
-    const client = fakeClient()
-    await new SupabaseRepository(client).updatePassword(NUEVA)
+  it('valida el código (recovery), fija la contraseña y cierra la sesión, en ese orden', async () => {
+    const { client, calls } = fakeClient()
+    await new SupabaseRepository(client).completePasswordReset(` ${SOCIO} `, ' 123456 ', NUEVA)
 
+    expect(client.auth.verifyOtp).toHaveBeenCalledWith({
+      email: SOCIO,
+      token: '123456',
+      type: 'recovery',
+    })
     expect(client.auth.updateUser).toHaveBeenCalledWith({ password: NUEVA })
+    expect(calls).toEqual(['verifyOtp', 'updateUser', 'signOut'])
   })
 
-  it('propaga el error de Supabase al guardar la contraseña', async () => {
-    const client = fakeClient({
-      updateUser: vi
-        .fn()
-        .mockResolvedValue({ error: { message: 'New password should be different' } }),
+  it('con un código inválido o vencido no toca la contraseña', async () => {
+    const { client } = fakeClient({
+      verifyOtp: vi.fn().mockResolvedValue({
+        data: {},
+        error: { code: 'otp_expired', message: 'Token has expired or is invalid' },
+      }),
     })
 
     await expect(
-      new SupabaseRepository(client).updatePassword(NUEVA),
-    ).rejects.toThrow(/should be different/i)
+      new SupabaseRepository(client).completePasswordReset(SOCIO, '000000', NUEVA),
+    ).rejects.toThrow(RECOVERY_CODE_INVALID)
+    expect(client.auth.updateUser).not.toHaveBeenCalled()
   })
 
-  it('reconoce el enlace como válido cuando Supabase abrió sesión con el token', async () => {
-    const client = fakeClient({
-      getSession: vi
-        .fn()
-        .mockResolvedValue({ data: { session: { access_token: 'token-de-recuperacion' } } }),
+  it('si la contraseña es igual a la anterior, avisa en español y cierra la sesión igual', async () => {
+    const { client } = fakeClient({
+      updateUser: vi.fn().mockResolvedValue({
+        error: { code: 'same_password', message: 'New password should be different from the old password.' },
+      }),
     })
 
-    expect(await new SupabaseRepository(client).hasRecoverySession()).toBe(true)
+    await expect(
+      new SupabaseRepository(client).completePasswordReset(SOCIO, '123456', NUEVA),
+    ).rejects.toThrow(/distinta a la anterior/i)
+    expect(client.auth.signOut).toHaveBeenCalled()
   })
 
-  it('reconoce el enlace como inválido cuando no hay sesión', async () => {
-    const client = fakeClient()
-    expect(await new SupabaseRepository(client).hasRecoverySession()).toBe(false)
-  })
-})
-
-describe('ZCAPP-46 · integración · la pantalla usa el repositorio activo', () => {
-  beforeEach(() => {
-    localStorage.clear()
-    resetRepositoryForTests()
-  })
-
-  it('muestra al socio el error que devuelve el backend, sin inventar texto', async () => {
-    const user = userEvent.setup()
-
-    const repo = new LocalRepository()
-    await repo.resetPassword(SOCIO)
-    vi.spyOn(repo, 'updatePassword').mockRejectedValue(
-      new Error('New password should be different from the old password'),
-    )
-    resetRepositoryForTests(repo)
-
-    render(
-      <MemoryRouter initialEntries={['/recuperar']}>
-        <RepositoryProvider>
-          <Routes>
-            <Route path="/recuperar" element={<ResetPasswordPage />} />
-          </Routes>
-        </RepositoryProvider>
-      </MemoryRouter>,
-    )
-
-    await user.type(await screen.findByLabelText(/nueva contraseña/i), NUEVA)
-    await user.type(screen.getByLabelText(/repite la contraseña/i), NUEVA)
-    await user.click(screen.getByRole('button', { name: /guardar contraseña/i }))
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(/should be different from the old password/i),
-      ).toBeInTheDocument()
-    })
+  it('updatePassword (con sesión normal) pide a Supabase actualizar la contraseña', async () => {
+    const { client } = fakeClient()
+    await new SupabaseRepository(client).updatePassword(NUEVA)
+    expect(client.auth.updateUser).toHaveBeenCalledWith({ password: NUEVA })
   })
 })

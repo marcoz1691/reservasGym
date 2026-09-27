@@ -21,9 +21,9 @@ function RouteFallback() {
 const LoginPage = lazy(() =>
   import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
-const ResetPasswordPage = lazy(() =>
-  import('@/features/auth/ResetPasswordPage').then((m) => ({
-    default: m.ResetPasswordPage,
+const ForgotPasswordPage = lazy(() =>
+  import('@/features/auth/ForgotPasswordPage').then((m) => ({
+    default: m.ForgotPasswordPage,
   })),
 )
 const HomePage = lazy(() =>
@@ -104,7 +104,7 @@ export function AppRouter() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         {/* Pública: se llega desde el enlace del correo, sin sesión iniciada. */}
-        <Route path="/recuperar" element={<ResetPasswordPage />} />
+        <Route path="/recuperar" element={<ForgotPasswordPage />} />
         <Route element={<RequireAuth />}>
           <Route path="bienvenida" element={<WelcomeFichaPage />} />
           <Route element={<AppLayout />}>

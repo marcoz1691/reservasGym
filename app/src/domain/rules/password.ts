@@ -9,6 +9,11 @@
 
 export const PASSWORD_MIN_LENGTH = 8
 
+/** Largo del código de recuperación que llega por correo (OTP de Supabase). */
+export const RECOVERY_CODE_LENGTH = 6
+export const RECOVERY_CODE_INVALID =
+  'El código no es válido o ya venció. Pide uno nuevo.'
+
 export type PasswordIssue =
   | 'too_short'
   | 'no_letter'
