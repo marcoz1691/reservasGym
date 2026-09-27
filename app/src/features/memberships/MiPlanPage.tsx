@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeftRight, ArrowRight, Banknote, CreditCard, ShieldAlert } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { ArrowLeftRight, ArrowRight, Banknote, Check, CreditCard, ShieldAlert } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym, useRepo } from '@/data/RepositoryProvider'
 import { selectMyMembership } from '@/app/store'
 import type { ManualPaymentMethod } from '@/domain/models'
@@ -16,7 +18,6 @@ import {
   PaymentHistory,
   PendingPlanRequestCard,
   PlansShowcase,
-  RenewalNoticeCard,
 } from './components'
 
 const PAYMENT_METHODS: ManualPaymentMethod[] = ['cash', 'transfer', 'card_pos']
@@ -26,6 +27,12 @@ const PAYMENT_ICONS = {
   transfer: ArrowLeftRight,
   card_pos: CreditCard,
 } as const
+
+const PAYMENT_HINTS: Record<ManualPaymentMethod, string> = {
+  cash: 'En caja del counter',
+  transfer: 'Bancos locales',
+  card_pos: 'Datáfono en recepción',
+}
 
 export function MiPlanPage() {
   const user = useCurrentUser()
@@ -77,6 +84,14 @@ export function MiPlanPage() {
   const chosenPlan = (data.membershipPlans ?? []).find(
     (plan) => plan.id === chosenPlanId,
   )
+
+  const memberSince = user?.createdAt
+    ? format(parseISO(user.createdAt), 'MMM yyyy', { locale: es })
+    : undefined
+
+  function scrollToCatalog() {
+    document.getElementById('planes-catalogo')?.scrollIntoView({ block: 'start' })
+  }
 
   async function handleRequestPayment(method: ManualPaymentMethod) {
     if (!chosenPlanId) return
@@ -189,28 +204,33 @@ export function MiPlanPage() {
           membership={currentMembership}
           plan={currentPlan}
           zones={data.zones ?? []}
+          memberName={user.fullName}
+          memberSince={memberSince}
+          onRenew={scrollToCatalog}
         />
       ) : showEmptyHero ? (
-        <div className="relative overflow-hidden rounded-3xl border border-line bg-bg-2 shadow-2xl">
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-acc" />
-          <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-acc/15 blur-3xl" />
+        <div className="relative overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-acc/50 via-acc/10 to-transparent"
+          />
           <div className="relative z-10 space-y-6 p-6 sm:p-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-warn/30 bg-warn-soft px-3.5 py-1 text-xs font-bold text-warn">
+            <div className="inline-flex items-center gap-2 rounded-full border border-warn/25 bg-warn-soft px-3.5 py-1 text-xs font-bold text-warn">
               <ShieldAlert className="h-4 w-4 text-warn" />
               <span>Sin membresía activa</span>
             </div>
 
             <div className="max-w-xl space-y-3">
-              <h2 className="font-display text-3xl font-black leading-[1.05] tracking-tight text-ink md:text-5xl">
+              <h2 className="font-display text-3xl font-bold leading-[1.08] tracking-tight text-ink md:text-[2.75rem]">
                 {onlinePayEnabled ? (
                   <>
                     Activa tu plan{' '}
-                    <span className="mt-1 block text-acc">en línea o en recepción.</span>
+                    <span className="mt-1 block text-ink-2">en línea o en recepción.</span>
                   </>
                 ) : (
                   <>
                     Elige tu plan{' '}
-                    <span className="mt-1 block text-acc">y empieza a entrenar.</span>
+                    <span className="mt-1 block text-ink-2">y empieza a entrenar.</span>
                   </>
                 )}
               </h2>
@@ -222,29 +242,14 @@ export function MiPlanPage() {
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <ul aria-label="Formas de pago en recepción" className="flex flex-wrap gap-2">
-                {PAYMENT_METHODS.map((method) => {
-                  const Icon = PAYMENT_ICONS[method]
-                  return (
-                    <li
-                      key={method}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-line bg-surface px-3 py-2 text-sm font-bold text-ink"
-                    >
-                      <Icon className="h-4 w-4 text-acc" aria-hidden />
-                      {MANUAL_PAYMENT_LABELS[method]}
-                    </li>
-                  )
-                })}
-              </ul>
+              <p className="text-sm text-ink-3">
+                Eliges el plan y, en el siguiente paso, cómo pagarlo.
+              </p>
               <Button
                 type="button"
                 size="lg"
                 className="w-full sm:w-auto"
-                onClick={() =>
-                  document
-                    .getElementById('planes-catalogo')
-                    ?.scrollIntoView({ block: 'start' })
-                }
+                onClick={scrollToCatalog}
               >
                 Ver planes
                 <ArrowRight className="h-4 w-4" aria-hidden />
@@ -253,8 +258,6 @@ export function MiPlanPage() {
           </div>
         </div>
       ) : null}
-
-      <RenewalNoticeCard onlinePayEnabled={onlinePayEnabled} />
 
       {showCatalog ? (
         <PlansShowcase
@@ -273,42 +276,77 @@ export function MiPlanPage() {
 
       {choosingPayment && chosenPlan ? (
         <div ref={paymentStepRef} className="space-y-4 scroll-mt-4">
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-extrabold text-ink">{chosenPlan.name}</p>
-              <p className="text-xs text-ink-2">
-                {formatCurrency(chosenPlan.priceCents)} · {chosenPlan.durationDays} días
-              </p>
+          {/* Resumen del plan elegido: contexto permanente mientras se decide el pago */}
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface-elevated px-4 py-3.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <span
+                aria-hidden
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink-2"
+              >
+                <Check className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+                  {currentMembership ? 'Plan a activar' : 'Plan elegido'}
+                </p>
+                <p className="truncate text-sm font-bold text-ink">{chosenPlan.name}</p>
+                <p className="text-xs text-ink-2">
+                  {formatCurrency(chosenPlan.priceCents)} · {chosenPlan.durationDays} días
+                </p>
+              </div>
             </div>
             <button
               type="button"
               onClick={handleChangePlan}
-              className="shrink-0 text-sm font-bold text-acc"
+              className="focus-ring shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-acc hover:text-acc-hi"
             >
               Cambiar
             </button>
           </div>
 
-          <div className="rounded-3xl border border-line bg-surface p-5">
-            <h3 className="text-lg font-extrabold text-ink">¿Cómo vas a pagar?</h3>
-            <p className="mt-1 text-sm text-ink-2">
+          <div className="rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)] sm:p-6">
+            <h3 className="font-display text-lg font-bold tracking-tight text-ink">
+              ¿Cómo vas a pagar?
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed text-ink-2">
               El pago se completa en recepción. Tu acceso se activa cuando lo registren.
             </p>
-            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
               {PAYMENT_METHODS.map((method) => {
                 const selected = chosenMethod === method
+                const Icon = PAYMENT_ICONS[method]
                 return (
                   <button
                     key={method}
                     type="button"
                     aria-pressed={selected}
+                    aria-label={MANUAL_PAYMENT_LABELS[method]}
                     disabled={requesting}
                     onClick={() => setChosenMethod(method)}
-                    className={`min-h-12 rounded-2xl border-2 bg-bg px-4 py-3 text-sm font-bold text-ink transition disabled:opacity-60 ${
-                      selected ? 'border-acc bg-acc-soft' : 'border-line'
+                    className={`flex items-start gap-3 rounded-2xl border p-3.5 text-left transition disabled:opacity-60 active:scale-[0.99] ${
+                      selected
+                        ? 'border-acc/45 bg-acc-soft ring-1 ring-inset ring-acc/15'
+                        : 'border-line bg-surface hover:border-line-strong'
                     }`}
                   >
-                    {MANUAL_PAYMENT_LABELS[method]}
+                    <span
+                      aria-hidden
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+                        selected
+                          ? 'border-acc/30 bg-surface text-acc'
+                          : 'border-line bg-surface-elevated text-ink-3'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span aria-hidden className="min-w-0">
+                      <span className="block text-sm font-bold text-ink">
+                        {MANUAL_PAYMENT_LABELS[method]}
+                      </span>
+                      <span className="block text-[11px] text-ink-3">
+                        {PAYMENT_HINTS[method]}
+                      </span>
+                    </span>
                   </button>
                 )
               })}
@@ -319,10 +357,14 @@ export function MiPlanPage() {
               onClick={() => {
                 if (chosenMethod) void handleRequestPayment(chosenMethod)
               }}
-              className="mt-4 flex w-full items-center justify-center rounded-2xl bg-acc px-4 py-3 text-sm font-bold text-[var(--color-acc-contrast)] transition hover:brightness-110 disabled:opacity-60"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-40 active:scale-[0.99]"
             >
               Enviar solicitud
+              <ArrowRight className="h-4 w-4" aria-hidden />
             </button>
+            <p className="mt-3 text-center text-xs text-ink-3">
+              Reservamos tu plan y recepción lo activa al registrar el cobro.
+            </p>
             {requestError ? (
               <p className="mt-3 text-sm text-danger" role="alert">
                 {requestError}

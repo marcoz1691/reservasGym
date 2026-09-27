@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { MiPlanPage } from './MiPlanPage'
@@ -35,14 +35,19 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Membresía activa')).toBeInTheDocument()
 
-    // Check Renewal Card
-    expect(screen.getByText(/Renueva tu plan en recepción/i)).toBeInTheDocument()
+    // Lo primero es la información del plan propio, no el aviso de recepción
+    const membershipCard = screen.getByRole('region', { name: 'Tu membresía' })
+    expect(within(membershipCard).getByText('Inicio')).toBeInTheDocument()
+    expect(within(membershipCard).getByText('Fecha de vencimiento')).toBeInTheDocument()
+    expect(within(membershipCard).getByText('Inversión')).toBeInTheDocument()
+    expect(within(membershipCard).getByText('Tu plan incluye')).toBeInTheDocument()
+
+    // Con membresía activa no se ofrecen formas de pago hasta elegir un plan
+    expect(screen.queryByText(/Renueva tu plan en recepción/i)).not.toBeInTheDocument()
     expect(
-      screen.getByText(/Próximamente: Pago online con tarjeta desde la app/i),
-    ).toBeInTheDocument()
-    expect(screen.getAllByText('Efectivo').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Transferencia').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Tarjeta Datafast').length).toBeGreaterThan(0)
+      screen.queryByRole('heading', { name: /Cómo vas a pagar/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Efectivo' })).not.toBeInTheDocument()
 
     // Check Plans Showcase
     expect(screen.getByText('Planes disponibles')).toBeInTheDocument()
@@ -86,7 +91,11 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
         'Pagas en recepción. En cuanto registramos el pago, tu acceso queda activo y reservas clase.',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByRole('list', { name: 'Formas de pago en recepción' })).toBeInTheDocument()
+    // Las formas de pago llegan recién al elegir un plan
+    expect(
+      screen.queryByRole('heading', { name: /Cómo vas a pagar/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Efectivo' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Ver planes' })).toBeInTheDocument()
 
     // Should still showcase plans and renewal instructions
@@ -184,6 +193,36 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
     expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
     expect(screen.queryByText('Plan Trimestral')).not.toBeInTheDocument()
     expect(screen.getAllByText('Plan Mensual Ilimitado').length).toBeGreaterThan(0)
+  })
+
+  it('con plan activo las formas de pago solo aparecen al elegir otro plan', async () => {
+    const user = userEvent.setup()
+    const repo = new LocalRepository()
+    await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
+    resetRepositoryForTests(repo)
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <MiPlanPage />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    await screen.findByRole('region', { name: 'Tu membresía' })
+    expect(screen.queryByRole('button', { name: 'Efectivo' })).not.toBeInTheDocument()
+
+    await user.click(screen.getAllByRole('button', { name: 'Elegir este plan' })[0]!)
+
+    expect(
+      screen.getByRole('heading', { name: /Cómo vas a pagar/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Efectivo' })).toBeInTheDocument()
+    expect(screen.queryByText('Planes disponibles')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Cambiar' }))
+    expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Efectivo' })).not.toBeInTheDocument()
   })
 
   it('el socio elige un plan y deja pendiente la forma de pago', async () => {

@@ -52,6 +52,24 @@ describe('PlansShowcase', () => {
     expect(screen.getAllByRole('button', { name: 'Elegir este plan' })).toHaveLength(1)
   })
 
+  it('tacha el precio de lista y calcula el ahorro desde la tarifa mensual', async () => {
+    const user = userEvent.setup()
+    render(<PlansShowcase plans={catalog} zones={[]} onChoosePlan={() => undefined} />)
+
+    // Trimestral: 3 × $15.00 de lista = $45.00 frente a $38.25 reales
+    expect(screen.getByText('$45.00')).toBeInTheDocument()
+    expect(screen.getByText('Ahorras $6.75')).toBeInTheDocument()
+    // Semestral (7 meses) y anual (14 meses) sobre la misma referencia
+    expect(screen.getByText('Ahorras $15.00')).toBeInTheDocument()
+    expect(screen.getByText('Ahorras $30.00')).toBeInTheDocument()
+    // El plan mensual es la referencia: no se tacha a sí mismo
+    expect(screen.queryByText('Ahorras $0.00')).not.toBeInTheDocument()
+
+    // Zero Elite no tiene tarifa mensual en el catálogo: sin referencia, sin tachado
+    await user.click(screen.getByRole('tab', { name: 'Zero Elite' }))
+    expect(screen.queryByText(/^Ahorras /)).not.toBeInTheDocument()
+  })
+
   it('con plan activo marca el siguiente nivel como mejora', async () => {
     const user = userEvent.setup()
     render(

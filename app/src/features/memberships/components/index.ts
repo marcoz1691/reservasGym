@@ -1,5 +1,4 @@
 export { MembershipCard } from './MembershipCard'
-export { RenewalNoticeCard } from './RenewalNoticeCard'
 export { PlansShowcase } from './PlansShowcase'
 export { PaymentRow } from './PaymentRow'
 export { PaymentHistory } from './PaymentHistory'
