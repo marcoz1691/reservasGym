@@ -227,8 +227,8 @@ export function AgendaPage() {
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <PageHeader
-        title="Agenda"
-        subtitle={formatDateSpanish(`${anchorYmd}T12:00:00-05:00`)}
+        title="Reservar clase"
+        subtitle={`${formatDateSpanish(`${anchorYmd}T12:00:00-05:00`)}. Aquí apartas el cupo. Lo que ya tomaste está en Mis clases.`}
       />
 
       <div className="flex items-center gap-2">

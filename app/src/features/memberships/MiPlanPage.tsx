@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import {
-  Building2,
-  CalendarCheck,
-  Dumbbell,
-  ShieldAlert,
-} from 'lucide-react'
+import { ArrowLeftRight, ArrowRight, Banknote, CreditCard, ShieldAlert } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym, useRepo } from '@/data/RepositoryProvider'
 import { selectMyMembership } from '@/app/store'
 import type { ManualPaymentMethod } from '@/domain/models'
@@ -14,7 +9,7 @@ import {
   selectPendingPlanRequest,
 } from '@/domain/rules/planRequest'
 import { formatCurrency } from '@/lib/format'
-import { PageHeader } from '@/ui/primitives'
+import { Button, PageHeader } from '@/ui/primitives'
 import { isOnlinePayEnabled } from './onlinePay'
 import {
   MembershipCard,
@@ -25,6 +20,12 @@ import {
 } from './components'
 
 const PAYMENT_METHODS: ManualPaymentMethod[] = ['cash', 'transfer', 'card_pos']
+
+const PAYMENT_ICONS = {
+  cash: Banknote,
+  transfer: ArrowLeftRight,
+  card_pos: CreditCard,
+} as const
 
 export function MiPlanPage() {
   const user = useCurrentUser()
@@ -190,59 +191,64 @@ export function MiPlanPage() {
           zones={data.zones ?? []}
         />
       ) : showEmptyHero ? (
-        <div className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-bg-2 via-bg-2 to-surface/60 p-8 shadow-2xl">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-acc/10 blur-3xl" />
-          <div className="relative z-10 max-w-2xl space-y-4">
+        <div className="relative overflow-hidden rounded-3xl border border-line bg-bg-2 shadow-2xl">
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-acc" />
+          <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-acc/15 blur-3xl" />
+          <div className="relative z-10 space-y-6 p-6 sm:p-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-warn/30 bg-warn-soft px-3.5 py-1 text-xs font-bold text-warn">
               <ShieldAlert className="h-4 w-4 text-warn" />
               <span>Sin membresía activa</span>
             </div>
 
-            <h2 className="text-2xl font-black tracking-tight text-ink md:text-3xl">
-              {onlinePayEnabled
-                ? 'Activa tu plan en línea (Datafast) o en recepción'
-                : 'Activa tu plan en recepción para empezar a entrenar'}
-            </h2>
+            <div className="max-w-xl space-y-3">
+              <h2 className="font-display text-3xl font-black leading-[1.05] tracking-tight text-ink md:text-5xl">
+                {onlinePayEnabled ? (
+                  <>
+                    Activa tu plan{' '}
+                    <span className="mt-1 block text-acc">en línea o en recepción.</span>
+                  </>
+                ) : (
+                  <>
+                    Elige tu plan{' '}
+                    <span className="mt-1 block text-acc">y empieza a entrenar.</span>
+                  </>
+                )}
+              </h2>
+              <p className="max-w-lg text-base leading-relaxed text-ink-2 md:text-lg">
+                {onlinePayEnabled
+                  ? 'Paga con tarjeta o en recepción. En cuanto queda el pago, tu acceso se activa y reservas.'
+                  : 'Pagas en recepción. En cuanto registramos el pago, tu acceso queda activo y reservas clase.'}
+              </p>
+            </div>
 
-            <p className="text-sm text-ink-2 leading-relaxed">
-              Actualmente no cuentas con una membresía activa en Zona Cero Performance.
-              {onlinePayEnabled
-                ? ' Elige un plan abajo y paga con tarjeta Dataweb, o acércate a recepción.'
-                : ' Para reservar clases, acércate a la recepción del gimnasio.'}
-            </p>
-
-            <div className="grid sm:grid-cols-3 gap-3 pt-2">
-              <div className="rounded-2xl border border-line/60 bg-bg/50 p-3.5 space-y-1">
-                <div className="flex items-center gap-2 text-xs font-bold text-acc">
-                  <Dumbbell className="h-4 w-4" />
-                  <span>1. Elige tu plan</span>
-                </div>
-                <p className="text-[11px] text-ink-3">
-                  Revisa los planes y disciplinas disponibles abajo.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-line/60 bg-bg/50 p-3.5 space-y-1">
-                <div className="flex items-center gap-2 text-xs font-bold text-sky-600">
-                  <Building2 className="h-4 w-4" />
-                  <span>{onlinePayEnabled ? '2. Paga en línea' : '2. Visita recepción'}</span>
-                </div>
-                <p className="text-[11px] text-ink-3">
-                  {onlinePayEnabled
-                    ? 'Datafast Dataweb (tarjeta) o efectivo / transferencia / POS.'
-                    : 'Paga en efectivo, transferencia o tarjeta Datafast.'}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-line/60 bg-bg/50 p-3.5 space-y-1">
-                <div className="flex items-center gap-2 text-xs font-bold text-success">
-                  <CalendarCheck className="h-4 w-4" />
-                  <span>3. Reserva y entrena</span>
-                </div>
-                <p className="text-[11px] text-ink-3">
-                  Tu acceso se habilita al confirmar el pago.
-                </p>
-              </div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <ul aria-label="Formas de pago en recepción" className="flex flex-wrap gap-2">
+                {PAYMENT_METHODS.map((method) => {
+                  const Icon = PAYMENT_ICONS[method]
+                  return (
+                    <li
+                      key={method}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-line bg-surface px-3 py-2 text-sm font-bold text-ink"
+                    >
+                      <Icon className="h-4 w-4 text-acc" aria-hidden />
+                      {MANUAL_PAYMENT_LABELS[method]}
+                    </li>
+                  )
+                })}
+              </ul>
+              <Button
+                type="button"
+                size="lg"
+                className="w-full sm:w-auto"
+                onClick={() =>
+                  document
+                    .getElementById('planes-catalogo')
+                    ?.scrollIntoView({ block: 'start' })
+                }
+              >
+                Ver planes
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Button>
             </div>
           </div>
         </div>

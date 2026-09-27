@@ -449,11 +449,7 @@ export function EmptyState({
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-line bg-surface-elevated text-acc shadow-inner">
             {icon}
           </div>
-        ) : (
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-line bg-surface-elevated text-acc">
-            <span className="h-3 w-3 rounded-full bg-acc animate-ping" />
-          </div>
-        )}
+        ) : null}
         <h3 className="font-display text-lg font-bold text-ink">{title}</h3>
         {description ? (
           <p className="mt-2 max-w-md text-sm text-ink-3 leading-relaxed">
