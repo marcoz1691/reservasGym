@@ -183,16 +183,43 @@ enlace listo para abrir y el código OTP. Las filas se borran solas a los 7 día
 
 ---
 
-## 7. Producción — no tocar hasta Go-Live
+## 7. Producción
 
-Proyecto Supabase **prod** separado (`zona-cero-prod`); mismos SQL (`schema.sql`, seed adaptado). Sprint 7.
+Creado el 2026-09-27. Separado de QA en todo: otro proyecto de Vercel y otro de Supabase.
+
+| | QA | Producción |
+|---|---|---|
+| Vercel | `zona-cero-qa` | `zona-cero-prod` (antes `reservas-gym`) |
+| Rama | `main` (cada merge) | `production` (solo cuando QA aprueba) |
+| Build | `npm run build:staging` (login con cuentas demo) | `npm run build` (sin cuentas demo) |
+| Supabase | `zona-cero` · `kqhmclbexnnsbzbgerbx` | `zona-cero-prod` · `gvgqlmoulgcickxognto` |
+
+**Vercel `zona-cero-prod`:** preset Vite, Root Directory `app`, Branch Tracking `production`.
+Ignored Build Step:
+
+```bash
+if [ "$VERCEL_GIT_COMMIT_REF" = "production" ] && [ -n "$VITE_SUPABASE_URL" ]; then exit 1; else exit 0; fi
+```
+
+Solo compila la rama `production` y solo si tiene `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (Environment Variables → Production).
+
+**Supabase `zona-cero-prod`**, SQL aplicado en este orden:
+
+1. `app/supabase/schema.sql`
+2. `app/supabase/booking-rpc.sql`
+3. `app/supabase/seed-prod.sql` — configuración, 9 áreas y plantillas, **sin** entrenadores ni planes de ejemplo
+4. `app/supabase/planes-zona-cero.sql` — catálogo comercial real
+
+**No** aplicar `seed.sql`, `staging-users.sql` ni `qa-mail-hook.sql` en prod.
+
+**Publicar una versión:** cuando QA valida `main`, abrir un PR `main` → `production` y hacer merge. Vercel despliega prod.
 
 ### Plan Supabase (decisión arquitectura)
 
 | Proyecto | Rol | Plan |
 |----------|-----|------|
 | `zona-cero` | Staging / QA | **Free** (ahora) |
-| `zona-cero-prod` | Gym real | **Pro** desde ~1–2 sem antes Go-Live |
+| `zona-cero-prod` | Gym real | **Free** hoy → **Pro** ≈ 05 Dic 2026 (ZCAPP-59) |
 
 Ver cronograma §8: [cronograma-desarrollo-avanzada.md](./cronograma-desarrollo-avanzada.md#8-decisión-de-arquitectura--supabase-plan-free-vs-pro).
 
