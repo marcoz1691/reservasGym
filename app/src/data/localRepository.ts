@@ -29,7 +29,7 @@ import {
   pickWaitlistPromotion,
   reindexWaitlist,
 } from '../domain/rules'
-import { RECOVERY_CODE_INVALID } from '../domain/rules/password'
+import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
 import type { AuthCredentials, GymRepository } from './types'
 import { createSeedState, DEMO_PASSWORD } from './seed'
 import {
@@ -51,7 +51,7 @@ const CREDS_KEY = 'reservasgym.creds.v1'
 /** Solo demo: simula el código de recuperación que en prod llega por correo. */
 const RECOVERY_KEY = 'reservasgym.recovery.v2'
 
-type RecoveryPayload = { userId: string; code: string }
+type RecoveryPayload = { userId: string; code: string; expiresAt: number }
 
 function readRecovery(): RecoveryPayload | null {
   try {
@@ -363,7 +363,11 @@ export class LocalRepository implements GymRepository {
     }
     // En demo no hay correo: el código queda guardado y la pantalla lo muestra
     // (peekRecoveryCode). Pedir otro reemplaza al anterior.
-    const payload: RecoveryPayload = { userId: user.id, code: newRecoveryCode() }
+    const payload: RecoveryPayload = {
+      userId: user.id,
+      code: newRecoveryCode(),
+      expiresAt: Date.now() + RECOVERY_CODE_TTL_MS,
+    }
     localStorage.setItem(RECOVERY_KEY, JSON.stringify(payload))
   }
 
@@ -382,9 +386,13 @@ export class LocalRepository implements GymRepository {
     const user = this.state.users.find(
       (u) => u.email.toLowerCase() === email.trim().toLowerCase(),
     )
-    if (!recovery || !user || recovery.userId !== user.id || recovery.code !== code.trim()) {
-      throw new Error(RECOVERY_CODE_INVALID)
-    }
+    const valid =
+      recovery !== null &&
+      user !== undefined &&
+      recovery.userId === user.id &&
+      recovery.code === code.trim() &&
+      Date.now() <= recovery.expiresAt
+    if (!valid) throw new Error(RECOVERY_CODE_INVALID)
     await this.writePassword(user.id, newPassword)
     // Un solo uso, y sin sesión: el socio entra desde el login con la clave nueva.
     localStorage.removeItem(RECOVERY_KEY)

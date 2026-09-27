@@ -11,6 +11,8 @@ export const PASSWORD_MIN_LENGTH = 8
 
 /** Largo del código de recuperación que llega por correo (OTP de Supabase). */
 export const RECOVERY_CODE_LENGTH = 6
+/** Vigencia del código: igual que `mailer_otp_exp` (3600 s) en Supabase. */
+export const RECOVERY_CODE_TTL_MS = 60 * 60 * 1000
 export const RECOVERY_CODE_INVALID =
   'El código no es válido o ya venció. Pide uno nuevo.'
 
