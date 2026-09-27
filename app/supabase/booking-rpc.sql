@@ -255,6 +255,98 @@ begin
 end;
 $$;
 
+-- Mueve una reserva a otra sesión, en un solo paso. Valida todo en la sesión nueva
+-- (cupo, solapamiento, membresía) ANTES de tocar nada: si falla, la reserva
+-- original queda intacta. Si había cupo, la original se cancela, se crea la nueva
+-- confirmada y se promueve la cola de la sesión que quedó libre.
+-- Bloquea ambas sesiones en orden de id para no provocar deadlocks.
+create or replace function public.reschedule_booking(p_booking_id text, p_session_id text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_old bookings%rowtype;
+  v_new_session sessions%rowtype;
+  v_reason text;
+  v_now timestamptz := now();
+  v_booking bookings%rowtype;
+begin
+  if v_actor is null then
+    raise exception 'No autenticado';
+  end if;
+  select * into v_old from bookings where id = p_booking_id;
+  if not found then
+    raise exception 'Reserva no encontrada';
+  end if;
+  if v_old.user_id <> v_actor and not public.is_staff() then
+    raise exception 'Sin permiso';
+  end if;
+
+  perform 1 from sessions
+  where id in (v_old.session_id, p_session_id)
+  order by id
+  for update;
+  select * into v_new_session from sessions where id = p_session_id;
+  if not found then
+    raise exception 'Sesión no encontrada';
+  end if;
+  perform 1 from profiles where id = v_old.user_id for update;
+
+  -- Releer con las sesiones bloqueadas: pudo cambiar mientras tanto.
+  select * into v_old from bookings where id = p_booking_id;
+  if v_old.status not in ('confirmed', 'pending', 'waitlisted') then
+    raise exception 'Esta reserva ya no está activa';
+  end if;
+  if v_new_session.starts_at <= v_now then
+    raise exception 'Esa clase ya empezó';
+  end if;
+  if exists (
+    select 1 from bookings
+    where session_id = p_session_id and user_id = v_old.user_id
+      and status in ('confirmed', 'pending', 'waitlisted')
+  ) then
+    raise exception 'Ya tienes reserva en esta sesión';
+  end if;
+  if exists (
+    select 1
+    from bookings b
+    join sessions s on s.id = b.session_id
+    where b.user_id = v_old.user_id
+      and b.id <> p_booking_id
+      and b.status in ('confirmed', 'pending')
+      and s.starts_at < v_new_session.ends_at
+      and s.ends_at > v_new_session.starts_at
+  ) then
+    raise exception 'Se solapa con otra reserva activa';
+  end if;
+  v_reason := public.member_booking_block_reason(v_old.user_id, v_new_session.zone_id);
+  if v_reason is not null then
+    raise exception '%', v_reason;
+  end if;
+  if (
+    select count(*) from bookings
+    where session_id = p_session_id and status = 'confirmed'
+  ) >= v_new_session.capacity then
+    raise exception 'La clase nueva está llena. Tu reserva actual no cambió.';
+  end if;
+
+  update bookings set status = 'cancelled', cancelled_at = v_now where id = p_booking_id;
+  delete from waitlist_entries
+  where session_id = v_old.session_id and user_id = v_old.user_id;
+  insert into bookings (id, session_id, user_id, status, created_at, check_in_code)
+  values (
+    'bk_' || gen_random_uuid(), p_session_id, v_old.user_id, 'confirmed', v_now,
+    upper('QR_' || gen_random_uuid())
+  )
+  returning * into v_booking;
+  perform public.promote_waitlist(v_old.session_id);
+  return to_jsonb(v_booking);
+end;
+$$;
+
 -- Todo lo de `public` queda expuesto como /rest/v1/rpc/<fn> (ver fix-function-grants.sql).
 -- Los helpers solo los llaman las funciones de arriba, que corren como su dueño.
 revoke all on function public.member_booking_block_reason(uuid, text) from public, anon, authenticated;
@@ -264,3 +356,5 @@ revoke all on function public.book_session(text, uuid) from public, anon;
 grant execute on function public.book_session(text, uuid) to authenticated;
 revoke all on function public.cancel_booking(text) from public, anon;
 grant execute on function public.cancel_booking(text) to authenticated;
+revoke all on function public.reschedule_booking(text, text) from public, anon;
+grant execute on function public.reschedule_booking(text, text) to authenticated;

@@ -72,17 +72,10 @@ export function nextWaitlistPosition(
     : Math.max(...forSession.map((w) => w.position)) + 1
 }
 
-export function promoteFirstWaitlist(
-  waitlist: WaitlistEntry[],
-  sessionId: string,
-): WaitlistEntry | null {
-  const ordered = waitlist
-    .filter((w) => w.sessionId === sessionId)
-    .sort((a, b) => a.position - b.position)
-  return ordered[0] ?? null
-}
 
-export const nextWaitlistPromotion = promoteFirstWaitlist
+/** Mismo texto que `reschedule_booking` en booking-rpc.sql. */
+export const RESCHEDULE_FULL_MESSAGE =
+  'La clase nueva está llena. Tu reserva actual no cambió.'
 
 /**
  * Primer socio de la cola que puede pasar a confirmado. Los que ya no son

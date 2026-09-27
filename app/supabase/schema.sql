@@ -109,7 +109,7 @@ after insert or update of status or delete on bookings
 for each row execute function public.sync_session_booked_count();
 
 -- Crear y cancelar reservas (cupo, lista de espera y promoción) va por las funciones
--- book_session / cancel_booking de booking-rpc.sql, que se ejecuta después de este archivo.
+-- book_session / cancel_booking / reschedule_booking de booking-rpc.sql, que se ejecuta después de este archivo.
 
 create table if not exists waitlist_entries (
   id text primary key,

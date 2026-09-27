@@ -9,7 +9,7 @@ import {
   isCheckInWindow,
   isCheckInWindowOpen,
   nextWaitlistPosition,
-  promoteFirstWaitlist,
+  pickWaitlistPromotion,
 } from './index'
 import type { Booking, Session } from '../models'
 
@@ -56,13 +56,14 @@ describe('rules', () => {
       ),
     ).toBe(2)
     expect(
-      promoteFirstWaitlist(
+      pickWaitlistPromotion(
         [
           { id: 'w2', sessionId: 's1', userId: 'u2', position: 2, createdAt: '' },
           { id: 'w1', sessionId: 's1', userId: 'u1', position: 1, createdAt: '' },
         ],
         's1',
-      )?.id,
+        () => true,
+      ).promoted?.id,
     ).toBe('w1')
   })
 

@@ -47,7 +47,7 @@ describe('MyBookingsPage', () => {
     const repo = createMockRepo(memberUser, { bookings: [] })
     const state = await repo.load()
     repo.load = vi.fn(
-      () => new Promise((resolve) => setTimeout(() => resolve(state), 80)),
+      () => new Promise<typeof state>((resolve) => setTimeout(() => resolve(state), 80)),
     )
     resetRepositoryForTests(repo)
 
