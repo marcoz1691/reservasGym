@@ -300,21 +300,33 @@ describe('Senior QA Engineer - Full Exploratory & Edge-Case Testing Cycle', () =
         bookedCount: 0,
       })
 
-      // User 1 books the only slot
       const user1 = await repo.signUp({
         fullName: 'Primer Atleta',
         email: 'atleta1@zonacero.ec',
         password: 'Password123!',
       })
-      const b1 = await repo.createBooking(microSession.id, user1.id)
-      expect((b1 as Booking).status).toBe('confirmed')
-
-      // User 2 tries to book the full session -> Should receive Waitlist position #1
       const user2 = await repo.signUp({
         fullName: 'Segundo Atleta',
         email: 'atleta2@zonacero.ec',
         password: 'Password123!',
       })
+
+      // Reservar exige membresía vigente: el admin la registra para ambos.
+      await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+      for (const user of [user1, user2]) {
+        await repo.registerManualPayment({
+          userId: user.id,
+          planId: 'plan-mensual-full',
+          amountCents: 4500,
+          manualMethod: 'cash',
+        })
+      }
+
+      // User 1 books the only slot
+      const b1 = await repo.createBooking(microSession.id, user1.id)
+      expect((b1 as Booking).status).toBe('confirmed')
+
+      // User 2 tries to book the full session -> Should receive Waitlist position #1
       const w2 = await repo.createBooking(microSession.id, user2.id)
       expect(w2).toHaveProperty('position', 1)
 

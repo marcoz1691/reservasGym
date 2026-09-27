@@ -74,6 +74,7 @@ async function main() {
   console.log(`Proyecto: ${projectRef}`)
 
   await runSql('schema', join(appRoot, 'supabase', 'schema.sql'))
+  await runSql('booking-rpc', join(appRoot, 'supabase', 'booking-rpc.sql'))
   await runSql('seed', join(appRoot, 'supabase', 'seed.sql'))
 
   console.log('\n▶ Verificando tablas...')

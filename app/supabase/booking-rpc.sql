@@ -1,0 +1,266 @@
+-- Reservas atómicas y promoción segura desde la lista de espera.
+-- Origen: ZCAPP-53 (sobrecupo por reservas simultáneas) y ZCAPP-54 (la promoción
+-- no revisaba solapamiento ni membresía). Ejecutar en SQL Editor de Supabase
+-- (proyecto zona-cero). Es idempotente: se puede correr más de una vez.
+--
+-- El cupo lo decide la base. book_session y cancel_booking bloquean la fila de la
+-- sesión (`for update`), así que dos reservas simultáneas sobre el último lugar se
+-- atienden una tras otra y la segunda cae en lista de espera. Orden de bloqueo en
+-- todas las funciones: sesión → perfil del socio, para no provocar deadlocks.
+--
+-- Además la promoción corre como SECURITY DEFINER: antes la hacía el cliente del
+-- socio que cancelaba, y RLS no le deja leer la cola ni tocar reservas ajenas.
+
+-- Motivo por el que el socio no puede reservar en la zona, o null si puede.
+-- Replica canBookMembership + canBookZone (src/domain/rules) con los mismos textos.
+-- Staff y admin no pasan por esta validación.
+create or replace function public.member_booking_block_reason(p_user_id uuid, p_zone_id text)
+returns text
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_role text;
+  v_membership memberships%rowtype;
+  v_plan membership_plans%rowtype;
+  v_zone text := lower(regexp_replace(p_zone_id, '[_-]', '', 'g'));
+begin
+  select role into v_role from profiles where id = p_user_id;
+  if v_role is distinct from 'member' then
+    return null;
+  end if;
+
+  select * into v_membership
+  from memberships
+  where user_id = p_user_id
+  order by ends_at desc
+  limit 1;
+  if not found then
+    return 'No cuenta con una membresía activa.';
+  end if;
+  if v_membership.status = 'cancelled' then
+    return 'La membresía ha sido cancelada.';
+  end if;
+  if now() > coalesce(v_membership.grace_ends_at, v_membership.ends_at + interval '3 days') then
+    return 'Membresía vencida. Por favor renueva tu plan.';
+  end if;
+  if v_membership.visits_left is not null and v_membership.visits_left <= 0 then
+    return 'No quedan visitas disponibles en la membresía.';
+  end if;
+
+  select * into v_plan from membership_plans where id = v_membership.plan_id;
+  if not found then
+    return 'No se encontró un plan asociado para verificar el acceso a la zona.';
+  end if;
+  if coalesce(array_length(v_plan.allowed_zone_ids, 1), 0) = 0 then
+    return null;
+  end if;
+  if exists (
+    select 1 from unnest(v_plan.allowed_zone_ids) z
+    where lower(regexp_replace(z, '[_-]', '', 'g')) = v_zone
+  ) then
+    return null;
+  end if;
+  return format('Tu plan (%s) no incluye acceso a esta zona.', v_plan.name);
+end;
+$$;
+
+-- ¿El socio ya tiene una reserva confirmada o pendiente que se cruza con la sesión?
+create or replace function public.booking_overlaps(p_user_id uuid, p_session_id text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from bookings b
+    join sessions s on s.id = b.session_id
+    join sessions c on c.id = p_session_id
+    where b.user_id = p_user_id
+      and b.status in ('confirmed', 'pending')
+      and s.starts_at < c.ends_at
+      and s.ends_at > c.starts_at
+  );
+$$;
+
+-- Sube a confirmados a los primeros elegibles de la cola mientras haya cupo.
+-- Quien ya no es elegible sale de la cola y su reserva en espera se cancela.
+-- Deja las posiciones en 1, 2, 3… Se llama con la fila de la sesión ya bloqueada.
+create or replace function public.promote_waitlist(p_session_id text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session sessions%rowtype;
+  v_entry waitlist_entries%rowtype;
+  v_now timestamptz := now();
+begin
+  select * into v_session from sessions where id = p_session_id;
+
+  for v_entry in
+    select * from waitlist_entries
+    where session_id = p_session_id
+    order by position, created_at
+  loop
+    exit when (
+      select count(*) from bookings
+      where session_id = p_session_id and status = 'confirmed'
+    ) >= v_session.capacity;
+
+    perform 1 from profiles where id = v_entry.user_id for update;
+    delete from waitlist_entries where id = v_entry.id;
+
+    if public.booking_overlaps(v_entry.user_id, p_session_id)
+      or public.member_booking_block_reason(v_entry.user_id, v_session.zone_id) is not null
+    then
+      update bookings set status = 'cancelled', cancelled_at = v_now
+      where session_id = p_session_id and user_id = v_entry.user_id and status = 'waitlisted';
+      continue;
+    end if;
+
+    update bookings set status = 'confirmed'
+    where session_id = p_session_id and user_id = v_entry.user_id and status = 'waitlisted';
+    if not found then
+      insert into bookings (id, session_id, user_id, status, created_at, check_in_code)
+      values (
+        'bk_' || gen_random_uuid(), p_session_id, v_entry.user_id, 'confirmed', v_now,
+        upper('QR_' || gen_random_uuid())
+      );
+    end if;
+  end loop;
+
+  update waitlist_entries w
+  set position = r.rn
+  from (
+    select id, row_number() over (order by position, created_at)::int as rn
+    from waitlist_entries
+    where session_id = p_session_id
+  ) r
+  where w.id = r.id and w.position <> r.rn;
+end;
+$$;
+
+-- Reserva o entra en lista de espera, en un solo paso.
+-- Devuelve {"booking": fila} o {"waitlist": fila}. p_user_id solo lo usa staff.
+create or replace function public.book_session(p_session_id text, p_user_id uuid default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_user uuid;
+  v_session sessions%rowtype;
+  v_reason text;
+  v_now timestamptz := now();
+  v_booking bookings%rowtype;
+  v_entry waitlist_entries%rowtype;
+begin
+  if v_actor is null then
+    raise exception 'No autenticado';
+  end if;
+  v_user := coalesce(p_user_id, v_actor);
+  if v_user <> v_actor and not public.is_staff() then
+    raise exception 'No puedes reservar por otro socio';
+  end if;
+
+  select * into v_session from sessions where id = p_session_id for update;
+  if not found then
+    raise exception 'Sesión no encontrada';
+  end if;
+  perform 1 from profiles where id = v_user for update;
+
+  if exists (
+    select 1 from bookings
+    where session_id = p_session_id and user_id = v_user
+      and status in ('confirmed', 'pending', 'waitlisted')
+  ) then
+    raise exception 'Ya tienes reserva en esta sesión';
+  end if;
+  if public.booking_overlaps(v_user, p_session_id) then
+    raise exception 'Se solapa con otra reserva activa';
+  end if;
+  v_reason := public.member_booking_block_reason(v_user, v_session.zone_id);
+  if v_reason is not null then
+    raise exception '%', v_reason;
+  end if;
+
+  if (
+    select count(*) from bookings
+    where session_id = p_session_id and status = 'confirmed'
+  ) < v_session.capacity then
+    insert into bookings (id, session_id, user_id, status, created_at, check_in_code)
+    values (
+      'bk_' || gen_random_uuid(), p_session_id, v_user, 'confirmed', v_now,
+      upper('QR_' || gen_random_uuid())
+    )
+    returning * into v_booking;
+    return jsonb_build_object('booking', to_jsonb(v_booking));
+  end if;
+
+  insert into waitlist_entries (id, session_id, user_id, position, created_at)
+  values (
+    'wl_' || gen_random_uuid(), p_session_id, v_user,
+    coalesce((select max(position) from waitlist_entries where session_id = p_session_id), 0) + 1,
+    v_now
+  )
+  returning * into v_entry;
+  insert into bookings (id, session_id, user_id, status, created_at, check_in_code)
+  values (
+    'bk_' || gen_random_uuid(), p_session_id, v_user, 'waitlisted', v_now,
+    upper('QR_' || gen_random_uuid())
+  );
+  return jsonb_build_object('waitlist', to_jsonb(v_entry));
+end;
+$$;
+
+-- Cancela una reserva (propia, o cualquiera si es staff), saca al socio de la
+-- cola y promueve al siguiente elegible. Devuelve la fila cancelada.
+create or replace function public.cancel_booking(p_booking_id text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_booking bookings%rowtype;
+begin
+  if v_actor is null then
+    raise exception 'No autenticado';
+  end if;
+  select * into v_booking from bookings where id = p_booking_id;
+  if not found then
+    raise exception 'Reserva no encontrada';
+  end if;
+  if v_booking.user_id <> v_actor and not public.is_staff() then
+    raise exception 'Sin permiso';
+  end if;
+
+  perform 1 from sessions where id = v_booking.session_id for update;
+  update bookings set status = 'cancelled', cancelled_at = now()
+  where id = p_booking_id
+  returning * into v_booking;
+  delete from waitlist_entries
+  where session_id = v_booking.session_id and user_id = v_booking.user_id;
+  perform public.promote_waitlist(v_booking.session_id);
+  return to_jsonb(v_booking);
+end;
+$$;
+
+-- Todo lo de `public` queda expuesto como /rest/v1/rpc/<fn> (ver fix-function-grants.sql).
+-- Los helpers solo los llaman las funciones de arriba, que corren como su dueño.
+revoke all on function public.member_booking_block_reason(uuid, text) from public, anon, authenticated;
+revoke all on function public.booking_overlaps(uuid, text) from public, anon, authenticated;
+revoke all on function public.promote_waitlist(text) from public, anon, authenticated;
+revoke all on function public.book_session(text, uuid) from public, anon;
+grant execute on function public.book_session(text, uuid) to authenticated;
+revoke all on function public.cancel_booking(text) from public, anon;
+grant execute on function public.cancel_booking(text) to authenticated;
