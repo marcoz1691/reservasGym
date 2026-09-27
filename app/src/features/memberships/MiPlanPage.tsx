@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import {
-  Building2,
-  CalendarCheck,
-  Dumbbell,
-  ShieldAlert,
-} from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { ArrowLeftRight, ArrowRight, Banknote, Check, CreditCard, ShieldAlert } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym, useRepo } from '@/data/RepositoryProvider'
 import { selectMyMembership } from '@/app/store'
 import type { ManualPaymentMethod } from '@/domain/models'
@@ -14,17 +11,28 @@ import {
   selectPendingPlanRequest,
 } from '@/domain/rules/planRequest'
 import { formatCurrency } from '@/lib/format'
-import { PageHeader } from '@/ui/primitives'
+import { Button, PageHeader } from '@/ui/primitives'
 import { isOnlinePayEnabled } from './onlinePay'
 import {
   MembershipCard,
   PaymentHistory,
   PendingPlanRequestCard,
   PlansShowcase,
-  RenewalNoticeCard,
 } from './components'
 
 const PAYMENT_METHODS: ManualPaymentMethod[] = ['cash', 'transfer', 'card_pos']
+
+const PAYMENT_ICONS = {
+  cash: Banknote,
+  transfer: ArrowLeftRight,
+  card_pos: CreditCard,
+} as const
+
+const PAYMENT_HINTS: Record<ManualPaymentMethod, string> = {
+  cash: 'En caja del counter',
+  transfer: 'Bancos locales',
+  card_pos: 'Datáfono en recepción',
+}
 
 export function MiPlanPage() {
   const user = useCurrentUser()
@@ -76,6 +84,14 @@ export function MiPlanPage() {
   const chosenPlan = (data.membershipPlans ?? []).find(
     (plan) => plan.id === chosenPlanId,
   )
+
+  const memberSince = user?.createdAt
+    ? format(parseISO(user.createdAt), 'MMM yyyy', { locale: es })
+    : undefined
+
+  function scrollToCatalog() {
+    document.getElementById('planes-catalogo')?.scrollIntoView({ block: 'start' })
+  }
 
   async function handleRequestPayment(method: ManualPaymentMethod) {
     if (!chosenPlanId) return
@@ -188,67 +204,60 @@ export function MiPlanPage() {
           membership={currentMembership}
           plan={currentPlan}
           zones={data.zones ?? []}
+          memberName={user.fullName}
+          memberSince={memberSince}
+          onRenew={scrollToCatalog}
         />
       ) : showEmptyHero ? (
-        <div className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-bg-2 via-bg-2 to-surface/60 p-8 shadow-2xl">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-acc/10 blur-3xl" />
-          <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-warn/30 bg-warn-soft px-3.5 py-1 text-xs font-bold text-warn">
+        <div className="relative overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-acc/50 via-acc/10 to-transparent"
+          />
+          <div className="relative z-10 space-y-6 p-6 sm:p-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-warn/25 bg-warn-soft px-3.5 py-1 text-xs font-bold text-warn">
               <ShieldAlert className="h-4 w-4 text-warn" />
               <span>Sin membresía activa</span>
             </div>
 
-            <h2 className="text-2xl font-black tracking-tight text-ink md:text-3xl">
-              {onlinePayEnabled
-                ? 'Activa tu plan en línea (Datafast) o en recepción'
-                : 'Activa tu plan en recepción para empezar a entrenar'}
-            </h2>
+            <div className="max-w-xl space-y-3">
+              <h2 className="font-display text-3xl font-bold leading-[1.08] tracking-tight text-ink md:text-[2.75rem]">
+                {onlinePayEnabled ? (
+                  <>
+                    Activa tu plan{' '}
+                    <span className="mt-1 block text-ink-2">en línea o en recepción.</span>
+                  </>
+                ) : (
+                  <>
+                    Elige tu plan{' '}
+                    <span className="mt-1 block text-ink-2">y empieza a entrenar.</span>
+                  </>
+                )}
+              </h2>
+              <p className="max-w-lg text-base leading-relaxed text-ink-2 md:text-lg">
+                {onlinePayEnabled
+                  ? 'Paga con tarjeta o en recepción. En cuanto queda el pago, tu acceso se activa y reservas.'
+                  : 'Pagas en recepción. En cuanto registramos el pago, tu acceso queda activo y reservas clase.'}
+              </p>
+            </div>
 
-            <p className="text-sm text-ink-2 leading-relaxed">
-              Actualmente no cuentas con una membresía activa en Zona Cero Performance.
-              {onlinePayEnabled
-                ? ' Elige un plan abajo y paga con tarjeta Dataweb, o acércate a recepción.'
-                : ' Para reservar clases, acércate a la recepción del gimnasio.'}
-            </p>
-
-            <div className="grid sm:grid-cols-3 gap-3 pt-2">
-              <div className="rounded-2xl border border-line/60 bg-bg/50 p-3.5 space-y-1">
-                <div className="flex items-center gap-2 text-xs font-bold text-acc">
-                  <Dumbbell className="h-4 w-4" />
-                  <span>1. Elige tu plan</span>
-                </div>
-                <p className="text-[11px] text-ink-3">
-                  Revisa los planes y disciplinas disponibles abajo.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-line/60 bg-bg/50 p-3.5 space-y-1">
-                <div className="flex items-center gap-2 text-xs font-bold text-sky-600">
-                  <Building2 className="h-4 w-4" />
-                  <span>{onlinePayEnabled ? '2. Paga en línea' : '2. Visita recepción'}</span>
-                </div>
-                <p className="text-[11px] text-ink-3">
-                  {onlinePayEnabled
-                    ? 'Datafast Dataweb (tarjeta) o efectivo / transferencia / POS.'
-                    : 'Paga en efectivo, transferencia o tarjeta Datafast.'}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-line/60 bg-bg/50 p-3.5 space-y-1">
-                <div className="flex items-center gap-2 text-xs font-bold text-success">
-                  <CalendarCheck className="h-4 w-4" />
-                  <span>3. Reserva y entrena</span>
-                </div>
-                <p className="text-[11px] text-ink-3">
-                  Tu acceso se habilita al confirmar el pago.
-                </p>
-              </div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-ink-3">
+                Eliges el plan y, en el siguiente paso, cómo pagarlo.
+              </p>
+              <Button
+                type="button"
+                size="lg"
+                className="w-full sm:w-auto"
+                onClick={scrollToCatalog}
+              >
+                Ver planes
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Button>
             </div>
           </div>
         </div>
       ) : null}
-
-      <RenewalNoticeCard onlinePayEnabled={onlinePayEnabled} />
 
       {showCatalog ? (
         <PlansShowcase
@@ -267,42 +276,77 @@ export function MiPlanPage() {
 
       {choosingPayment && chosenPlan ? (
         <div ref={paymentStepRef} className="space-y-4 scroll-mt-4">
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-extrabold text-ink">{chosenPlan.name}</p>
-              <p className="text-xs text-ink-2">
-                {formatCurrency(chosenPlan.priceCents)} · {chosenPlan.durationDays} días
-              </p>
+          {/* Resumen del plan elegido: contexto permanente mientras se decide el pago */}
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface-elevated px-4 py-3.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <span
+                aria-hidden
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink-2"
+              >
+                <Check className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+                  {currentMembership ? 'Plan a activar' : 'Plan elegido'}
+                </p>
+                <p className="truncate text-sm font-bold text-ink">{chosenPlan.name}</p>
+                <p className="text-xs text-ink-2">
+                  {formatCurrency(chosenPlan.priceCents)} · {chosenPlan.durationDays} días
+                </p>
+              </div>
             </div>
             <button
               type="button"
               onClick={handleChangePlan}
-              className="shrink-0 text-sm font-bold text-acc"
+              className="focus-ring shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-acc hover:text-acc-hi"
             >
               Cambiar
             </button>
           </div>
 
-          <div className="rounded-3xl border border-line bg-surface p-5">
-            <h3 className="text-lg font-extrabold text-ink">¿Cómo vas a pagar?</h3>
-            <p className="mt-1 text-sm text-ink-2">
+          <div className="rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)] sm:p-6">
+            <h3 className="font-display text-lg font-bold tracking-tight text-ink">
+              ¿Cómo vas a pagar?
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed text-ink-2">
               El pago se completa en recepción. Tu acceso se activa cuando lo registren.
             </p>
-            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
               {PAYMENT_METHODS.map((method) => {
                 const selected = chosenMethod === method
+                const Icon = PAYMENT_ICONS[method]
                 return (
                   <button
                     key={method}
                     type="button"
                     aria-pressed={selected}
+                    aria-label={MANUAL_PAYMENT_LABELS[method]}
                     disabled={requesting}
                     onClick={() => setChosenMethod(method)}
-                    className={`min-h-12 rounded-2xl border-2 bg-bg px-4 py-3 text-sm font-bold text-ink transition disabled:opacity-60 ${
-                      selected ? 'border-acc bg-acc-soft' : 'border-line'
+                    className={`flex items-start gap-3 rounded-2xl border p-3.5 text-left transition disabled:opacity-60 active:scale-[0.99] ${
+                      selected
+                        ? 'border-acc/45 bg-acc-soft ring-1 ring-inset ring-acc/15'
+                        : 'border-line bg-surface hover:border-line-strong'
                     }`}
                   >
-                    {MANUAL_PAYMENT_LABELS[method]}
+                    <span
+                      aria-hidden
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+                        selected
+                          ? 'border-acc/30 bg-surface text-acc'
+                          : 'border-line bg-surface-elevated text-ink-3'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span aria-hidden className="min-w-0">
+                      <span className="block text-sm font-bold text-ink">
+                        {MANUAL_PAYMENT_LABELS[method]}
+                      </span>
+                      <span className="block text-[11px] text-ink-3">
+                        {PAYMENT_HINTS[method]}
+                      </span>
+                    </span>
                   </button>
                 )
               })}
@@ -313,10 +357,14 @@ export function MiPlanPage() {
               onClick={() => {
                 if (chosenMethod) void handleRequestPayment(chosenMethod)
               }}
-              className="mt-4 flex w-full items-center justify-center rounded-2xl bg-acc px-4 py-3 text-sm font-bold text-[var(--color-acc-contrast)] transition hover:brightness-110 disabled:opacity-60"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-40 active:scale-[0.99]"
             >
               Enviar solicitud
+              <ArrowRight className="h-4 w-4" aria-hidden />
             </button>
+            <p className="mt-3 text-center text-xs text-ink-3">
+              Reservamos tu plan y recepción lo activa al registrar el cobro.
+            </p>
             {requestError ? (
               <p className="mt-3 text-sm text-danger" role="alert">
                 {requestError}

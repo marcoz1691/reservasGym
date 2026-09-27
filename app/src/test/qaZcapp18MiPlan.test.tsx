@@ -68,7 +68,8 @@ describe('QA ZCAPP-18 — Mi Plan e Historial de Pagos', () => {
       expect(screen.getByText('Membresía activa')).toBeInTheDocument()
       expect(screen.getByText('Fecha de vencimiento')).toBeInTheDocument()
       expect(screen.getByText(formatDateSpanish(endsAt))).toBeInTheDocument()
-      expect(screen.getByText('20 días restantes')).toBeInTheDocument()
+      // La vigencia vive solo en el anillo, sin duplicar el dato en texto
+      expect(screen.getByLabelText('20 días restantes')).toBeInTheDocument()
     })
 
     it('[ZC18-02] Último día de vigencia se comunica como "Último día de acceso"', async () => {
@@ -80,7 +81,7 @@ describe('QA ZCAPP-18 — Mi Plan e Historial de Pagos', () => {
 
       renderMiPlan()
 
-      expect(await screen.findByText('Último día de acceso')).toBeInTheDocument()
+      expect(await screen.findByLabelText('Último día de acceso')).toBeInTheDocument()
       expect(screen.getByText('Membresía activa')).toBeInTheDocument()
     })
 
@@ -94,8 +95,9 @@ describe('QA ZCAPP-18 — Mi Plan e Historial de Pagos', () => {
 
       renderMiPlan()
 
-      // El badge de estado y el contador de vigencia usan la misma etiqueta
-      expect((await screen.findAllByText('En período de gracia')).length).toBe(2)
+      // Badge de estado en texto; el anillo cuenta los días de gracia
+      expect((await screen.findAllByText('En período de gracia')).length).toBe(1)
+      expect(screen.getByLabelText(/en período de gracia/i)).toBeInTheDocument()
       expect(
         screen.getByText(/Tu plan venció pero estás en período de gracia/i),
       ).toBeInTheDocument()
@@ -112,7 +114,7 @@ describe('QA ZCAPP-18 — Mi Plan e Historial de Pagos', () => {
       renderMiPlan()
 
       expect(await screen.findByText('Membresía vencida')).toBeInTheDocument()
-      expect(screen.getByText('Vencida')).toBeInTheDocument()
+      expect(screen.getByLabelText('Sin días restantes')).toBeInTheDocument()
       expect(screen.getByText(/Tu membresía ha expirado/i)).toBeInTheDocument()
       expect(screen.queryByText('Tu plan actual')).not.toBeInTheDocument()
     })
@@ -154,8 +156,13 @@ describe('QA ZCAPP-18 — Mi Plan e Historial de Pagos', () => {
 
       expect(await screen.findByText('Sin membresía activa')).toBeInTheDocument()
       expect(
-        screen.getByText(/Activa tu plan en recepción para empezar a entrenar/i),
+        screen.getByRole('heading', { name: /Elige tu plan y empieza a entrenar/i }),
       ).toBeInTheDocument()
+      expect(screen.queryByText(/1. Elige tu plan/i)).not.toBeInTheDocument()
+      expect(
+        screen.getByText(/Pagas en recepción. En cuanto registramos el pago/i),
+      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Ver planes' })).toBeInTheDocument()
       // ZC18-O1: no confundir “sin plan” con “membresía vencida”
       expect(screen.queryByText(/Membresía vencida/i)).not.toBeInTheDocument()
       expect(screen.getByText(/Sin registros de pago/i)).toBeInTheDocument()

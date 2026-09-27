@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { MiPlanPage } from './MiPlanPage'
@@ -35,20 +35,25 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Membresía activa')).toBeInTheDocument()
 
-    // Check Renewal Card
-    expect(screen.getByText(/Renueva tu plan en recepción/i)).toBeInTheDocument()
+    // Lo primero es la información del plan propio, no el aviso de recepción
+    const membershipCard = screen.getByRole('region', { name: 'Tu membresía' })
+    expect(within(membershipCard).getByText('Inicio')).toBeInTheDocument()
+    expect(within(membershipCard).getByText('Fecha de vencimiento')).toBeInTheDocument()
+    expect(within(membershipCard).getByText('Inversión')).toBeInTheDocument()
+    expect(within(membershipCard).getByText('Tu plan incluye')).toBeInTheDocument()
+
+    // Con membresía activa no se ofrecen formas de pago hasta elegir un plan
+    expect(screen.queryByText(/Renueva tu plan en recepción/i)).not.toBeInTheDocument()
     expect(
-      screen.getByText(/Próximamente: Pago online con tarjeta desde la app/i),
-    ).toBeInTheDocument()
-    expect(screen.getAllByText('Efectivo').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Transferencia').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Tarjeta Datafast').length).toBeGreaterThan(0)
+      screen.queryByRole('heading', { name: /Cómo vas a pagar/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Efectivo' })).not.toBeInTheDocument()
 
     // Check Plans Showcase
     expect(screen.getByText('Planes disponibles')).toBeInTheDocument()
     expect(screen.getByText('Plan Trimestral')).toBeInTheDocument()
     expect(screen.getByText('Pase 10 Visitas')).toBeInTheDocument()
-    expect(screen.getByText('Dragon Fit Mensual')).toBeInTheDocument()
+    expect(screen.getAllByText('Dragon Fit Mensual').length).toBeGreaterThan(0)
 
     // Check Payment History
     expect(screen.getByText('Historial de pagos')).toBeInTheDocument()
@@ -75,14 +80,92 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
 
     // Wait for empty state message
     expect(
-      await screen.findByText(/Activa tu plan en recepción para empezar a entrenar/i),
+      await screen.findByRole('heading', { name: /Elige tu plan y empieza a entrenar/i }),
     ).toBeInTheDocument()
     expect(screen.getByText('Sin membresía activa')).toBeInTheDocument()
-    expect(screen.getByText(/1. Elige tu plan/i)).toBeInTheDocument()
+    expect(screen.queryByText(/1\. Elige tu plan/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/2\. Visita recepción/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/3\. Reserva y entrena/i)).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Pagas en recepción. En cuanto registramos el pago, tu acceso queda activo y reservas clase.',
+      ),
+    ).toBeInTheDocument()
+    // Las formas de pago llegan recién al elegir un plan
+    expect(
+      screen.queryByRole('heading', { name: /Cómo vas a pagar/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Efectivo' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ver planes' })).toBeInTheDocument()
 
     // Should still showcase plans and renewal instructions
     expect(screen.getByText('Planes disponibles')).toBeInTheDocument()
     expect(screen.getByText(/Sin registros de pago/i)).toBeInTheDocument()
+  })
+
+  it('agrupa el catálogo por familia y muestra el badge de 2 meses gratis', async () => {
+    const user = userEvent.setup()
+    const adminRepo = new LocalRepository()
+    await adminRepo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    await adminRepo.upsertMembershipPlan({
+      id: 'plan-elite-anual',
+      name: 'Zero Elite Anual',
+      priceCents: 42000,
+      durationDays: 420,
+      active: true,
+    })
+
+    const memberRepo = new LocalRepository()
+    await memberRepo.signUp({
+      email: 'vitrina@gym.local',
+      fullName: 'Socio Vitrina',
+      password: 'password123',
+    })
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <MiPlanPage />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('tablist', { name: 'Familias de plan' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Zero Elite' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Otros planes' })).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Zero Elite' }))
+    expect(await screen.findByText(/2 meses gratis/i)).toBeInTheDocument()
+    expect(screen.getByText(/Más ahorro/i)).toBeInTheDocument()
+    expect(screen.queryByText(/1. Elige tu plan/i)).not.toBeInTheDocument()
+  })
+
+  it('Ver planes desplaza al catálogo', async () => {
+    const user = userEvent.setup()
+    const repo = new LocalRepository()
+    await repo.signUp({
+      email: 'catalogo@gym.local',
+      fullName: 'Nuevo Catalogo',
+      password: 'password123',
+    })
+    const scrollIntoView = vi.fn()
+    const originalScroll = HTMLElement.prototype.scrollIntoView
+    HTMLElement.prototype.scrollIntoView = scrollIntoView
+
+    try {
+      render(
+        <MemoryRouter>
+          <RepositoryProvider>
+            <MiPlanPage />
+          </RepositoryProvider>
+        </MemoryRouter>,
+      )
+
+      await user.click(await screen.findByRole('button', { name: 'Ver planes' }))
+      expect(document.getElementById('planes-catalogo')).toBeTruthy()
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScroll
+    }
   })
 
   it('does not show inactive plans in PlansShowcase for members', async () => {
@@ -110,6 +193,36 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
     expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
     expect(screen.queryByText('Plan Trimestral')).not.toBeInTheDocument()
     expect(screen.getAllByText('Plan Mensual Ilimitado').length).toBeGreaterThan(0)
+  })
+
+  it('con plan activo las formas de pago solo aparecen al elegir otro plan', async () => {
+    const user = userEvent.setup()
+    const repo = new LocalRepository()
+    await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
+    resetRepositoryForTests(repo)
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <MiPlanPage />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    await screen.findByRole('region', { name: 'Tu membresía' })
+    expect(screen.queryByRole('button', { name: 'Efectivo' })).not.toBeInTheDocument()
+
+    await user.click(screen.getAllByRole('button', { name: 'Elegir este plan' })[0]!)
+
+    expect(
+      screen.getByRole('heading', { name: /Cómo vas a pagar/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Efectivo' })).toBeInTheDocument()
+    expect(screen.queryByText('Planes disponibles')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Cambiar' }))
+    expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Efectivo' })).not.toBeInTheDocument()
   })
 
   it('el socio elige un plan y deja pendiente la forma de pago', async () => {

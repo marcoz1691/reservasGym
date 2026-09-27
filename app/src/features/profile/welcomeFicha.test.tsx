@@ -6,7 +6,7 @@ import { AppRouter } from '@/app/router'
 import { RepositoryProvider } from '@/data/RepositoryProvider'
 import { resetRepositoryForTests } from '@/data/repository'
 import { createMockRepo } from '@/test/mockRepo'
-import type { GymState, User } from '@/domain/models'
+import type { GymState, Membership, User } from '@/domain/models'
 
 const memberSinFicha: User = {
   id: 'user_member_1',
@@ -28,6 +28,17 @@ const staffSinFicha: User = {
   role: 'staff',
 }
 
+const activeMembership: Membership = {
+  id: 'mem_1',
+  userId: memberConFicha.id,
+  planId: 'plan_1',
+  status: 'active',
+  startsAt: '2026-01-01T00:00:00.000Z',
+  endsAt: '2026-12-31T00:00:00.000Z',
+  graceEndsAt: '2027-01-03T00:00:00.000Z',
+  visitsLeft: null,
+}
+
 function renderApp(user: User, state: Partial<GymState> = {}) {
   resetRepositoryForTests(createMockRepo(user, state))
 
@@ -40,6 +51,8 @@ function renderApp(user: User, state: Partial<GymState> = {}) {
   )
 }
 
+const lazy = { timeout: 8000 }
+
 describe('Primer ingreso — ficha técnica', () => {
   beforeEach(() => {
     sessionStorage.clear()
@@ -50,7 +63,7 @@ describe('Primer ingreso — ficha técnica', () => {
     renderApp(memberSinFicha)
 
     expect(
-      await screen.findByText('Ficha Técnica Inicial de Ingreso'),
+      await screen.findByText('Ficha Técnica Inicial de Ingreso', undefined, lazy),
     ).toBeInTheDocument()
   })
 
@@ -58,19 +71,44 @@ describe('Primer ingreso — ficha técnica', () => {
     renderApp(memberConFicha)
 
     expect(
-      await screen.findByText(/Activa tu plan y empieza a entrenar/i),
+      await screen.findByText(/Activa tu plan y empieza a entrenar/i, undefined, lazy),
     ).toBeInTheDocument()
     expect(
       screen.queryByText('Ficha Técnica Inicial de Ingreso'),
     ).not.toBeInTheDocument()
   })
 
-  it('socio sin plan no ve Agenda ni Reservas en la navegación', async () => {
+  it('socio sin plan no ve Reservar ni Mis clases en la navegación', async () => {
     renderApp(memberConFicha)
 
-    await screen.findByText(/Activa tu plan y empieza a entrenar/i)
+    await screen.findByText(/Activa tu plan y empieza a entrenar/i, undefined, lazy)
+    expect(screen.queryByRole('link', { name: /^Reservar$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^Reservas$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /mis clases/i })).not.toBeInTheDocument()
+  })
+
+  it('socio con plan ve Reservar y Mis clases, no Reservas ni Agenda', async () => {
+    renderApp(memberConFicha, { memberships: [activeMembership] })
+
+    expect(
+      await screen.findByText(/Sin clases próximas/i, undefined, lazy),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /^Reservar$/i }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: /^Mis clases$/i }).length).toBeGreaterThan(0)
     expect(screen.queryByRole('link', { name: /^Agenda$/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /reservas/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^Reservas$/i })).not.toBeInTheDocument()
+  })
+
+  it('staff ve Reservar y Reservar clases, no Agenda', async () => {
+    renderApp(staffSinFicha)
+
+    expect(
+      await screen.findByText(/Áreas disponibles/i, undefined, lazy),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /^Reservar$/i }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('link', { name: /Reservar clases/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^Agenda$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Agenda General/i })).not.toBeInTheDocument()
   })
 
   it('socio sin plan ve un popup de recordatorio, no un banner de error', async () => {
@@ -90,19 +128,21 @@ describe('Primer ingreso — ficha técnica', () => {
     await userEvent.click(within(reminder).getByRole('link', { name: /ver planes/i }))
 
     expect(screen.queryByTestId('plan-required-notice')).not.toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Mi Plan' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Mi Plan' }, lazy),
+    ).toBeInTheDocument()
   })
 
   it('"Completarla después" deja entrar a la app en esta sesión', async () => {
     renderApp(memberSinFicha)
 
-    await screen.findByText('Ficha Técnica Inicial de Ingreso')
+    await screen.findByText('Ficha Técnica Inicial de Ingreso', undefined, lazy)
     await userEvent.click(
       screen.getByRole('button', { name: /Completarla después/i }),
     )
 
     expect(
-      await screen.findByText(/Activa tu plan y empieza a entrenar/i),
+      await screen.findByText(/Activa tu plan y empieza a entrenar/i, undefined, lazy),
     ).toBeInTheDocument()
   })
 
@@ -143,7 +183,6 @@ describe('Primer ingreso — ficha técnica', () => {
     await userEvent.click(screen.getByRole('button', { name: /Siguiente/i }))
     await userEvent.type(screen.getByLabelText(/Estatura/i), '180')
     await userEvent.type(screen.getByLabelText(/Masa corporal/i), '72')
-    await userEvent.click(screen.getByRole('button', { name: /Siguiente/i }))
     await userEvent.click(
       screen.getByRole('button', { name: /Guardar Ficha Técnica/i }),
     )

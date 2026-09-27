@@ -69,9 +69,6 @@ export function ExplorePage() {
       .filter((s) => s.startsAt >= now)
       .filter((s) => {
         if (selectedAreaBlocked) return false
-        if (isMember && memberPlan && !canBookZone(memberPlan, s.zoneId).allowed) {
-          return false
-        }
         if (zoneType === 'all') return true
         const z = data.zones.find((x) => x.id === s.zoneId)
         return (

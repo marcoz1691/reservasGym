@@ -43,7 +43,7 @@ describe('HomePage — hero del socio', () => {
     vi.clearAllMocks()
   })
 
-  it('socio sin plan ve la bienvenida en lugar de "Sin reservas próximas"', async () => {
+  it('socio sin plan ve la bienvenida en lugar de "Sin clases próximas"', async () => {
     resetRepositoryForTests(createMockRepo(memberUser, { memberships: [] }))
 
     renderHome()
@@ -52,11 +52,11 @@ describe('HomePage — hero del socio', () => {
       await screen.findByText(/Activa tu plan y empieza a entrenar/i),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText(/Sin reservas próximas/i),
+      screen.queryByText(/Sin clases próximas/i),
     ).not.toBeInTheDocument()
   })
 
-  it('socio con plan activo y sin reservas ve "Sin reservas próximas"', async () => {
+  it('socio con plan activo y sin reservas ve "Sin clases próximas"', async () => {
     resetRepositoryForTests(
       createMockRepo(memberUser, { memberships: [activeMembership] }),
     )
@@ -64,7 +64,7 @@ describe('HomePage — hero del socio', () => {
     renderHome()
 
     expect(
-      await screen.findByText(/Sin reservas próximas/i),
+      await screen.findByText(/Sin clases próximas/i),
     ).toBeInTheDocument()
     expect(
       screen.queryByText(/Activa tu plan y empieza a entrenar/i),
@@ -109,6 +109,10 @@ describe('HomePage — hero del socio', () => {
     expect(
       within(heroLabel.parentElement!).getByText('CrossFit WOD Power'),
     ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Ver mis clases/i })).toHaveAttribute(
+      'href',
+      '/reservas',
+    )
     expect(
       screen.queryByText(/Activa tu plan y empieza a entrenar/i),
     ).not.toBeInTheDocument()
@@ -126,6 +130,45 @@ describe('HomePage — hero del socio', () => {
       /Socio/,
     )
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/Demo/)
+  })
+
+  it('muestra clases, áreas y peso como un panel, no como tres contadores sueltos', async () => {
+    resetRepositoryForTests(
+      createMockRepo(memberUser, {
+        memberships: [activeMembership],
+        zones: [
+          {
+            id: 'zone-gimnasio',
+            name: 'Gimnasio',
+            type: 'gimnasio',
+            description: '',
+            defaultCapacity: 20,
+            imageHint: '',
+          },
+        ],
+        measurements: [
+          {
+            id: 'bm_1',
+            userId: memberUser.id,
+            recordedBy: memberUser.id,
+            weightKg: 67.2,
+            heightCm: 165,
+            measuredAt: new Date(Date.now() - DAY_MS).toISOString(),
+            notes: '',
+          },
+        ],
+      }),
+    )
+
+    renderHome()
+
+    expect(await screen.findByText('Reservas activas')).toBeInTheDocument()
+    expect(screen.getByText('Ninguna apartada')).toBeInTheDocument()
+    expect(screen.getByText('Áreas disponibles')).toBeInTheDocument()
+    expect(screen.getByText('En el complejo')).toBeInTheDocument()
+    expect(screen.getByText('Último peso')).toBeInTheDocument()
+    expect(screen.getByText('67.2')).toBeInTheDocument()
+    expect(screen.getByText(/hace/i)).toBeInTheDocument()
   })
 
   it('socio sin plan no ve atajos de agenda ni reservas', async () => {

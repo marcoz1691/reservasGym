@@ -1,3 +1,5 @@
+import type { MembershipPlan } from '@/domain/models'
+
 /** Input for creating/updating a membership plan (admin UI / repository). */
 export interface MembershipPlanInput {
   name: string
@@ -46,4 +48,159 @@ export function validateMembershipPlanInput(
       active: input.active ?? true,
     },
   }
+}
+
+export type PlanFamilyId =
+  | 'zero-start'
+  | 'zero-active'
+  | 'zero-pro'
+  | 'zero-elite'
+  | 'zona-day'
+  | 'otros'
+
+export interface PlanFamily {
+  id: PlanFamilyId
+  label: string
+  benefit: string
+}
+
+export interface PlanOffer {
+  plan: MembershipPlan
+  familyId: PlanFamilyId
+  durationLabel: string
+  /** Meses que cubre la oferta; null en pases diarios o duraciones sueltas. */
+  months: number | null
+  badge: string | null
+  equivalentPerMonthCents: number | null
+  featured: boolean
+}
+
+export interface PlanFamilyGroup {
+  family: PlanFamily
+  offers: PlanOffer[]
+}
+
+const FAMILY_ORDER: PlanFamily[] = [
+  {
+    id: 'zero-start',
+    label: 'Zero Start',
+    benefit: 'Clases funcionales en gimnasio',
+  },
+  {
+    id: 'zero-active',
+    label: 'Zero Active',
+    benefit: 'Gimnasio, musculación y bailoterapia',
+  },
+  {
+    id: 'zero-pro',
+    label: 'Zero Pro',
+    benefit: 'Active + Hyrox y clases grupales',
+  },
+  {
+    id: 'zero-elite',
+    label: 'Zero Elite',
+    benefit: 'Complejo completo, todas las áreas',
+  },
+  {
+    id: 'zona-day',
+    label: 'Pases diarios',
+    benefit: 'Acceso de un día, sin mensualidad',
+  },
+  {
+    id: 'otros',
+    label: 'Otros planes',
+    benefit: 'Planes vigentes fuera del catálogo Zero',
+  },
+]
+
+const DURATION: Record<number, { label: string; months: number | null; badge: string | null }> = {
+  1: { label: '1 día', months: null, badge: null },
+  30: { label: '1 mes', months: 1, badge: null },
+  90: { label: '3 meses', months: 3, badge: '3 meses · 15% off' },
+  210: { label: '7 meses', months: 7, badge: '1 mes gratis' },
+  420: { label: '14 meses', months: 14, badge: '2 meses gratis' },
+}
+
+export function planFamilyId(name: string): PlanFamilyId {
+  const n = name.toLowerCase()
+  if (n.includes('zona day')) return 'zona-day'
+  if (n.includes('zero start')) return 'zero-start'
+  if (n.includes('zero active')) return 'zero-active'
+  if (n.includes('zero pro')) return 'zero-pro'
+  if (n.includes('zero elite')) return 'zero-elite'
+  return 'otros'
+}
+
+export function describePlanOffer(plan: MembershipPlan): PlanOffer {
+  const known = DURATION[plan.durationDays]
+  const months = known?.months ?? null
+  return {
+    plan,
+    familyId: planFamilyId(plan.name),
+    durationLabel: known?.label ?? `${plan.durationDays} días`,
+    months,
+    badge: known?.badge ?? null,
+    equivalentPerMonthCents:
+      months && months > 0 ? Math.round(plan.priceCents / months) : null,
+    featured: plan.durationDays === 420,
+  }
+}
+
+const FAMILY_RANK: Record<PlanFamilyId, number> = {
+  'zona-day': 0,
+  otros: 1,
+  'zero-start': 2,
+  'zero-active': 3,
+  'zero-pro': 4,
+  'zero-elite': 5,
+}
+
+/**
+ * Plan superior a ofrecer. Sin membresía, el de mayor precio.
+ * Con plan, el siguiente nivel de familia (misma duración si existe);
+ * si ya está en la familia más alta, el siguiente precio.
+ */
+export function selectUpgradePlan(
+  plans: MembershipPlan[],
+  currentPlanId: string | null | undefined,
+): MembershipPlan | null {
+  const active = plans.filter((plan) => plan.active)
+  if (active.length === 0) return null
+
+  const current = currentPlanId
+    ? active.find((plan) => plan.id === currentPlanId)
+    : undefined
+
+  if (!current) {
+    return [...active].sort((a, b) => b.priceCents - a.priceCents)[0] ?? null
+  }
+
+  const currentRank = FAMILY_RANK[planFamilyId(current.name)]
+  const higherFamily = active
+    .filter((plan) => plan.id !== current.id && FAMILY_RANK[planFamilyId(plan.name)] > currentRank)
+    .sort((a, b) => {
+      const rank = FAMILY_RANK[planFamilyId(a.name)] - FAMILY_RANK[planFamilyId(b.name)]
+      if (rank !== 0) return rank
+      const duration =
+        Math.abs(a.durationDays - current.durationDays) -
+        Math.abs(b.durationDays - current.durationDays)
+      if (duration !== 0) return duration
+      return a.priceCents - b.priceCents
+    })
+  if (higherFamily[0]) return higherFamily[0]
+
+  return (
+    active
+      .filter((plan) => plan.id !== current.id && plan.priceCents > current.priceCents)
+      .sort((a, b) => a.priceCents - b.priceCents)[0] ?? null
+  )
+}
+
+export function groupPlansByFamily(plans: MembershipPlan[]): PlanFamilyGroup[] {
+  const offers = plans.filter((p) => p.active).map(describePlanOffer)
+  return FAMILY_ORDER.flatMap((family) => {
+    const group = offers.filter((o) => o.familyId === family.id)
+    if (group.length === 0) return []
+    return [{ family, offers: group }]
+  })
 }

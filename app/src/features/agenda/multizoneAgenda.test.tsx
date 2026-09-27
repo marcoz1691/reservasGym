@@ -184,7 +184,13 @@ describe('Multizone Agenda — 9 Disciplines in Zona Cero', () => {
     )
 
     // Verify main header and subtitle
-    expect(await screen.findByRole('heading', { name: 'Agenda' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Reservar clase' })).toBeInTheDocument()
+    expect(
+      screen.getByText(/Aquí apartas el cupo. Lo que ya tomaste está en Mis clases/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Aquí apartas el cupo. Lo que ya tomaste está en Mis clases/i),
+    ).toBeInTheDocument()
 
     // Verify filter pills are present
     expect(screen.getByRole('button', { name: /todas/i })).toBeInTheDocument()

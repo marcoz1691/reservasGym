@@ -12,14 +12,17 @@ export function WelcomeNoPlanCard({
   onlinePayEnabled = false,
 }: WelcomeNoPlanCardProps) {
   return (
-    <Card className="relative overflow-hidden border-acc/25 p-0">
-      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-acc-glow blur-3xl" />
+    <Card className="relative overflow-hidden p-0">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-acc/50 via-acc/10 to-transparent"
+      />
       <div className="relative p-5 sm:p-6">
-        <div className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-acc">
-          <Sparkles className="h-3.5 w-3.5" />
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-acc/25 bg-acc-soft px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-acc">
+          <Sparkles className="h-3 w-3" />
           Primer paso
         </div>
-        <h2 className="mt-2 font-display text-2xl font-extrabold text-ink">
+        <h2 className="mt-3 font-display text-2xl font-extrabold text-ink">
           Activa tu plan y empieza a entrenar
         </h2>
         <p className="mt-1.5 text-sm text-ink-2">

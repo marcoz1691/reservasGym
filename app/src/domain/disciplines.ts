@@ -8,9 +8,9 @@ import {
   HeartPulse,
   Music,
   Timer,
-  Zap,
 } from 'lucide-react'
 import type { ElementType } from 'react'
+import { Barbell } from '@/ui/icons'
 
 export interface DisciplineMeta {
   type: ZoneType
@@ -126,7 +126,7 @@ export const ZONA_CERO_DISCIPLINES: Record<ZoneType, DisciplineMeta> = {
     type: 'crossfit',
     name: 'CrossFit',
     shortName: 'CrossFit',
-    icon: Zap,
+    icon: Barbell,
     tone: 'neutral',
     colorClass: 'text-ink-2',
     bgLightClass: 'bg-surface-elevated',
