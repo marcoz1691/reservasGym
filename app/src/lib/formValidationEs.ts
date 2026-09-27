@@ -60,9 +60,12 @@ export function isBlockedNumberKey(key: string): boolean {
   return BLOCKED_NUMBER_KEYS.has(key)
 }
 
-/** Quita notación científica y signos de un valor pegado/escrito. */
+/**
+ * Quita notación científica y signos de un valor pegado/escrito.
+ * Acepta coma decimal (teclado es-EC) y la normaliza a punto.
+ */
 export function sanitizeDecimalInput(raw: string): string {
-  const cleaned = raw.replace(/[^\d.]/g, '')
+  const cleaned = raw.replace(/,/g, '.').replace(/[^\d.]/g, '')
   const firstDot = cleaned.indexOf('.')
   if (firstDot === -1) return cleaned
   return (

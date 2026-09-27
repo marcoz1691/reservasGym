@@ -129,6 +129,37 @@ describe('WeightPage (Anthropometric & Body Progress Module)', () => {
     })
   })
 
+  it('acepta coma decimal en peso objetivo y peso (ZCAPP-52)', async () => {
+    const repo = new LocalRepository()
+    await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <WeightPage />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('Control Antropométrico & Progreso')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Ajustar meta|Definir meta/i }))
+    const targetWeightInput = screen.getByLabelText(/Peso Objetivo \(kg\) \*/i)
+    await userEvent.clear(targetWeightInput)
+    await userEvent.type(targetWeightInput, '62,5')
+    expect(targetWeightInput).toHaveValue('62.5')
+    await userEvent.click(screen.getByRole('button', { name: /Actualizar Meta|Fijar Meta/i }))
+    await waitFor(() => {
+      expect(screen.getByText('62.5')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: /Nueva medición/i }))
+    const weightInput = screen.getByLabelText(/Peso \(kg\) \*/i)
+    await userEvent.clear(weightInput)
+    await userEvent.type(weightInput, '66,8')
+    expect(weightInput).toHaveValue('66.8')
+  })
+
   it('renders staff panel and allows selecting members when logged in as staff', async () => {
     const repo = new LocalRepository()
     await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
