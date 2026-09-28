@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Lock, UserCheck } from 'lucide-react'
 import {
@@ -71,7 +71,20 @@ export function AgendaPage() {
     ? (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
     : undefined
 
-  const [anchorYmd, setAnchorYmd] = useState(() => ecuadorTodayYmd())
+  // ?dia=YYYY-MM-DD&sesion=<id>: viene de Inicio, abre ese día y resalta la clase (ZCAPP-58)
+  const [anchorYmd, setAnchorYmd] = useState(() => {
+    const day = params.get('dia')
+    return day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : ecuadorTodayYmd()
+  })
+  const focusSessionId = params.get('sesion')
+  const scrolledToFocus = useRef(false)
+  useEffect(() => {
+    if (!focusSessionId || scrolledToFocus.current) return
+    const row = document.getElementById(`sesion-${focusSessionId}`)
+    if (!row) return
+    scrolledToFocus.current = true
+    row.scrollIntoView?.({ block: 'center' })
+  })
   const [zoneFilter, setZoneFilter] = useState(params.get('zone') ?? 'all')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [rowError, setRowError] = useState<{ sessionId: string; message: string } | null>(
@@ -389,7 +402,11 @@ export function AgendaPage() {
           return (
             <div
               key={session.id}
-              className="rounded-2xl border border-line bg-surface px-3 py-3"
+              id={`sesion-${session.id}`}
+              aria-current={session.id === focusSessionId ? 'true' : undefined}
+              className={`rounded-2xl border bg-surface px-3 py-3 ${
+                session.id === focusSessionId ? 'border-acc ring-2 ring-acc/30' : 'border-line'
+              }`}
             >
               <div className="flex items-center gap-3">
                 <div className="w-12 shrink-0 text-sm font-extrabold text-ink">

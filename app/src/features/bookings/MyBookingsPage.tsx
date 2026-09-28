@@ -12,7 +12,7 @@ import {
   useRepo,
 } from '@/data/RepositoryProvider'
 import { ZONE_LABELS, type MembershipPlan, type Session } from '@/domain/models'
-import { canBookZone } from '@/domain/rules'
+import { bookingStatusLabel, canBookZone, isActiveBooking } from '@/domain/rules'
 import { selectMyMembership } from '@/app/store'
 import { ButtonLink } from '@/ui/ButtonLink'
 import {
@@ -26,6 +26,9 @@ import {
 } from '@/ui/primitives'
 import { TicketCheck } from 'lucide-react'
 
+/** Clases pasadas que se muestran en el historial (las más recientes). */
+const HISTORY_LIMIT = 10
+
 export function MyBookingsPage() {
   const user = useCurrentUser()
   const data = useAppData()
@@ -37,26 +40,30 @@ export function MyBookingsPage() {
   const [rescheduleId, setRescheduleId] = useState<string | null>(null)
   const [newSessionId, setNewSessionId] = useState('')
 
-  const mine = useMemo(
-    () =>
-      !user
-        ? []
-        : data.bookings
-        .filter((b) => b.userId === user.id && b.status !== 'cancelled')
-        .map((b) => ({
+  // Próximas (la clase no terminó) con QR y acciones; las pasadas van al
+  // historial, sin cancelar ni reagendar (ZCAPP-57).
+  const { mine, history } = useMemo(() => {
+    if (!user) return { mine: [], history: [] }
+    const now = new Date()
+    const rows = data.bookings
+      .filter((b) => b.userId === user.id && b.status !== 'cancelled')
+      .map((b) => {
+        const session = data.sessions.find((s) => s.id === b.sessionId)
+        return {
           booking: b,
-          session: data.sessions.find((s) => s.id === b.sessionId),
-          zone: data.zones.find(
-            (z) =>
-              z.id ===
-              data.sessions.find((s) => s.id === b.sessionId)?.zoneId,
-          ),
-        }))
-        .sort((a, b) =>
-          (a.session?.startsAt ?? '').localeCompare(b.session?.startsAt ?? ''),
-        ),
-    [data, user],
-  )
+          session,
+          zone: data.zones.find((z) => z.id === session?.zoneId),
+          active: isActiveBooking(b, session, now),
+        }
+      })
+      .sort((a, b) =>
+        (a.session?.startsAt ?? '').localeCompare(b.session?.startsAt ?? ''),
+      )
+    return {
+      mine: rows.filter((r) => r.active),
+      history: rows.filter((r) => !r.active).reverse().slice(0, HISTORY_LIMIT),
+    }
+  }, [data, user])
 
   useEffect(() => {
     let cancelled = false
@@ -131,7 +138,7 @@ export function MyBookingsPage() {
                         : 'neutral'
                   }
                 >
-                  {booking.status}
+                  {bookingStatusLabel(booking, session)}
                 </Badge>
               </div>
 
@@ -222,6 +229,35 @@ export function MyBookingsPage() {
           ))}
         </div>
       )}
+
+      {history.length > 0 ? (
+        <section aria-label="Historial" className="mt-8">
+          <h2 className="mb-3 font-display text-lg font-bold text-ink">Historial</h2>
+          <div className="space-y-2">
+            {history.map(({ booking, session, zone }) => (
+              <div
+                key={booking.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-ink">
+                    {session?.title ?? 'Sesión'}
+                  </p>
+                  <p className="text-xs text-ink-3">
+                    {zone ? ZONE_LABELS[zone.type] : 'Área'}
+                    {session
+                      ? ` · ${format(parseISO(session.startsAt), 'EEE d MMM · HH:mm', { locale: es })}`
+                      : ''}
+                  </p>
+                </div>
+                <Badge tone={booking.status === 'attended' ? 'ok' : 'neutral'}>
+                  {bookingStatusLabel(booking, session)}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   )
 }

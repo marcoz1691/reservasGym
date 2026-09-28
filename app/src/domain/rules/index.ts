@@ -181,3 +181,4 @@ export * from './anthropometrics'
 export * from './profile'
 export * from './planRequest'
 
+export * from './bookingTimeline'

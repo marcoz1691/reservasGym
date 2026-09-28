@@ -18,7 +18,13 @@ import {
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
 import { ZONE_LABELS } from '@/domain/models'
 import type { Membership, MembershipPlan } from '@/domain/models'
-import { canBookZone, canUseBookingNav, displayFirstName } from '@/domain/rules'
+import { ecuadorTodayYmd } from '@/lib/format'
+import {
+  canBookZone,
+  canUseBookingNav,
+  displayFirstName,
+  selectActiveBookings,
+} from '@/domain/rules'
 import { computeMembershipStatus, daysRemaining } from '@/domain/rules/membership'
 import { AreaThumb } from './components/AreaThumb'
 import { selectMyMembership } from '@/app/store'
@@ -59,11 +65,8 @@ export function HomePage() {
     )
   }
 
-  const mine = data.bookings.filter(
-    (b) =>
-      b.userId === user.id &&
-      (b.status === 'confirmed' || b.status === 'waitlisted'),
-  )
+  // Solo clases que aún no terminan: las pasadas no cuentan como activas (ZCAPP-57)
+  const mine = selectActiveBookings(data.bookings, data.sessions, user.id)
 
   const membership = selectMyMembership(data, user.id)
   const pendingRequest = selectPendingPlanRequest(data.payments ?? [], user.id)
@@ -319,7 +322,11 @@ export function HomePage() {
                   Math.round((s.bookedCount / Math.max(1, s.capacity)) * 100),
                 )
                 return (
-                  <Link key={s.id} to="/agenda" className="focus-ring rounded-3xl">
+                  <Link
+                    key={s.id}
+                    to={agendaLinkFor(s)}
+                    className="focus-ring rounded-3xl"
+                  >
                     <Card className="h-full hover:-translate-y-0.5 hover:border-line-strong hover:shadow-[var(--shadow-pop)]">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex min-w-0 gap-3">
@@ -523,6 +530,11 @@ export function HomePage() {
       </div>
     </div>
   )
+}
+
+/** Abre la agenda en el día de la sesión y la resalta (ZCAPP-58). */
+function agendaLinkFor(session: { id: string; startsAt: string }): string {
+  return `/agenda?dia=${ecuadorTodayYmd(session.startsAt)}&sesion=${encodeURIComponent(session.id)}`
 }
 
 function bookingHint(count: number): string {
