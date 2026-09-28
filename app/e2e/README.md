@@ -10,7 +10,7 @@ Complementan a los tests de Vitest (`npm test`), que prueban el código en aisla
 |---|---|---|
 | `recuperacion-otp.e2e.ts` | ZCAPP-61 | Recuperar la contraseña con el código de 6 dígitos: validaciones, reenvío bloqueado 60 s, código incorrecto, cambio y login con la clave nueva, código de un solo uso |
 | `medidas.e2e.ts` | ZCAPP-22, 23, 52, 62 | Medición con coma decimal, IMC en vivo (70.5 kg / 175 cm = 23.0), gráfica, historial, meta, staff registrando medidas y hora de Ecuador al guardar |
-| `reservas-checkin.e2e.ts` | ZCAPP-21, 24, 56 | Reservar, solapamiento, lista de espera, promoción al liberarse cupo, cancelar, QR con código corto, check-in (código incorrecto, correcto, doble, fuera de horario) |
+| `reservas-checkin.e2e.ts` | ZCAPP-21, 24, 55, 56 | Reservar, solapamiento, lista de espera, promoción al liberarse cupo, cancelar, QR con código corto, check-in (código incorrecto, correcto, doble, fuera de horario), reagendar (a clase llena o que choca no cambia nada; a clase libre mueve la reserva y promueve la cola) |
 
 ## Cómo correrlas
 

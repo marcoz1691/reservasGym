@@ -2,7 +2,8 @@ import { test, expect, type Page } from '@playwright/test'
 import { ACCOUNTS, login, sql, sqlAs, userId } from './support/qa'
 
 /**
- * ZCAPP-21 motor de reservas, ZCAPP-24 check-in QR y ZCAPP-56 código corto.
+ * ZCAPP-21 motor de reservas, ZCAPP-24 check-in QR, ZCAPP-55 reagendar y
+ * ZCAPP-56 código corto.
  * Crea clases temporales "QA-E2E" en QA a horas controladas y las borra al
  * final (con sus reservas, colas y check-ins).
  */
@@ -14,6 +15,12 @@ const S = {
   overlap: `qa_e2e_ov_${tag}`,
   full: `qa_e2e_full_${tag}`,
   tomorrow: `qa_e2e_later_${tag}`,
+  // ZCAPP-55: reagendar
+  origin: `qa_e2e_orig_${tag}`,
+  fullTarget: `qa_e2e_rfull_${tag}`,
+  clash: `qa_e2e_clash_${tag}`,
+  clashOther: `qa_e2e_clash2_${tag}`,
+  free: `qa_e2e_free_${tag}`,
 }
 let socioId = ''
 let staffId = ''
@@ -43,6 +50,18 @@ test.beforeAll(async () => {
   await createSession(S.tomorrow, 'QA-E2E Mañana', 26 * 60, 5)
   await sqlAs(staffId, `select public.book_session('${S.full}')`) // staff ocupa el único cupo
   await sqlAs(socioId, `select public.book_session('${S.tomorrow}')`)
+
+  // Reagendar (después de "Llena", que termina al minuto 130): el socio está en
+  // Origen (cupo 1) y staff espera detrás de él.
+  await createSession(S.origin, 'QA-E2E Origen', 150, 1)
+  await createSession(S.fullTarget, 'QA-E2E Destino lleno', 230, 1)
+  await createSession(S.clash, 'QA-E2E Destino choca', 310, 5)
+  await createSession(S.clashOther, 'QA-E2E Otra suya', 310, 5)
+  await createSession(S.free, 'QA-E2E Destino libre', 390, 5)
+  await sqlAs(socioId, `select public.book_session('${S.origin}')`)
+  await sqlAs(staffId, `select public.book_session('${S.origin}')`)
+  await sqlAs(staffId, `select public.book_session('${S.fullTarget}')`)
+  await sqlAs(socioId, `select public.book_session('${S.clashOther}')`)
 })
 
 test.afterAll(async () => {
@@ -145,5 +164,64 @@ test('ZCAPP-24: check-in en recepción', async ({ page }) => {
       await expect(page.getByText(/fuera de la ventana/i)).toBeVisible()
     }
     expect(await checkIns(later.id)).toBe(0)
+  })
+})
+
+test('ZCAPP-55: reagendar no pierde el lugar ni sobrepasa el cupo', async ({ page }) => {
+  await login(page, ACCOUNTS.socio)
+  await page.goto('/reservas')
+  const statusOf = async (sessionId: string, user = socioId) =>
+    (await sql<{ status: string }>(
+      `select status from bookings where session_id = '${sessionId}' and user_id = '${user}'
+       order by created_at desc limit 1`,
+    ))[0]?.status
+  const confirmedIn = async (sessionId: string) =>
+    (await sql<{ c: number }>(
+      `select count(*)::int c from bookings where session_id = '${sessionId}' and status = 'confirmed'`,
+    ))[0]!.c
+
+  /** Abre "Reagendar" en la tarjeta de Origen, elige el destino y confirma. */
+  const rescheduleTo = async (target: string) => {
+    const card = page.getByText('QA-E2E Origen', { exact: true }).first()
+      .locator('xpath=ancestor::*[.//button[normalize-space()="Reagendar"]][1]')
+    await card.getByRole('button', { name: /^reagendar$/i }).click()
+    const select = card.getByLabel(/nueva sesión/i)
+    const value = await select.locator('option', { hasText: target }).first().getAttribute('value')
+    expect(value, `"${target}" no aparece como opción`).toBeTruthy()
+    await select.selectOption(value!)
+    await card.getByRole('button', { name: /^confirmar$/i }).click()
+  }
+
+  await test.step('a una clase llena → avisa y la reserva original no cambia', async () => {
+    await rescheduleTo('QA-E2E Destino lleno')
+    await expect(page.getByText(/la clase nueva está llena\. tu reserva actual no cambió/i)).toBeVisible()
+    expect(await statusOf(S.origin)).toBe('confirmed')
+    expect(await statusOf(S.origin, staffId)).toBe('waitlisted') // nadie fue promovido
+    expect(await confirmedIn(S.origin)).toBe(1) // sin sobrecupo
+    expect(await statusOf(S.fullTarget)).toBeUndefined() // ni en espera en la llena
+  })
+
+  await test.step('a una clase que choca con otra suya → avisa y no cambia nada', async () => {
+    await page.reload()
+    await rescheduleTo('QA-E2E Destino choca')
+    await expect(page.getByText(/se solapa/i)).toBeVisible()
+    expect(await statusOf(S.origin)).toBe('confirmed')
+    expect(await statusOf(S.clash)).toBeUndefined()
+    expect(await confirmedIn(S.origin)).toBe(1)
+  })
+
+  await test.step('a una clase con cupo → se mueve y el siguiente de la cola sube', async () => {
+    await page.reload()
+    await rescheduleTo('QA-E2E Destino libre')
+    await expect(page.getByText(/reserva reagendada/i)).toBeVisible()
+    expect(await statusOf(S.origin)).toBe('cancelled')
+    expect(await statusOf(S.free)).toBe('confirmed')
+    expect(await statusOf(S.origin, staffId)).toBe('confirmed') // promovido
+    expect(await confirmedIn(S.origin)).toBe(1)
+    const [moved] = await sql<{ check_in_code: string }>(
+      `select check_in_code from bookings where session_id = '${S.free}' and user_id = '${socioId}'`,
+    )
+    expect(moved!.check_in_code).toMatch(/^QR-[0-9A-F]{8}$/)
+    await expect(page.getByAltText(`QR ${moved!.check_in_code}`)).toBeVisible()
   })
 })
