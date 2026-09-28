@@ -2,6 +2,7 @@ import { useState, useMemo, type FormEvent } from 'react'
 import type { BodyMeasurement } from '@/domain/models'
 import { calculateBmi, getBmiCategory } from '@/domain/rules'
 import { Input } from '@/ui/primitives'
+import { ecuadorDateTimeLocalToIso, toEcuadorDateTimeLocal } from '@/lib/format'
 import {
   Scale,
   X,
@@ -65,10 +66,9 @@ export function MeasurementModal({
   const [thighCm, setThighCm] = useState(() =>
     initialData?.thighCm ? String(initialData.thighCm) : '',
   )
+  // El input datetime-local muestra y edita la hora de Ecuador (ZCAPP-62).
   const [measuredAt, setMeasuredAt] = useState(() =>
-    initialData
-      ? initialData.measuredAt.slice(0, 16)
-      : new Date().toISOString().slice(0, 16),
+    toEcuadorDateTimeLocal(initialData ? initialData.measuredAt : new Date()),
   )
   const [notes, setNotes] = useState(() => initialData?.notes ?? '')
 
@@ -116,7 +116,7 @@ export function MeasurementModal({
         chestCm: chest,
         armCm: arm,
         thighCm: thigh,
-        measuredAt: new Date(measuredAt).toISOString(),
+        measuredAt: ecuadorDateTimeLocalToIso(measuredAt),
         notes: notes.trim(),
       })
       onClose()

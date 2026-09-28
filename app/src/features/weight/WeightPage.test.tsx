@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -176,5 +176,51 @@ describe('WeightPage (Anthropometric & Body Progress Module)', () => {
     expect(await screen.findByText('Panel de Entrenador / Staff')).toBeInTheDocument()
     expect(screen.getByLabelText(/Seleccionar Socio/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Registrar medidas/i })).toBeInTheDocument()
+  })
+})
+
+describe('Nueva medición usa la hora de Ecuador (ZCAPP-62)', () => {
+  const originalTz = process.env.TZ
+
+  beforeEach(() => {
+    localStorage.clear()
+    resetRepositoryForTests()
+    // Celular en Ecuador, 27 sep a las 21:42 (02:42 UTC del 28)
+    process.env.TZ = 'America/Guayaquil'
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-28T02:42:00.000Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    process.env.TZ = originalTz
+  })
+
+  it('propone la hora local y guarda ese mismo instante, no 5 h después', async () => {
+    const repo = new LocalRepository()
+    const socio = await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <WeightPage />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    await userEvent.click(await screen.findByRole('button', { name: /Nueva medición/i }))
+    expect(screen.getByLabelText(/Fecha y hora/i)).toHaveValue('2026-09-27T21:42')
+
+    const weightInput = screen.getByLabelText(/Peso \(kg\) \*/i)
+    await userEvent.clear(weightInput)
+    await userEvent.type(weightInput, '66.5')
+    await userEvent.click(screen.getByRole('button', { name: /Guardar Medición/i }))
+
+    await waitFor(async () => {
+      const saved = (await new LocalRepository().listMeasurements(socio.id)).find(
+        (m) => m.weightKg === 66.5,
+      )
+      expect(saved?.measuredAt).toBe('2026-09-28T02:42:00.000Z')
+    })
   })
 })

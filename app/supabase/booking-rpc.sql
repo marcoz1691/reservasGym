@@ -11,6 +11,19 @@
 -- Además la promoción corre como SECURITY DEFINER: antes la hacía el cliente del
 -- socio que cancelaba, y RLS no le deja leer la cola ni tocar reservas ajenas.
 
+-- Código de check-in con el mismo formato que la app (uid('QR') en los repositorios):
+-- 'QR-' + 8 hexadecimales en mayúscula, p. ej. QR-047CAC92. Corto para dictarlo o
+-- escribirlo en recepción (ZCAPP-56). El check-in compara reserva + código, así
+-- que una repetición entre reservas distintas no tiene efecto.
+create or replace function public.new_check_in_code()
+returns text
+language sql
+volatile
+set search_path = public
+as $$
+  select 'QR-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
+$$;
+
 -- Motivo por el que el socio no puede reservar en la zona, o null si puede.
 -- Replica canBookMembership + canBookZone (src/domain/rules) con los mismos textos.
 -- Staff y admin no pasan por esta validación.
@@ -129,8 +142,8 @@ begin
     if not found then
       insert into bookings (id, session_id, user_id, status, created_at, check_in_code)
       values (
-        'bk_' || gen_random_uuid(), p_session_id, v_entry.user_id, 'confirmed', v_now,
-        upper('QR_' || gen_random_uuid())
+        'bk-' || gen_random_uuid(), p_session_id, v_entry.user_id, 'confirmed', v_now,
+        public.new_check_in_code()
       );
     end if;
   end loop;
@@ -198,8 +211,8 @@ begin
   ) < v_session.capacity then
     insert into bookings (id, session_id, user_id, status, created_at, check_in_code)
     values (
-      'bk_' || gen_random_uuid(), p_session_id, v_user, 'confirmed', v_now,
-      upper('QR_' || gen_random_uuid())
+      'bk-' || gen_random_uuid(), p_session_id, v_user, 'confirmed', v_now,
+      public.new_check_in_code()
     )
     returning * into v_booking;
     return jsonb_build_object('booking', to_jsonb(v_booking));
@@ -207,15 +220,15 @@ begin
 
   insert into waitlist_entries (id, session_id, user_id, position, created_at)
   values (
-    'wl_' || gen_random_uuid(), p_session_id, v_user,
+    'wl-' || gen_random_uuid(), p_session_id, v_user,
     coalesce((select max(position) from waitlist_entries where session_id = p_session_id), 0) + 1,
     v_now
   )
   returning * into v_entry;
   insert into bookings (id, session_id, user_id, status, created_at, check_in_code)
   values (
-    'bk_' || gen_random_uuid(), p_session_id, v_user, 'waitlisted', v_now,
-    upper('QR_' || gen_random_uuid())
+    'bk-' || gen_random_uuid(), p_session_id, v_user, 'waitlisted', v_now,
+    public.new_check_in_code()
   );
   return jsonb_build_object('waitlist', to_jsonb(v_entry));
 end;
@@ -338,8 +351,8 @@ begin
   where session_id = v_old.session_id and user_id = v_old.user_id;
   insert into bookings (id, session_id, user_id, status, created_at, check_in_code)
   values (
-    'bk_' || gen_random_uuid(), p_session_id, v_old.user_id, 'confirmed', v_now,
-    upper('QR_' || gen_random_uuid())
+    'bk-' || gen_random_uuid(), p_session_id, v_old.user_id, 'confirmed', v_now,
+    public.new_check_in_code()
   )
   returning * into v_booking;
   perform public.promote_waitlist(v_old.session_id);
@@ -352,9 +365,17 @@ $$;
 revoke all on function public.member_booking_block_reason(uuid, text) from public, anon, authenticated;
 revoke all on function public.booking_overlaps(uuid, text) from public, anon, authenticated;
 revoke all on function public.promote_waitlist(text) from public, anon, authenticated;
+revoke all on function public.new_check_in_code() from public, anon, authenticated;
 revoke all on function public.book_session(text, uuid) from public, anon;
 grant execute on function public.book_session(text, uuid) to authenticated;
 revoke all on function public.cancel_booking(text) from public, anon;
 grant execute on function public.cancel_booking(text) to authenticated;
 revoke all on function public.reschedule_booking(text, text) from public, anon;
 grant execute on function public.reschedule_booking(text, text) to authenticated;
+
+-- ZCAPP-56: las reservas activas creadas con el formato largo (QR_<uuid>) pasan al
+-- corto. Idempotente: solo toca los códigos que aún tienen el formato viejo.
+update bookings
+set check_in_code = public.new_check_in_code()
+where check_in_code like 'QR\_%' escape '\'
+  and status in ('confirmed', 'pending', 'waitlisted');
