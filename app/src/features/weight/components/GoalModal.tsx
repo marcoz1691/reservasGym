@@ -2,6 +2,7 @@ import { useState, useMemo, type FormEvent } from 'react'
 import type { BodyGoal, BodyGoalStatus } from '@/domain/models'
 import { calculateBmi, getBmiCategory } from '@/domain/rules'
 import { Input, Select } from '@/ui/primitives'
+import { ecuadorTodayYmd } from '@/lib/format'
 import { Target, X, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
 
 interface GoalModalProps {
@@ -34,8 +35,9 @@ export function GoalModal({
   )
   const [targetDate, setTargetDate] = useState(() => {
     if (existingGoal?.targetDate) return existingGoal.targetDate.slice(0, 10)
-    const d = new Date()
-    d.setDate(d.getDate() + 60)
+    // +60 días sobre el día de hoy en Ecuador (no en UTC: de noche ya sería mañana)
+    const d = new Date(`${ecuadorTodayYmd()}T12:00:00Z`)
+    d.setUTCDate(d.getUTCDate() + 60)
     return d.toISOString().slice(0, 10)
   })
   const [status, setStatus] = useState<BodyGoalStatus>(

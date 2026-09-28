@@ -104,18 +104,47 @@ describe('LocalRepository promoción desde lista de espera (ZCAPP-54)', () => {
     expect(await statusIn(repo, u3.id, 'sess_a')).toBe('confirmed')
   })
 
-  it('reindexa las posiciones cuando alguien sale de la cola', async () => {
-    const { repo, u2, u3 } = await setup()
+  it('cancelar una reserva en espera no promueve a nadie y reindexa la cola', async () => {
+    const { repo, u1, u2, u3 } = await setup()
     const waiting = (await repo.listBookingsForUser(u2.id)).find(
       (b) => b.sessionId === 'sess_a',
     )!
 
     await repo.cancelBooking(waiting.id)
 
+    // No se liberó ningún cupo: el confirmado sigue y el resto sigue esperando
+    expect(await statusIn(repo, u1.id, 'sess_a')).toBe('confirmed')
+    expect(await statusIn(repo, u3.id, 'sess_a')).toBe('waitlisted')
     const state = await repo.load()
+    expect(
+      state.bookings.filter((b) => b.sessionId === 'sess_a' && b.status === 'confirmed'),
+    ).toHaveLength(1)
     const queue = state.waitlist.filter((w) => w.sessionId === 'sess_a')
     expect(queue).toHaveLength(1)
     expect(queue[0]).toMatchObject({ userId: u3.id, position: 1 })
+  })
+
+  it('si nadie de la cola es elegible, el cupo queda libre y la cola vacía', async () => {
+    const { repo, u2, u3, b1 } = await setup()
+    // sess_b es a la misma hora que sess_a: confirmarse en ella hace que u2 y u3
+    // ya no sean elegibles para sess_a (se solaparían).
+    const a = (await repo.load()).sessions.find((x) => x.id === 'sess_a')!
+    const b = (await repo.load()).sessions.find((x) => x.id === 'sess_b')!
+    expect(b.startsAt).toBe(a.startsAt)
+    await repo.createBooking('sess_b', u2.id)
+    await repo.createBooking('sess_b', u3.id)
+
+    await repo.cancelBooking(b1.id)
+
+    const state = await repo.load()
+    expect(
+      state.bookings.filter((x) => x.sessionId === 'sess_a' && x.status === 'confirmed'),
+    ).toHaveLength(0)
+    // Sus reservas en espera se cancelaron (no quedan huérfanas)
+    expect(await statusIn(repo, u2.id, 'sess_a')).toBe('cancelled')
+    expect(await statusIn(repo, u3.id, 'sess_a')).toBe('cancelled')
+    expect(state.waitlist.filter((w) => w.sessionId === 'sess_a')).toEqual([])
+    expect(state.sessions.find((x) => x.id === 'sess_a')?.bookedCount).toBe(0)
   })
 })
 

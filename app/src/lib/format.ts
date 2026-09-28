@@ -15,6 +15,30 @@ export function ecuadorLocalDateTimeIso(dateYmd: string, timeHm: string): string
   return new Date(`${dateYmd}T${time}${ECUADOR_OFFSET}`).toISOString()
 }
 
+/**
+ * `YYYY-MM-DDTHH:mm` en hora de Ecuador, para `<input type="datetime-local">`.
+ * `toISOString().slice(0, 16)` daría la hora UTC (5 h adelantada) — ZCAPP-62.
+ */
+export function toEcuadorDateTimeLocal(input: string | Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ECUADOR_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(parseDateInput(input))
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? '00'
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+}
+
+/** Inverso de `toEcuadorDateTimeLocal`: valor de datetime-local (hora de Ecuador) → ISO UTC. */
+export function ecuadorDateTimeLocalToIso(value: string): string {
+  return ecuadorLocalDateTimeIso(value.slice(0, 10), value.slice(11, 16))
+}
+
 /** Día calendario en America/Guayaquil (`YYYY-MM-DD`). */
 export function ecuadorTodayYmd(now: string | Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
