@@ -27,16 +27,11 @@ import type {
 } from '@/domain/models'
 import {
   calculateBmi,
-  assertMemberBookingAllowed,
-  canBookSession,
   canManageGoals,
   canManageWeight,
   computeMembershipStatus,
   extendMembership,
-  hasOverlap,
   isCheckInWindow,
-  nextWaitlistPosition,
-  promoteFirstWaitlist,
 } from '@/domain/rules'
 import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
 import type { AuthCredentials, GymRepository } from './types'
@@ -196,11 +191,6 @@ type WaitlistRow = {
   user_id: string
   position: number
   created_at: string
-}
-
-/** PostgREST no encuentra la función: booking-rpc.sql aún no se aplicó. */
-function isMissingRpc(error: { code?: string }): boolean {
-  return error.code === 'PGRST202' || error.code === '42883'
 }
 
 function mapBooking(row: BookingRow): Booking {
@@ -904,10 +894,7 @@ export class SupabaseRepository implements GymRepository {
       p_session_id: sessionId,
       p_user_id: userId,
     })
-    if (error) {
-      if (isMissingRpc(error)) return this.createBookingLegacy(sessionId, userId)
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
     const result = data as { booking?: BookingRow; waitlist?: WaitlistRow }
     if (result.waitlist) return mapWaitlist(result.waitlist)
     return mapBooking(result.booking!)
@@ -918,217 +905,22 @@ export class SupabaseRepository implements GymRepository {
     const { data, error } = await this.client.rpc('cancel_booking', {
       p_booking_id: bookingId,
     })
-    if (error) {
-      if (isMissingRpc(error)) return this.cancelBookingLegacy(bookingId)
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
     return mapBooking(data as BookingRow)
   }
 
-  // TODO: borrar los *Legacy cuando booking-rpc.sql esté aplicado en staging y prod.
-  // Sin esas funciones en la base se mantiene el comportamiento anterior.
-  private async createBookingLegacy(
-    sessionId: string,
-    userId: string,
-  ): Promise<Booking | WaitlistEntry> {
-    const actor = await this.requireUser()
-    if (actor.role === 'member' && actor.id !== userId) {
-      throw new Error('No puedes reservar por otro socio')
-    }
-    const state = await this.fetchState()
-    const session = state.sessions.find((s) => s.id === sessionId)
-    if (!session) throw new Error('Sesión no encontrada')
-
-    const already = state.bookings.find(
-      (b) =>
-        b.sessionId === sessionId &&
-        b.userId === userId &&
-        (b.status === 'confirmed' ||
-          b.status === 'pending' ||
-          b.status === 'waitlisted'),
-    )
-    if (already) throw new Error('Ya tienes reserva en esta sesión')
-    if (hasOverlap(state.sessions, state.bookings, userId, session)) {
-      throw new Error('Se solapa con otra reserva activa')
-    }
-
-    const subject = state.users.find((u) => u.id === userId)
-    if (subject?.role === 'member' || actor.role === 'member') {
-      const membership = (state.memberships ?? []).find((m) => m.userId === userId)
-      const plan = membership
-        ? (state.membershipPlans ?? []).find((p) => p.id === membership.planId)
-        : undefined
-      const allowed = assertMemberBookingAllowed(membership, plan, session.zoneId)
-      if (!allowed.ok) throw new Error(allowed.reason)
-    }
-
-    const capacity = canBookSession(session, state.bookings)
-    if (!capacity.ok) {
-      const entry: WaitlistEntry = {
-        id: uid('wl'),
-        sessionId,
-        userId,
-        position: nextWaitlistPosition(state.waitlist, sessionId),
-        createdAt: new Date().toISOString(),
-      }
-      const { error: wlError } = await this.client.from('waitlist_entries').insert({
-        id: entry.id,
-        session_id: entry.sessionId,
-        user_id: entry.userId,
-        position: entry.position,
-        created_at: entry.createdAt,
-      })
-      if (wlError) throw new Error(wlError.message)
-      const waitBooking: Booking = {
-        id: uid('bk'),
-        sessionId,
-        userId,
-        status: 'waitlisted',
-        createdAt: entry.createdAt,
-        cancelledAt: null,
-        checkInCode: uid('QR').toUpperCase(),
-      }
-      const { error: bkError } = await this.client.from('bookings').insert({
-        id: waitBooking.id,
-        session_id: waitBooking.sessionId,
-        user_id: waitBooking.userId,
-        status: waitBooking.status,
-        created_at: waitBooking.createdAt,
-        cancelled_at: null,
-        check_in_code: waitBooking.checkInCode,
-      })
-      if (bkError) throw new Error(bkError.message)
-      return entry
-    }
-
-    const booking: Booking = {
-      id: uid('bk'),
-      sessionId,
-      userId,
-      status: 'confirmed',
-      createdAt: new Date().toISOString(),
-      cancelledAt: null,
-      checkInCode: uid('QR').toUpperCase(),
-    }
-    const { error } = await this.client.from('bookings').insert({
-      id: booking.id,
-      session_id: booking.sessionId,
-      user_id: booking.userId,
-      status: booking.status,
-      created_at: booking.createdAt,
-      cancelled_at: null,
-      check_in_code: booking.checkInCode,
-    })
-    if (error) throw new Error(error.message)
-    const bookedCount =
-      state.bookings.filter(
-        (b) => b.sessionId === sessionId && b.status === 'confirmed',
-      ).length + 1
-    await this.client
-      .from('sessions')
-      .update({ booked_count: bookedCount })
-      .eq('id', sessionId)
-    return booking
-  }
-
-  private async cancelBookingLegacy(bookingId: string): Promise<Booking> {
-    const actor = await this.requireUser()
-    const state = await this.fetchState()
-    const booking = state.bookings.find((b) => b.id === bookingId)
-    if (!booking) throw new Error('Reserva no encontrada')
-    if (actor.role === 'member' && booking.userId !== actor.id) {
-      throw new Error('Sin permiso')
-    }
-    const wasConfirmed = booking.status === 'confirmed'
-    const cancelledAt = new Date().toISOString()
-    const { data, error } = await this.client
-      .from('bookings')
-      .update({ status: 'cancelled', cancelled_at: cancelledAt })
-      .eq('id', bookingId)
-      .select('*')
-      .single()
-    if (error) throw new Error(error.message)
-
-    await this.client
-      .from('waitlist_entries')
-      .delete()
-      .eq('session_id', booking.sessionId)
-      .eq('user_id', booking.userId)
-
-    if (wasConfirmed) {
-      const promoted = promoteFirstWaitlist(state.waitlist, booking.sessionId)
-      if (promoted) {
-        await this.client.from('waitlist_entries').delete().eq('id', promoted.id)
-        const waitBooking = state.bookings.find(
-          (b) =>
-            b.sessionId === booking.sessionId &&
-            b.userId === promoted.userId &&
-            b.status === 'waitlisted',
-        )
-        if (waitBooking) {
-          await this.client
-            .from('bookings')
-            .update({ status: 'confirmed' })
-            .eq('id', waitBooking.id)
-        } else {
-          await this.client.from('bookings').insert({
-            id: uid('bk'),
-            session_id: booking.sessionId,
-            user_id: promoted.userId,
-            status: 'confirmed',
-            created_at: new Date().toISOString(),
-            cancelled_at: null,
-            check_in_code: uid('QR').toUpperCase(),
-          })
-        }
-      }
-    }
-
-    const refreshed = await this.fetchState()
-    const session = refreshed.sessions.find((s) => s.id === booking.sessionId)
-    if (session) {
-      const bookedCount = refreshed.bookings.filter(
-        (b) => b.sessionId === session.id && b.status === 'confirmed',
-      ).length
-      await this.client
-        .from('sessions')
-        .update({ booked_count: bookedCount })
-        .eq('id', session.id)
-    }
-
-    return mapBooking(data)
-  }
-
+  /** Mueve la reserva en un solo paso (reschedule_booking): si falla, no cambia nada. */
   async rescheduleBooking(
     bookingId: string,
     newSessionId: string,
   ): Promise<Booking> {
-    const actor = await this.requireUser()
-    const state = await this.fetchState()
-    const old = state.bookings.find((b) => b.id === bookingId)
-    if (!old) throw new Error('Reserva no encontrada')
-    const next = state.sessions.find((s) => s.id === newSessionId)
-    if (!next) throw new Error('Sesión no encontrada')
-    if (new Date(next.startsAt).getTime() <= Date.now()) {
-      throw new Error('Esa clase ya empezó')
-    }
-    const previousStatus = old.status
-    await this.cancelBooking(bookingId)
-    const userId = old.userId ?? actor.id
-    let result: Booking | WaitlistEntry
-    try {
-      result = await this.createBooking(newSessionId, userId)
-    } catch (error) {
-      await this.client
-        .from('bookings')
-        .update({ status: previousStatus, cancelled_at: null })
-        .eq('id', bookingId)
-      throw error
-    }
-    if ('position' in result) {
-      throw new Error('La nueva sesión está llena; quedaste en lista de espera')
-    }
-    return result
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('reschedule_booking', {
+      p_booking_id: bookingId,
+      p_session_id: newSessionId,
+    })
+    if (error) throw new Error(error.message)
+    return mapBooking(data as BookingRow)
   }
 
   async checkIn(bookingId: string, code: string): Promise<CheckIn> {

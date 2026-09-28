@@ -97,19 +97,34 @@ describe('SupabaseRepository reservas vía RPC (ZCAPP-53/54)', () => {
     expect(result.status).toBe('cancelled')
   })
 
-  it('si booking-rpc.sql no está aplicado, usa el camino anterior', async () => {
+  it('reagenda con reschedule_booking y devuelve la reserva nueva', async () => {
     const rpc = vi.fn().mockResolvedValue({
-      data: null,
-      error: { code: 'PGRST202', message: 'Could not find the function' },
+      data: { ...bookingRow, id: 'bk_2', session_id: 'sess_2' },
+      error: null,
     })
     const repo = new SupabaseRepository(clientWithRpc(rpc))
-    const legacy = vi
-      .spyOn(repo as unknown as { createBookingLegacy: () => Promise<unknown> }, 'createBookingLegacy')
-      .mockResolvedValue({ id: 'bk_legacy' })
 
-    await expect(repo.createBooking('sess_1', 'user_member')).resolves.toEqual({
-      id: 'bk_legacy',
+    const result = await repo.rescheduleBooking('bk_1', 'sess_2')
+
+    expect(rpc).toHaveBeenCalledWith('reschedule_booking', {
+      p_booking_id: 'bk_1',
+      p_session_id: 'sess_2',
     })
-    expect(legacy).toHaveBeenCalledWith('sess_1', 'user_member')
+    expect(result).toMatchObject({ id: 'bk_2', sessionId: 'sess_2', status: 'confirmed' })
+    // Un solo paso: no cancela ni reserva por separado
+    expect(rpc).toHaveBeenCalledTimes(1)
+  })
+
+  it('si la clase nueva está llena, propaga el aviso y no hace nada más', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message: 'La clase nueva está llena. Tu reserva actual no cambió.' },
+    })
+    const repo = new SupabaseRepository(clientWithRpc(rpc))
+
+    await expect(repo.rescheduleBooking('bk_1', 'sess_full')).rejects.toThrow(
+      /llena. Tu reserva actual no cambió/,
+    )
+    expect(rpc).toHaveBeenCalledTimes(1)
   })
 })

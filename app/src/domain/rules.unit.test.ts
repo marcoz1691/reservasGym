@@ -7,7 +7,7 @@ import {
   hasOverlap,
   isCheckInWindow,
   nextWaitlistPosition,
-  promoteFirstWaitlist,
+  pickWaitlistPromotion,
 } from './rules'
 import type { Booking, Session, WaitlistEntry } from './models'
 
@@ -78,7 +78,7 @@ describe('domain rules', () => {
       { id: 'w1', sessionId: 's1', userId: 'u1', position: 1, createdAt: '' },
     ]
     expect(nextWaitlistPosition(waitlist, 's1')).toBe(3)
-    expect(promoteFirstWaitlist(waitlist, 's1')?.id).toBe('w1')
+    expect(pickWaitlistPromotion(waitlist, 's1', () => true).promoted?.id).toBe('w1')
   })
 
   it('enforces cancel and check-in windows', () => {

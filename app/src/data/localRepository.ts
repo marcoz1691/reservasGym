@@ -28,6 +28,7 @@ import {
   nextWaitlistPosition,
   pickWaitlistPromotion,
   reindexWaitlist,
+  RESCHEDULE_FULL_MESSAGE,
 } from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
 import type { AuthCredentials, GymRepository } from './types'
@@ -731,38 +732,68 @@ export class LocalRepository implements GymRepository {
     bookingId: string,
     newSessionId: string,
   ): Promise<Booking> {
+    // Igual que reschedule_booking en SQL: se valida todo en la sesión nueva
+    // antes de tocar la reserva original, así un fallo no deja nada a medias.
+    const actor = await this.requireUser()
     const old = this.state.bookings.find((b) => b.id === bookingId)
     if (!old) throw new Error('Reserva no encontrada')
+    if (actor.role === 'member' && old.userId !== actor.id) throw new Error('Sin permiso')
     const next = this.state.sessions.find((s) => s.id === newSessionId)
     if (!next) throw new Error('Sesión no encontrada')
     if (new Date(next.startsAt).getTime() <= Date.now()) {
       throw new Error('Esa clase ya empezó')
     }
-    const previousStatus = old.status
-    await this.cancelBooking(bookingId)
-    try {
-    const actor = await this.requireUser()
-    const userId = old.userId ?? actor.id
-    const result = await this.createBooking(newSessionId, userId)
-    if ('position' in result) {
-      throw new Error('La nueva sesión está llena; quedaste en lista de espera')
+    const userId = old.userId
+    if (!['confirmed', 'pending', 'waitlisted'].includes(old.status)) {
+      throw new Error('Esta reserva ya no está activa')
     }
-    return result
-    } catch (error) {
-      const current = this.state.bookings.find((b) => b.id === bookingId)
-      if (current?.status === 'cancelled') {
-        current.status = previousStatus
-        current.cancelledAt = null
-        const session = this.state.sessions.find((s) => s.id === current.sessionId)
-        if (session) {
-          session.bookedCount = this.state.bookings.filter(
-            (b) => b.sessionId === session.id && b.status === 'confirmed',
-          ).length
-        }
-        this.persistState()
+    const already = this.state.bookings.some(
+      (b) =>
+        b.sessionId === newSessionId &&
+        b.userId === userId &&
+        (b.status === 'confirmed' || b.status === 'pending' || b.status === 'waitlisted'),
+    )
+    if (already) throw new Error('Ya tienes reserva en esta sesión')
+    if (hasOverlap(this.state.sessions, this.state.bookings, userId, next, old.id)) {
+      throw new Error('Se solapa con otra reserva activa')
+    }
+    if (this.state.users.find((u) => u.id === userId)?.role === 'member') {
+      const allowed = this.memberBookingAllowed(userId, next.zoneId)
+      if (!allowed.ok) throw new Error(allowed.reason)
+    }
+    if (!canBookSession(next, this.state.bookings).ok) {
+      throw new Error(RESCHEDULE_FULL_MESSAGE)
+    }
+
+    // Todo validado: recién ahora se mueve. No hay nada que deshacer.
+    const now = new Date().toISOString()
+    const wasConfirmed = old.status === 'confirmed'
+    old.status = 'cancelled'
+    old.cancelledAt = now
+    this.state.waitlist = this.state.waitlist.filter(
+      (w) => !(w.sessionId === old.sessionId && w.userId === userId),
+    )
+    const booking: Booking = {
+      id: uid('bk'),
+      sessionId: newSessionId,
+      userId,
+      status: 'confirmed',
+      createdAt: now,
+      cancelledAt: null,
+      checkInCode: uid('QR').toUpperCase(),
+    }
+    this.state.bookings.push(booking)
+    if (wasConfirmed) this.promoteFromWaitlist(old.sessionId)
+    this.state.waitlist = reindexWaitlist(this.state.waitlist, old.sessionId)
+    for (const session of this.state.sessions) {
+      if (session.id === old.sessionId || session.id === newSessionId) {
+        session.bookedCount = this.state.bookings.filter(
+          (b) => b.sessionId === session.id && b.status === 'confirmed',
+        ).length
       }
-      throw error
     }
+    this.persistState()
+    return { ...booking }
   }
 
   async checkIn(bookingId: string, code: string): Promise<CheckIn> {
