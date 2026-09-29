@@ -1,0 +1,58 @@
+name: E2E QA
+
+# Regresión contra el ambiente QA real (zona-cero-qa.vercel.app), ver app/e2e/README.md.
+# Corre después de cada merge a main (cuando Vercel ya desplegó QA) y a demanda.
+# Requiere secrets del repo: SUPABASE_ACCESS_TOKEN (obligatorio) y E2E_SUPABASE_ANON_KEY (opcional).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: e2e-qa
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: Playwright contra QA
+    runs-on: ubuntu-latest
+    if: ${{ vars.E2E_ENABLED == 'true' }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+
+      - name: Correr suite E2E contra QA
+        run: npm run test:e2e
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+
+      - name: Subir reporte HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: app/e2e/report
+          retention-days: 14
+
+      - name: Subir capturas/trazas de fallos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: app/e2e/results
+          retention-days: 14
