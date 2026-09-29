@@ -24,7 +24,12 @@ import {
   useRepo,
 } from '@/data/RepositoryProvider'
 import { selectMyMembership } from '@/app/store'
-import { canUseBookingNav, displayInitials, selectPendingPlanRequest } from '@/domain/rules'
+import {
+  canUseBookingNav,
+  displayInitials,
+  selectActiveBookings,
+  selectPendingPlanRequest,
+} from '@/domain/rules'
 import { ExpiryBanner, PlanRequiredNotice } from '@/features/memberships'
 import {
   markNoPlanReminderDismissed,
@@ -85,7 +90,7 @@ export function AppLayout() {
   const repo = useRepo()
   const refresh = useRefresh()
   const { state, loading } = useGym()
-  const { settings, bookings } = useAppData()
+  const { settings, bookings, sessions } = useAppData()
   const [noPlanReminderDismissed, setNoPlanReminderDismissed] = useState(
     wasNoPlanReminderDismissed,
   )
@@ -116,11 +121,7 @@ export function AppLayout() {
   const accent = settings.accentColor || '#F26D17'
 
   const activeBookingsCount = isMember && user
-    ? bookings.filter(
-        (b) =>
-          b.userId === user.id &&
-          (b.status === 'confirmed' || b.status === 'waitlisted'),
-      ).length
+    ? selectActiveBookings(bookings, sessions, user.id).length
     : 0
 
   const userInitials = displayInitials(user?.fullName) || 'ZC'
