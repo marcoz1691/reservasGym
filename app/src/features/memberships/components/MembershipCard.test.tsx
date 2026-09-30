@@ -22,6 +22,10 @@ const mockZones: Zone[] = [
   },
 ]
 
+// Fechas relativas a hoy: con fechas fijas la membresía "activa" vence sola.
+const DAY = 24 * 60 * 60 * 1000
+const daysFromNow = (days: number) => new Date(Date.now() + days * DAY).toISOString()
+
 describe('MembershipCard', () => {
   it('renders active membership with full access chip and price', () => {
     const membership: Membership = {
@@ -29,10 +33,10 @@ describe('MembershipCard', () => {
       userId: 'user_1',
       planId: 'plan_full',
       status: 'active',
-      startsAt: '2026-08-01T00:00:00.000Z',
-      endsAt: '2026-09-30T00:00:00.000Z',
+      startsAt: daysFromNow(-30),
+      endsAt: daysFromNow(30),
       visitsLeft: null,
-      graceEndsAt: '2026-10-03T00:00:00.000Z',
+      graceEndsAt: daysFromNow(33),
     }
 
     const plan: MembershipPlan = {
@@ -59,10 +63,10 @@ describe('MembershipCard', () => {
       userId: 'user_1',
       planId: 'plan_full',
       status: 'active',
-      startsAt: '2026-07-01T00:00:00.000Z',
-      endsAt: '2026-07-31T00:00:00.000Z',
+      startsAt: daysFromNow(-35),
+      endsAt: daysFromNow(-1),
       visitsLeft: null,
-      graceEndsAt: '2099-08-03T00:00:00.000Z', // far future grace
+      graceEndsAt: daysFromNow(2)
     }
 
     const plan: MembershipPlan = {
@@ -89,10 +93,10 @@ describe('MembershipCard', () => {
       userId: 'user_1',
       planId: 'plan_df',
       status: 'active',
-      startsAt: '2026-08-01T00:00:00.000Z',
-      endsAt: '2026-09-30T00:00:00.000Z',
+      startsAt: daysFromNow(-30),
+      endsAt: daysFromNow(30),
       visitsLeft: 7,
-      graceEndsAt: '2026-10-03T00:00:00.000Z',
+      graceEndsAt: daysFromNow(33),
     }
 
     const plan: MembershipPlan = {
