@@ -34,7 +34,13 @@ import {
   isCheckInWindow,
 } from '@/domain/rules'
 import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
-import type { AuthCredentials, GymRepository, PagomediosDocumentType } from './types'
+import type {
+  AuthCredentials,
+  GymRepository,
+  OnlinePaymentReceipt,
+  OnlinePaymentResult,
+  PagomediosDocumentType,
+} from './types'
 import { isSupabaseEnvConfigured } from './selectRepositoryBackend'
 import { scopeGymState } from './scopeGymState'
 import {
@@ -1516,20 +1522,21 @@ export class SupabaseRepository implements GymRepository {
     )
   }
 
-  async verifyPagomediosPayment(params: {
-    paymentId: string
-  }): Promise<{ status: 'approved' | 'pending' | 'rejected'; description?: string }> {
+  async verifyPagomediosPayment(params: { paymentId: string }): Promise<OnlinePaymentResult> {
     await this.requireUser()
     const { data, error } = await this.invokePagomedios({
       action: 'verify',
       paymentId: params.paymentId,
     })
     const payload = (data ?? {}) as {
-      status?: 'approved' | 'pending' | 'rejected'
+      status?: OnlinePaymentResult['status']
       description?: string
+      receipt?: OnlinePaymentReceipt
       error?: string
     }
-    if (payload.status) return { status: payload.status, description: payload.description }
+    if (payload.status) {
+      return { status: payload.status, description: payload.description, receipt: payload.receipt }
+    }
     if (payload.error) throw new Error(payload.error)
     throw new Error((await functionErrorMessage(error)) ?? 'No se pudo verificar el pago')
   }

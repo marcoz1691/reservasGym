@@ -147,9 +147,21 @@ export interface GymRepository {
     native?: boolean
   }): Promise<{ url: string; paymentId: string }>
   /** Consulta el estado en Pagomedios y activa la membresía si está autorizado. */
-  verifyPagomediosPayment?(params: {
-    paymentId: string
-  }): Promise<{ status: 'approved' | 'pending' | 'rejected'; description?: string }>
+  verifyPagomediosPayment?(params: { paymentId: string }): Promise<OnlinePaymentResult>
+}
+
+/** Comprobante de un pago en línea aprobado. */
+export interface OnlinePaymentReceipt {
+  planName: string | null
+  amountCents: number
+  authorizationCode: string | null
+  membershipEndsAt: string | null
+}
+
+export interface OnlinePaymentResult {
+  status: 'approved' | 'pending' | 'rejected'
+  description?: string
+  receipt?: OnlinePaymentReceipt
 }
 
 /** 05 cédula, 04 RUC, 06 pasaporte, 08 identificación del exterior */

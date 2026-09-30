@@ -3,10 +3,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Clock, CreditCard, Loader2, ShieldCheck } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
-import type { PagomediosDocumentType } from '@/data/types'
-import { formatCurrency } from '@/lib/format'
+import type { OnlinePaymentReceipt, PagomediosDocumentType } from '@/data/types'
+import { formatCurrency, formatDateSpanish } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
-import { isNativeApp, isOnlinePayEnabled, openPaymentPage } from './onlinePay'
+import {
+  isNativeApp,
+  isOnlinePayEnabled,
+  onPaymentScreenClosed,
+  openPaymentPage,
+  rememberPendingPayment,
+  takePendingPayment,
+} from './onlinePay'
 
 const DOCUMENT_OPTIONS: { value: PagomediosDocumentType; label: string }[] = [
   { value: '05', label: 'Cédula' },
@@ -15,9 +22,12 @@ const DOCUMENT_OPTIONS: { value: PagomediosDocumentType; label: string }[] = [
   { value: '08', label: 'Identificación del exterior' },
 ]
 
+const verifyUrl = (id: string) =>
+  `/membresia/pago?provider=pagomedios&paymentId=${encodeURIComponent(id)}`
+
 type VerifyState =
   | { kind: 'checking' }
-  | { kind: 'approved' }
+  | { kind: 'approved'; receipt?: OnlinePaymentReceipt }
   | { kind: 'pending'; message: string }
   | { kind: 'error'; message: string }
 
@@ -58,9 +68,9 @@ export function PagomediosCheckoutPage() {
     try {
       const result = await verifyPayment({ paymentId })
       if (result.status === 'approved') {
-        setVerify({ kind: 'approved' })
+        // Se queda en el comprobante hasta que el socio vuelva a Mi Plan.
+        setVerify({ kind: 'approved', receipt: result.receipt })
         await refresh()
-        setTimeout(() => navigate('/membresia', { replace: true }), 1800)
       } else if (result.status === 'pending') {
         setVerify({
           kind: 'pending',
@@ -75,11 +85,33 @@ export function PagomediosCheckoutPage() {
         message: err instanceof Error ? err.message : 'Error al verificar el pago',
       })
     }
-  }, [paymentId, repo, refresh, navigate])
+  }, [paymentId, repo, refresh])
 
   useEffect(() => {
     void runVerify()
   }, [runVerify])
+
+  // Si la app se recargó mientras el socio pagaba, retoma la verificación.
+  useEffect(() => {
+    if (paymentId) return
+    const pending = takePendingPayment()
+    if (pending) navigate(verifyUrl(pending), { replace: true })
+  }, [paymentId, navigate])
+
+  // App nativa: al cerrarse la pantalla de pago (aun tras una recarga) vuelve a verificar.
+  useEffect(() => {
+    if (!paymentId || !isNativeApp()) return
+    let stop: (() => void) | undefined
+    let active = true
+    void onPaymentScreenClosed(() => void runVerify()).then((unsubscribe) => {
+      if (active) stop = unsubscribe
+      else unsubscribe()
+    })
+    return () => {
+      active = false
+      stop?.()
+    }
+  }, [paymentId, runVerify])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -96,10 +128,10 @@ export function PagomediosCheckoutPage() {
         address: address.trim(),
         native,
       })
+      if (native) rememberPendingPayment(newPaymentId)
       await openPaymentPage(url, () => {
-        navigate(`/membresia/pago?provider=pagomedios&paymentId=${encodeURIComponent(newPaymentId)}`, {
-          replace: true,
-        })
+        takePendingPayment()
+        navigate(verifyUrl(newPaymentId), { replace: true })
       })
       if (native) setBusy(false)
     } catch (err) {
@@ -131,15 +163,7 @@ export function PagomediosCheckoutPage() {
             Verificando con Pagomedios…
           </div>
         ) : null}
-        {verify.kind === 'approved' ? (
-          <div
-            role="status"
-            className="flex items-start gap-2 rounded-2xl border border-success/40 bg-success/10 p-4 text-sm text-ink"
-          >
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-            Pago aprobado. Tu membresía ya está activa.
-          </div>
-        ) : null}
+        {verify.kind === 'approved' ? <ApprovedReceipt receipt={verify.receipt} /> : null}
         {verify.kind === 'pending' ? (
           <div className="space-y-3 rounded-2xl border border-warn/30 bg-warn-soft p-4 text-sm text-ink">
             <p className="flex items-start gap-2">
@@ -277,6 +301,49 @@ export function PagomediosCheckoutPage() {
       </form>
 
       <BackLink label="Cancelar y volver" />
+    </div>
+  )
+}
+
+function ApprovedReceipt({ receipt }: { receipt?: OnlinePaymentReceipt }) {
+  const rows: [string, string][] = receipt
+    ? [
+        ['Plan', receipt.planName ?? '—'],
+        ['Monto', formatCurrency(receipt.amountCents)],
+        ['Código de autorización', receipt.authorizationCode ?? '—'],
+        [
+          'Membresía activa hasta',
+          receipt.membershipEndsAt ? formatDateSpanish(receipt.membershipEndsAt) : '—',
+        ],
+      ]
+    : []
+  return (
+    <div
+      role="status"
+      className="space-y-4 rounded-2xl border border-success/40 bg-success/10 p-4 text-sm text-ink"
+    >
+      <p className="flex items-center gap-2 text-base font-bold">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
+        ¡Pago aprobado!
+      </p>
+      <p>Tu membresía ya está activa.</p>
+      {rows.length > 0 ? (
+        <dl className="space-y-1.5">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex justify-between gap-3">
+              <dt className="text-ink-3">{label}</dt>
+              <dd className="text-right font-semibold">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      <Link
+        to="/membresia"
+        replace
+        className="flex w-full items-center justify-center rounded-xl bg-ink px-4 py-2.5 font-semibold text-white"
+      >
+        Ir a Mi Plan
+      </Link>
     </div>
   )
 }

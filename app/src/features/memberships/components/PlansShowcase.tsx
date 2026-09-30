@@ -319,7 +319,7 @@ export function PlansShowcase({
               </div>
 
               <div className="mt-4 space-y-2">
-                {onlinePayEnabled && onPayOnline && (!currentPlanId || isCurrent || isUpgrade) ? (
+                {onlinePayEnabled && onPayOnline ? (
                   <button
                     type="button"
                     disabled={Boolean(payingPlanId)}
@@ -349,7 +349,7 @@ export function PlansShowcase({
                     )}
                   </button>
                 ) : null}
-                {onlinePayEnabled && onPayOnline && (!currentPlanId || isCurrent || isUpgrade) ? (
+                {onlinePayEnabled && onPayOnline ? (
                   <p className="text-center text-xs text-ink-3">
                     Pago único con tarjeta · sin cobros recurrentes
                   </p>

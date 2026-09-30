@@ -261,8 +261,16 @@ async function handleNotify(req: Request, url: URL, env: Env) {
   return redirectToApp(env.appUrl, paymentId)
 }
 
+/** Comprobante que ve el socio al volver: qué pagó y hasta cuándo queda activo. */
+type Receipt = {
+  planName: string | null
+  amountCents: number
+  authorizationCode: string | null
+  membershipEndsAt: string | null
+}
+
 type VerifyResult =
-  | { ok: true; status: "approved"; membershipId?: string }
+  | { ok: true; status: "approved"; membershipId?: string; receipt?: Receipt }
   | { ok: false; status: "pending" | "rejected"; description: string }
 
 async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult> {
@@ -275,7 +283,9 @@ async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult>
   if (!payment || payment.provider !== "pagomedios") {
     return { ok: false, status: "rejected", description: "Pago no encontrado" }
   }
-  if (payment.status === "approved") return { ok: true, status: "approved" }
+  if (payment.status === "approved") {
+    return { ok: true, status: "approved", receipt: await receiptFor(payment.id, admin) }
+  }
   if (!payment.reference) {
     return { ok: false, status: "rejected", description: "Pago sin solicitud Pagomedios" }
   }
@@ -333,7 +343,9 @@ async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult>
     .eq("id", payment.id)
     .neq("status", "approved")
     .select("id")
-  if (!claimed || claimed.length === 0) return { ok: true, status: "approved" }
+  if (!claimed || claimed.length === 0) {
+    return { ok: true, status: "approved", receipt: await receiptFor(payment.id, admin) }
+  }
 
   try {
     const membershipId = await extendMembershipFor(payment, paidAt, admin)
@@ -341,13 +353,43 @@ async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult>
       .from("payments")
       .update({ membership_id: membershipId })
       .eq("id", payment.id)
-    return { ok: true, status: "approved", membershipId }
+    return {
+      ok: true,
+      status: "approved",
+      membershipId,
+      receipt: await receiptFor(payment.id, admin),
+    }
   } catch (err) {
     await admin
       .from("payments")
       .update({ status: "pending", approved_at: null })
       .eq("id", payment.id)
     throw err
+  }
+}
+
+async function receiptFor(paymentId: string, admin: SupabaseClient): Promise<Receipt | undefined> {
+  const { data: payment } = await admin
+    .from("payments")
+    .select("user_id, plan_id, amount_cents, mp_payment_id")
+    .eq("id", paymentId)
+    .maybeSingle()
+  if (!payment) return undefined
+  const [{ data: plan }, { data: membership }] = await Promise.all([
+    admin.from("membership_plans").select("name").eq("id", payment.plan_id).maybeSingle(),
+    admin
+      .from("memberships")
+      .select("ends_at")
+      .eq("user_id", payment.user_id)
+      .order("ends_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+  return {
+    planName: plan?.name ?? null,
+    amountCents: payment.amount_cents,
+    authorizationCode: payment.mp_payment_id ?? null,
+    membershipEndsAt: membership?.ends_at ?? null,
   }
 }
 
@@ -447,13 +489,19 @@ function redirectToApp(appUrl: string, paymentId: string | null) {
   return new Response(null, { status: 303, headers: { Location: target } })
 }
 
-/** Fin del pago dentro del navegador de la app nativa: al cerrarlo, la app verifica. */
+/**
+ * Fin del pago dentro de la pantalla de pago de la app nativa. Se cierra sola con
+ * window.mobileApp.close() (lo inyecta @capgo/inappbrowser); si no, el socio la
+ * cierra con la X. Al cerrarse, la app verifica el pago.
+ */
 function closeWindowPage() {
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Pago recibido</title>
 <style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:90vh;margin:0 24px;text-align:center;color:#1c1917}
 h1{font-size:1.4rem;margin:0 0 .5rem}p{color:#57534e;margin:0}</style></head>
-<body><div><h1>Pago recibido</h1><p>Cierra esta ventana para volver a la app de Zona Cero.</p></div></body></html>`
+<body><div><h1>Pago recibido</h1><p>Cierra esta ventana para volver a la app de Zona Cero.</p></div>
+<script>(function(){var n=0,t=setInterval(function(){var m=window.mobileApp;if(m&&m.close){clearInterval(t);m.close()}else if(++n>50){clearInterval(t)}},100)})()</script>
+</body></html>`
   return new Response(html, {
     status: 200,
     headers: { "Content-Type": "text/html; charset=utf-8" },

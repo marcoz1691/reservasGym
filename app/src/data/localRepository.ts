@@ -31,7 +31,12 @@ import {
   RESCHEDULE_FULL_MESSAGE,
 } from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
-import type { AuthCredentials, GymRepository, PagomediosDocumentType } from './types'
+import type {
+  AuthCredentials,
+  GymRepository,
+  OnlinePaymentResult,
+  PagomediosDocumentType,
+} from './types'
 import { createSeedState, DEMO_PASSWORD } from './seed'
 import {
   hashSecret,
@@ -1260,9 +1265,7 @@ export class LocalRepository implements GymRepository {
     )
   }
 
-  async verifyPagomediosPayment(_params: {
-    paymentId: string
-  }): Promise<{ status: 'approved' | 'pending' | 'rejected'; description?: string }> {
+  async verifyPagomediosPayment(_params: { paymentId: string }): Promise<OnlinePaymentResult> {
     throw new Error('Verificación Pagomedios solo en Supabase.')
   }
 }
