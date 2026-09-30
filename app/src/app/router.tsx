@@ -79,9 +79,9 @@ const MiPlanPage = lazy(() =>
     default: m.MiPlanPage,
   })),
 )
-const DatafastCheckoutPage = lazy(() =>
-  import('@/features/memberships/DatafastCheckoutPage').then((m) => ({
-    default: m.DatafastCheckoutPage,
+const OnlineCheckoutPage = lazy(() =>
+  import('@/features/memberships/OnlineCheckoutPage').then((m) => ({
+    default: m.OnlineCheckoutPage,
   })),
 )
 const WelcomeFichaPage = lazy(() =>
@@ -110,7 +110,7 @@ export function AppRouter() {
           <Route element={<AppLayout />}>
             <Route index element={<HomePage />} />
             <Route path="membresia" element={<MiPlanPage />} />
-            <Route path="membresia/pago" element={<DatafastCheckoutPage />} />
+            <Route path="membresia/pago" element={<OnlineCheckoutPage />} />
             <Route path="explorar" element={<ExplorePage />} />
             <Route path="catalogo" element={<ExplorePage />} />
             <Route path="agenda" element={<AgendaPage />} />

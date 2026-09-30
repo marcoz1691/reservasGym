@@ -31,7 +31,7 @@ import {
   RESCHEDULE_FULL_MESSAGE,
 } from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
-import type { AuthCredentials, GymRepository } from './types'
+import type { AuthCredentials, GymRepository, PagomediosDocumentType } from './types'
 import { createSeedState, DEMO_PASSWORD } from './seed'
 import {
   hashSecret,
@@ -1245,5 +1245,24 @@ export class LocalRepository implements GymRepository {
     resourcePath: string
   }): Promise<{ ok: boolean; description?: string }> {
     throw new Error('Verificación Datafast solo en Supabase.')
+  }
+
+  async createPagomediosPayment(_params: {
+    planId: string
+    document: string
+    documentType: PagomediosDocumentType
+    phone: string
+    address: string
+    native?: boolean
+  }): Promise<{ url: string; paymentId: string }> {
+    throw new Error(
+      'El pago en línea (Pagomedios) requiere el ambiente Supabase (QA). Usa recepción en modo local.',
+    )
+  }
+
+  async verifyPagomediosPayment(_params: {
+    paymentId: string
+  }): Promise<{ status: 'approved' | 'pending' | 'rejected'; description?: string }> {
+    throw new Error('Verificación Pagomedios solo en Supabase.')
   }
 }

@@ -253,6 +253,71 @@ el esquema. Antes del Go-Live hay que confirmar:
 
 ---
 
+## 8. Pago en línea con Pagomedios (en desarrollo local)
+
+Alcance, flujo y exclusiones: [pagomedios-plan-1-pago-unico.md](./pagomedios-plan-1-pago-unico.md)
+y [pagomedios-plan-2-recurrencia.md](./pagomedios-plan-2-recurrencia.md).
+
+**Hoy corre solo en local.** No hay función desplegada ni variables en Vercel. En QA
+se aplicó únicamente `app/supabase/pagomedios-provider.sql` (agrega `'pagomedios'` a
+`payments_provider_check`).
+
+### Correrlo en local contra el sandbox de Pagomedios
+
+1. `app/.env.pagomedios.local` (git lo ignora):
+
+   ```bash
+   PAGOMEDIOS_TOKEN=<token de pruebas de Pagomedios>
+   SUPABASE_URL=https://kqhmclbexnnsbzbgerbx.supabase.co
+   SUPABASE_ANON_KEY=<anon de QA>
+   SUPABASE_SERVICE_ROLE_KEY=<service_role de QA>
+   APP_URL=http://localhost:5173
+   FUNCTION_PUBLIC_URL=http://localhost:8000
+   PAGOMEDIOS_TAX_RATE=0.15
+   ```
+
+2. `app/.env.staging.local`: las `VITE_SUPABASE_*` de QA más
+   `VITE_ONLINE_PAYMENTS=1`, `VITE_PAYMENT_PROVIDER=pagomedios` y
+   `VITE_FUNCTIONS_URL=http://localhost:8000`.
+3. En dos terminales, desde `app/`: `npm run pagomedios:fn` (Edge Function con Deno, puerto 8000) y
+   `npm run dev:staging` (app en `localhost:5173`).
+4. Entrar como `socio.staging`, ir a Mi Plan → **Pagar en línea**, y pagar con las tarjetas de
+   prueba que entrega Pagomedios.
+
+Sin credenciales: `npm run pagomedios:e2e` levanta un Supabase falso y un simulador de
+Pagomedios y prueba la función de punta a punta (aprobado, rechazado, notify repetido,
+concurrencia, seguridad, app nativa).
+
+**Sandbox:** se rechazan los montos $2, $3, $4, $5, $50, $999 y $1000. En QA sirven
+"Zero Start Mensual" ($15, aprobado) y "Zona Day Musculación" ($2, rechazado).
+
+**Qué observamos en el sandbox (30-sep-2026):**
+- El retorno (`notify_url`) lo envía el **navegador del socio** (form POST), no el servidor de
+  Pagomedios. Por eso funciona con `localhost`.
+- Un pago rechazado no vuelve a la app: Pagomedios muestra "Tarjeta Invalida" y deja al socio
+  en su página para reintentar. El pago queda "Pendiente" en Cobros.
+- La tarjeta Mastercard de prueba fue rechazada incluso con montos válidos; la Visa aprueba.
+  Confirmar con Pagomedios.
+
+### Pasos para activarlo en QA (cuando se apruebe, no antes)
+
+- [ ] `supabase functions deploy pagomedios-payment --no-verify-jwt --project-ref kqhmclbexnnsbzbgerbx`
+      (sin JWT del gateway porque el retorno de Pagomedios llega sin sesión; create/verify validan
+      la sesión dentro de la función).
+- [ ] Secrets de la función: `PAGOMEDIOS_TOKEN`, `APP_URL=https://zona-cero-qa.vercel.app`,
+      `PAGOMEDIOS_TAX_RATE=0.15`.
+- [ ] Vercel `zona-cero-qa`: `VITE_ONLINE_PAYMENTS=1`, `VITE_PAYMENT_PROVIDER=pagomedios`.
+
+### Go-Live (producción)
+
+- [ ] Aplicar `pagomedios-provider.sql` en `zona-cero-prod`.
+- [ ] Token **de producción** de Pagomedios (contrato del gimnasio) como secret; nunca el de pruebas.
+- [ ] Deploy de la función en prod con `APP_URL` del dominio real.
+- [ ] Variables `VITE_ONLINE_PAYMENTS` / `VITE_PAYMENT_PROVIDER` en `zona-cero-prod`.
+- [ ] Un pago real de monto bajo y su reverso desde el panel de Pagomedios.
+
+---
+
 ## Checklist Sprint 1 (SCRUM-15)
 
 - [x] Proyecto Supabase staging (`zona-cero`) operativo

@@ -15,7 +15,7 @@ export type ZoneType =
 
 export type MembershipStatus = 'active' | 'grace' | 'expired' | 'cancelled'
 export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded'
-export type PaymentProvider = 'manual' | 'datafast' | 'mercadopago'
+export type PaymentProvider = 'manual' | 'datafast' | 'mercadopago' | 'pagomedios'
 export type ManualPaymentMethod = 'cash' | 'transfer' | 'card_pos'
 
 export interface MembershipPlan {
@@ -51,6 +51,8 @@ export interface Payment {
   provider: PaymentProvider
   manualMethod: ManualPaymentMethod | null
   reference?: string | null
+  /** Código de autorización del banco en pagos en línea (Pagomedios). */
+  authorizationCode?: string | null
   createdAt: string
   approvedAt: string | null
 }

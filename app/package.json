@@ -7,6 +7,9 @@
     "dev": "vite",
     "dev:staging": "vite --mode staging",
     "provision:staging": "node scripts/provision-staging.mjs",
+    "pagomedios:mock": "node scripts/pagomedios-mock.mjs",
+    "pagomedios:e2e": "node scripts/pagomedios-e2e.mjs",
+    "pagomedios:fn": "DENO_NO_PACKAGE_JSON=1 deno run --allow-net --allow-env --allow-read --env-file=.env.pagomedios.local supabase/functions/pagomedios-payment/index.ts",
     "build": "tsc -b && vite build",
     "build:staging": "tsc -b && vite build --mode staging",
     "build:capacitor": "tsc -b && vite build --mode capacitor",
@@ -21,6 +24,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
+    "@capacitor/browser": "^7.0.5",
     "@capacitor/core": "^7.4.3",
     "@capacitor/ios": "^7.4.3",
     "@supabase/supabase-js": "^2.112.3",

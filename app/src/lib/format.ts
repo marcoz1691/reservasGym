@@ -158,6 +158,18 @@ export function formatDateSpanish(iso: string | Date): string {
   }
 }
 
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  approved: 'Aprobado',
+  pending: 'Pendiente',
+  rejected: 'Rechazado',
+  refunded: 'Reembolsado',
+}
+
+/** Estado de un pago en español para socios y administración. */
+export function formatPaymentStatus(status: string): string {
+  return PAYMENT_STATUS_LABELS[status] ?? status
+}
+
 export function formatPaymentMethod(
   provider: string,
   method?: string | null,
@@ -175,6 +187,7 @@ export function formatPaymentMethod(
     }
   }
   if (provider === 'datafast') return 'Datafast'
+  if (provider === 'pagomedios') return 'Pagomedios'
   if (provider === 'mercadopago') return 'Mercado Pago'
   return provider
 }
