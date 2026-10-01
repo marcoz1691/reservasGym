@@ -5,12 +5,14 @@ import { RepositoryProvider } from '@/data/RepositoryProvider'
 import { installSpanishFormValidation } from '@/lib/formValidationEs'
 import { AppRouter } from './app/router'
 import { ErrorBoundary } from './app/ErrorBoundary'
+import { installAndroidBackButton } from './app/androidBackButton'
 import './index.css'
 
 /** Vite `base` (e.g. `/` or `/reservasGym/`) → React Router basename */
 const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || undefined
 
 installSpanishFormValidation()
+void installAndroidBackButton()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

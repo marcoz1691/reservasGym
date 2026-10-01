@@ -264,7 +264,7 @@ export function PagomediosCheckoutPage() {
             {verify.message}
           </div>
         ) : null}
-        <BackLink />
+        {verify.kind !== 'approved' ? <BackLink /> : null}
       </div>
     )
   }

@@ -414,6 +414,7 @@ describe('PagomediosCheckoutPage — pago único', () => {
     // no salta solo a Mi Plan: el socio decide cuándo salir
     await new Promise((r) => setTimeout(r, 2500))
     expect(screen.getByTestId('url')).toHaveTextContent('paymentId=pay_1')
+    expect(screen.queryByRole('link', { name: 'Volver a Mi Plan' })).toBeNull() // un solo botón para salir
     await userEvent.click(screen.getByRole('link', { name: 'Ir a Mi Plan' }))
     expect(screen.getByTestId('url')).toHaveTextContent(/^\/membresia$/)
   })
