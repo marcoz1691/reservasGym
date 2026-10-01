@@ -36,6 +36,7 @@ async function fillBilling() {
 const repo = {
   createPagomediosPayment: vi.fn(),
   verifyPagomediosPayment: vi.fn(),
+  requestPlanPayment: vi.fn(),
 }
 const refresh = vi.fn().mockResolvedValue(undefined)
 
@@ -288,6 +289,39 @@ describe('PagomediosCheckoutPage — pago único', () => {
     for (const name of ['Visa', 'Mastercard', 'Diners Club', 'Discover', 'American Express']) {
       expect(within(brands).getByRole('img', { name })).toBeInTheDocument()
     }
+  })
+
+  it.each([
+    ['Efectivo en recepción', 'cash', /paga \$35\.00 en efectivo/],
+    ['Transferencia bancaria', 'transfer', /datos de la cuenta para transferir \$35\.00/],
+  ] as const)('pagar con "%s" deja la solicitud a recepción sin pedir datos del pagador', async (label, manualMethod, message) => {
+    repo.requestPlanPayment.mockResolvedValue({ id: 'req_1' })
+    renderAt('/membresia/pago?planId=plan_mensual')
+
+    await userEvent.click(screen.getByRole('radio', { name: new RegExp(label) }))
+    expect(screen.getByRole('radio', { name: new RegExp(label) })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByText('Datos del pagador')).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Tarjetas aceptadas' })).toBeNull()
+
+    const confirm = screen.getByRole('button', { name: /Confirmar solicitud\s*\$35\.00/ })
+    expect(confirm).toBeDisabled() // falta aceptar términos
+    await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos/ }))
+    await userEvent.click(confirm)
+
+    expect(repo.requestPlanPayment).toHaveBeenCalledWith({ planId: 'plan_mensual', manualMethod })
+    expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
+    expect(await screen.findByRole('heading', { name: 'Solicitud enviada' })).toBeInTheDocument()
+    expect(screen.getByText(message)).toBeInTheDocument()
+    expect(screen.getByText('Tu plan se activa cuando recepción registre el pago.')).toBeInTheDocument()
+    expect(refresh).toHaveBeenCalled()
+  })
+
+  it('la tarjeta es el método por defecto y vuelve a pedir los datos del pagador', async () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    expect(screen.getByRole('radio', { name: /Tarjeta de crédito o débito/ })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(screen.getByRole('radio', { name: /Efectivo en recepción/ }))
+    await userEvent.click(screen.getByRole('radio', { name: /Tarjeta de crédito o débito/ }))
+    expect(screen.getByLabelText('Número de identificación')).toBeInTheDocument()
   })
 
   it('muestra el resumen con subtotal, IVA 15% y total', async () => {

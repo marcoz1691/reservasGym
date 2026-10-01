@@ -89,7 +89,7 @@ describe('PlansShowcase', () => {
     expect(screen.getByText('Mejorar')).toBeInTheDocument()
   })
 
-  it('con pago en línea, un socio con plan puede pagar cualquier plan (no solo renovar o mejorar)', async () => {
+  it('con pago en línea, un socio con plan puede elegir cualquier plan (no solo renovar o mejorar)', async () => {
     const user = userEvent.setup()
     const paid: string[] = []
     render(
@@ -102,15 +102,15 @@ describe('PlansShowcase', () => {
       />,
     )
 
-    expect(screen.getByRole('button', { name: /Renovar en línea/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Renovar plan/ })).toBeInTheDocument()
     // Start Mensual (actual) + Trimestral, Semestral y Anual de la misma familia
-    expect(screen.getAllByRole('button', { name: /en línea/ })).toHaveLength(4)
-    expect(screen.getAllByText('Pago único con tarjeta · sin cobros recurrentes')).toHaveLength(4)
+    expect(screen.getAllByRole('button', { name: /Renovar plan|Mejorar plan|Elegir plan/ })).toHaveLength(4)
+    expect(screen.getAllByText('Tarjeta, efectivo o transferencia')).toHaveLength(4)
 
-    await user.click(screen.getAllByRole('button', { name: /Pagar en línea/ })[0]!)
+    await user.click(screen.getAllByRole('button', { name: /Elegir plan/ })[0]!)
     expect(paid).toEqual(['s90'])
 
     await user.click(screen.getByRole('tab', { name: 'Zero Elite' }))
-    expect(screen.getByRole('button', { name: /en línea/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Mejorar plan|Elegir plan/ })).toBeInTheDocument()
   })
 })

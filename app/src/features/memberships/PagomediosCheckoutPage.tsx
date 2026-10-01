@@ -3,14 +3,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
+  Banknote,
   Check,
   CheckCircle2,
   ChevronDown,
   Clock,
   CreditCard,
+  Landmark,
   Loader2,
   Lock,
+  Store,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
 import type { OnlinePaymentReceipt } from '@/data/types'
 import {
@@ -36,6 +40,15 @@ import {
   rememberPendingPayment,
   takePendingPayment,
 } from './onlinePay'
+
+/** Cómo paga el socio: tarjeta en línea (Pagomedios) o en recepción. */
+type CheckoutMethod = 'card' | 'cash' | 'transfer'
+
+const METHOD_OPTIONS: { value: CheckoutMethod; title: string; detail: string; icon: LucideIcon }[] = [
+  { value: 'card', title: 'Tarjeta de crédito o débito', detail: 'En línea, procesado por Pagomedios', icon: CreditCard },
+  { value: 'cash', title: 'Efectivo en recepción', detail: 'Pagas al llegar al gimnasio', icon: Banknote },
+  { value: 'transfer', title: 'Transferencia bancaria', detail: 'Recepción confirma tu comprobante', icon: Landmark },
+]
 
 const DOCUMENT_PLACEHOLDER: Record<BillingDocumentType, string> = {
   '05': 'Ej. 1712345678',
@@ -81,6 +94,8 @@ export function PagomediosCheckoutPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [payerOpen, setPayerOpen] = useState(true)
+  const [method, setMethod] = useState<CheckoutMethod>('card')
+  const [requestSent, setRequestSent] = useState<Exclude<CheckoutMethod, 'card'> | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [verify, setVerify] = useState<VerifyState>({ kind: 'checking' })
@@ -144,7 +159,23 @@ export function PagomediosCheckoutPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!planId || !repo.createPagomediosPayment) return
+    if (!planId) return
+    if (method !== 'card') {
+      if (!acceptedTerms) return
+      setBusy(true)
+      setError(null)
+      try {
+        await repo.requestPlanPayment({ planId, manualMethod: method })
+        await refresh()
+        setRequestSent(method)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'No se pudo enviar la solicitud')
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
+    if (!repo.createPagomediosPayment) return
     if (Object.keys(billingErrors).length > 0 || !acceptedTerms) {
       setTouched({ document: true, phone: true, address: true })
       setPayerOpen(true)
@@ -235,9 +266,41 @@ export function PagomediosCheckoutPage() {
     )
   }
 
+  if (requestSent) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 p-4">
+        <PageHeader title="Solicitud enviada" subtitle={plan.name} />
+        <div
+          role="status"
+          className="space-y-3 rounded-3xl border border-line bg-surface p-5 text-sm text-ink-2 shadow-[var(--shadow-card)]"
+        >
+          <p className="flex items-center gap-2 text-base font-bold text-ink">
+            <Store className="h-5 w-5 shrink-0" aria-hidden />
+            Paga en recepción
+          </p>
+          <p>
+            {requestSent === 'cash'
+              ? `Acércate a recepción y paga ${formatCurrency(plan.priceCents)} en efectivo.`
+              : `Recepción te dará los datos de la cuenta para transferir ${formatCurrency(plan.priceCents)}. Muestra tu comprobante en recepción.`}
+          </p>
+          <p>Tu plan se activa cuando recepción registre el pago.</p>
+          <Link
+            to="/membresia"
+            replace
+            className="flex w-full items-center justify-center rounded-xl bg-cta px-4 py-2.5 font-semibold text-cta-contrast"
+          >
+            Ir a Mi Plan
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const amounts = splitTax(plan.priceCents, ONLINE_PAYMENT_TAX_RATE)
   const cents = (value: number) => Math.round(value * 100)
-  const formValid = Object.keys(billingErrors).length === 0 && acceptedTerms
+  const payingByCard = method === 'card'
+  const formValid =
+    acceptedTerms && (!payingByCard || Object.keys(billingErrors).length === 0)
   const docLabel = BILLING_DOCUMENT_TYPES.find((t) => t.value === documentType)?.label ?? 'ID'
   const payerSummary =
     Object.keys(billingErrors).length === 0
@@ -246,7 +309,7 @@ export function PagomediosCheckoutPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6 p-4 pb-10">
-      <PageHeader title="Pago" subtitle="Pago único con tarjeta" />
+      <PageHeader title="Pago" subtitle="Elige cómo quieres pagar tu plan" />
 
       <section className="rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
         <p className="text-[11px] font-bold uppercase tracking-wider text-ink-3">Tu plan</p>
@@ -258,6 +321,36 @@ export function PagomediosCheckoutPage() {
       </section>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
+        <Section title="Método de pago">
+          <div role="radiogroup" aria-label="Método de pago" className="space-y-2">
+            {METHOD_OPTIONS.map((option) => {
+              const selected = method === option.value
+              const Icon = option.icon
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setMethod(option.value)}
+                  className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                    selected ? 'border-2 border-cta bg-surface' : 'border-line bg-surface hover:border-line-strong'
+                  }`}
+                >
+                  <Icon className="h-5 w-5 shrink-0 text-ink" aria-hidden />
+                  <span className="flex-1">
+                    <span className="block font-semibold text-ink">{option.title}</span>
+                    <span className="block text-xs text-ink-3">{option.detail}</span>
+                  </span>
+                  {selected ? <Check className="h-5 w-5 shrink-0 text-ink" aria-hidden /> : null}
+                </button>
+              )
+            })}
+          </div>
+          {payingByCard ? <CardBrandLogos /> : null}
+        </Section>
+
+        {payingByCard ? (
         <section className="space-y-3">
           <h2 className="text-sm font-bold text-ink">Datos del pagador</h2>
           <div className="overflow-hidden rounded-2xl border border-line bg-surface">
@@ -341,18 +434,8 @@ export function PagomediosCheckoutPage() {
             ) : null}
           </div>
         </section>
+        ) : null}
 
-        <Section title="Método de pago">
-          <div className="flex items-center gap-3 rounded-2xl border-2 border-ink bg-surface px-4 py-3">
-            <CreditCard className="h-5 w-5 text-ink" aria-hidden />
-            <div className="flex-1">
-              <p className="font-semibold text-ink">Tarjeta de crédito o débito</p>
-              <p className="text-xs text-ink-3">Procesado por Pagomedios</p>
-            </div>
-            <Check className="h-5 w-5 text-ink" aria-label="Seleccionado" />
-          </div>
-          <CardBrandLogos />
-        </Section>
 
         <section
           aria-label="Resumen del pago"
@@ -402,18 +485,24 @@ export function PagomediosCheckoutPage() {
             {busy ? (
               <span className="flex w-full items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Abriendo pago seguro…
+                {payingByCard ? 'Abriendo pago seguro…' : 'Enviando solicitud…'}
               </span>
             ) : (
               <>
-                <span>Pagar</span>
+                <span>{payingByCard ? 'Pagar' : 'Confirmar solicitud'}</span>
                 <span>{formatCurrency(plan.priceCents)}</span>
               </>
             )}
           </button>
           <p className="flex items-center justify-center gap-1.5 text-center text-xs text-ink-3">
-            <Lock className="h-3.5 w-3.5" aria-hidden />
-            Pago seguro en Pagomedios. No guardamos los datos de tu tarjeta.
+            {payingByCard ? (
+              <>
+                <Lock className="h-3.5 w-3.5" aria-hidden />
+                Pago seguro en Pagomedios. No guardamos los datos de tu tarjeta.
+              </>
+            ) : (
+              'Pagas en recepción. Tu plan se activa cuando lo registren.'
+            )}
           </p>
         </div>
       </form>

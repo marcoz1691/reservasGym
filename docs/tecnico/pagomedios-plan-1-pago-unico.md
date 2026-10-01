@@ -49,6 +49,8 @@ El socio paga su plan con tarjeta desde la app y la membresía se activa sola. E
 - hay una métrica nueva "En línea" junto a efectivo, transferencia y tarjeta;
 - los pagos pendientes o rechazados se ven con su estado. No hay que registrar nada a mano.
 
+**Métodos de pago en el mismo checkout:** el socio elige entre *Tarjeta de crédito o débito* (Pagomedios, flujo de arriba), *Efectivo en recepción* o *Transferencia bancaria*. Con efectivo o transferencia no se piden datos del pagador: se crea la solicitud pendiente, el socio ve "Solicitud enviada · Paga en recepción" y recepción la cobra y activa desde Cobros, como hoy.
+
 ## Qué incluye
 - Portar el trabajo ya hecho y sin commitear del worktree `reservasGym-pagomedios` (rama `feat/pagomedios-pago-unico`, basada en el `main` viejo) a una rama nueva `feat/pagomedios-pago-unico-v2` desde el `main` actual (`af49fa6`):
   - Edge Function `supabase/functions/pagomedios-payment/`: `index.ts` con create, verify y notify, y `tax.ts` con `splitTax` (IVA 15 % incluido en el precio);

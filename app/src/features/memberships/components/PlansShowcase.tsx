@@ -331,23 +331,23 @@ export function PlansShowcase({
                     {isPaying ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Redirigiendo…
+                        Abriendo…
                       </>
                     ) : (
                       <>
                         <CreditCard className="h-4 w-4" />
                         {isCurrent
-                          ? 'Renovar en línea'
+                          ? 'Renovar plan'
                           : isUpgrade && currentPlan
-                            ? 'Mejorar en línea'
-                            : 'Pagar en línea'}
+                            ? 'Mejorar plan'
+                            : 'Elegir plan'}
                       </>
                     )}
                   </button>
                 ) : null}
                 {onlinePayEnabled && onPayOnline ? (
                   <p className="text-center text-xs text-ink-3">
-                    Pago único con tarjeta · sin cobros recurrentes
+                    Tarjeta, efectivo o transferencia
                   </p>
                 ) : null}
                 {onChoosePlan && !onlinePayEnabled && !isCurrent ? (
