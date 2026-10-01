@@ -1,7 +1,16 @@
 import type { FormEvent, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, CheckCircle2, Clock, CreditCard, Loader2, Lock } from 'lucide-react'
+import {
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  CreditCard,
+  Loader2,
+  Lock,
+} from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
 import type { OnlinePaymentReceipt } from '@/data/types'
 import {
@@ -16,6 +25,7 @@ import {
 import { formatCurrency, formatDateSpanish } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
 import { TermsDialog } from '@/features/legal/TermsDialog'
+import { CardBrandLogos } from './components/CardBrandLogos'
 import { splitTax } from '../../../supabase/functions/pagomedios-payment/tax'
 import {
   ONLINE_PAYMENT_TAX_RATE,
@@ -26,8 +36,6 @@ import {
   rememberPendingPayment,
   takePendingPayment,
 } from './onlinePay'
-
-const CARD_BRANDS = ['Visa', 'Mastercard', 'Diners', 'Discover', 'Amex']
 
 const DOCUMENT_PLACEHOLDER: Record<BillingDocumentType, string> = {
   '05': 'Ej. 1712345678',
@@ -72,6 +80,7 @@ export function PagomediosCheckoutPage() {
   const [touched, setTouched] = useState<Partial<Record<keyof BillingErrors, boolean>>>({})
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
+  const [payerOpen, setPayerOpen] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [verify, setVerify] = useState<VerifyState>({ kind: 'checking' })
@@ -138,6 +147,7 @@ export function PagomediosCheckoutPage() {
     if (!planId || !repo.createPagomediosPayment) return
     if (Object.keys(billingErrors).length > 0 || !acceptedTerms) {
       setTouched({ document: true, phone: true, address: true })
+      setPayerOpen(true)
       return
     }
     setBusy(true)
@@ -228,6 +238,11 @@ export function PagomediosCheckoutPage() {
   const amounts = splitTax(plan.priceCents, ONLINE_PAYMENT_TAX_RATE)
   const cents = (value: number) => Math.round(value * 100)
   const formValid = Object.keys(billingErrors).length === 0 && acceptedTerms
+  const docLabel = BILLING_DOCUMENT_TYPES.find((t) => t.value === documentType)?.label ?? 'ID'
+  const payerSummary =
+    Object.keys(billingErrors).length === 0
+      ? `${docLabel} ${document} · ${phone}`
+      : 'Completa tu identificación, celular y dirección'
 
   return (
     <div className="mx-auto max-w-lg space-y-6 p-4 pb-10">
@@ -243,69 +258,89 @@ export function PagomediosCheckoutPage() {
       </section>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
-        <Section
-          title="Datos del pagador"
-          hint="Pagomedios los pide para procesar el pago con tarjeta. No se emite factura electrónica."
-        >
-          <div className="rounded-2xl border border-line bg-surface-elevated px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-3">A nombre de</p>
-            <p className="font-semibold text-ink">{user.fullName}</p>
-            <p className="text-xs text-ink-3">{user.email}</p>
-          </div>
-          <Field label="Tipo de identificación">
-            <select
-              value={documentType}
-              onChange={(e) => {
-                const type = e.target.value as BillingDocumentType
-                setDocumentType(type)
-                setDocument((current) => sanitizeDocument(type, current))
-              }}
-              className={INPUT_CLASS}
+        <section className="space-y-3">
+          <h2 className="text-sm font-bold text-ink">Datos del pagador</h2>
+          <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+            <button
+              type="button"
+              aria-expanded={payerOpen}
+              aria-controls="datos-pagador"
+              onClick={() => setPayerOpen((open) => !open)}
+              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
             >
-              {BILLING_DOCUMENT_TYPES.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Número de identificación" error={fieldError('document')}>
-            <input
-              inputMode={isNumericDocument(documentType) ? 'numeric' : 'text'}
-              autoComplete="off"
-              value={document}
-              onChange={(e) => setDocument(sanitizeDocument(documentType, e.target.value))}
-              onBlur={() => setTouched((t) => ({ ...t, document: true }))}
-              aria-invalid={Boolean(fieldError('document'))}
-              className={INPUT_CLASS}
-              placeholder={DOCUMENT_PLACEHOLDER[documentType]}
-            />
-          </Field>
-          <Field label="Celular" error={fieldError('phone')}>
-            <input
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel-national"
-              value={phone}
-              onChange={(e) => setPhone(sanitizePhone(e.target.value))}
-              onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
-              aria-invalid={Boolean(fieldError('phone'))}
-              className={INPUT_CLASS}
-              placeholder="Ej. 0991234567"
-            />
-          </Field>
-          <Field label="Dirección" error={fieldError('address')}>
-            <input
-              autoComplete="street-address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value.slice(0, 150))}
-              onBlur={() => setTouched((t) => ({ ...t, address: true }))}
-              aria-invalid={Boolean(fieldError('address'))}
-              className={INPUT_CLASS}
-              placeholder="Ej. Av. Amazonas N34-120, Quito"
-            />
-          </Field>
-        </Section>
+              <span className="min-w-0">
+                <span className="block truncate font-semibold text-ink">{user.fullName}</span>
+                <span
+                  className={`block truncate text-xs ${Object.keys(billingErrors).length ? 'text-ink-3' : 'text-ink-2'}`}
+                >
+                  {payerSummary}
+                </span>
+              </span>
+              <ChevronDown
+                aria-hidden
+                className={`h-5 w-5 shrink-0 text-ink-2 transition-transform ${payerOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {payerOpen ? (
+              <div id="datos-pagador" className="space-y-4 border-t border-line px-4 pb-4 pt-3">
+                <p className="text-xs text-ink-3">Pagomedios los pide para procesar el pago con tarjeta.</p>
+              <Field label="Tipo de identificación">
+                <select
+                  value={documentType}
+                  onChange={(e) => {
+                    const type = e.target.value as BillingDocumentType
+                    setDocumentType(type)
+                    setDocument((current) => sanitizeDocument(type, current))
+                  }}
+                  className={INPUT_CLASS}
+                >
+                  {BILLING_DOCUMENT_TYPES.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Número de identificación" error={fieldError('document')}>
+                <input
+                  inputMode={isNumericDocument(documentType) ? 'numeric' : 'text'}
+                  autoComplete="off"
+                  value={document}
+                  onChange={(e) => setDocument(sanitizeDocument(documentType, e.target.value))}
+                  onBlur={() => setTouched((t) => ({ ...t, document: true }))}
+                  aria-invalid={Boolean(fieldError('document'))}
+                  className={INPUT_CLASS}
+                  placeholder={DOCUMENT_PLACEHOLDER[documentType]}
+                />
+              </Field>
+              <Field label="Celular" error={fieldError('phone')}>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  value={phone}
+                  onChange={(e) => setPhone(sanitizePhone(e.target.value))}
+                  onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
+                  aria-invalid={Boolean(fieldError('phone'))}
+                  className={INPUT_CLASS}
+                  placeholder="Ej. 0991234567"
+                />
+              </Field>
+              <Field label="Dirección" error={fieldError('address')}>
+                <input
+                  autoComplete="street-address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value.slice(0, 150))}
+                  onBlur={() => setTouched((t) => ({ ...t, address: true }))}
+                  aria-invalid={Boolean(fieldError('address'))}
+                  className={INPUT_CLASS}
+                  placeholder="Ej. Av. Amazonas N34-120, Quito"
+                />
+              </Field>
+              </div>
+            ) : null}
+          </div>
+        </section>
 
         <Section title="Método de pago">
           <div className="flex items-center gap-3 rounded-2xl border-2 border-ink bg-surface px-4 py-3">
@@ -316,16 +351,7 @@ export function PagomediosCheckoutPage() {
             </div>
             <Check className="h-5 w-5 text-ink" aria-label="Seleccionado" />
           </div>
-          <ul className="flex flex-wrap gap-1.5" aria-label="Tarjetas aceptadas">
-            {CARD_BRANDS.map((brand) => (
-              <li
-                key={brand}
-                className="rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] font-bold text-ink-2"
-              >
-                {brand}
-              </li>
-            ))}
-          </ul>
+          <CardBrandLogos />
         </Section>
 
         <section

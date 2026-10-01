@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import type { MembershipPlan, User } from '@/domain/models'
@@ -262,10 +262,32 @@ describe('PagomediosCheckoutPage — pago único', () => {
     expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
   })
 
-  it('aclara que los datos son del pagador y que no se emite factura', () => {
+  it('los datos del pagador se colapsan con un resumen y se vuelven a abrir', async () => {
     renderAt('/membresia/pago?planId=plan_mensual')
-    expect(screen.getByRole('heading', { name: 'Datos del pagador' })).toBeInTheDocument()
-    expect(screen.getByText(/No se emite factura electrónica/)).toBeInTheDocument()
+    const toggle = screen.getByRole('button', { name: /Socio Demo/ })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveTextContent('Completa tu identificación, celular y dirección')
+    expect(screen.queryByText(/factura/i)).toBeNull()
+
+    await fillBilling()
+    expect(toggle).toHaveTextContent('Cédula 1710034065 · 0987569852')
+
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByLabelText('Número de identificación')).toBeNull()
+    // colapsado no pierde lo escrito ni bloquea el pago
+    expect(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ })).toBeEnabled()
+
+    await userEvent.click(toggle)
+    expect(screen.getByLabelText('Número de identificación')).toHaveValue('1710034065')
+  })
+
+  it('muestra los logos de las tarjetas aceptadas', () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    const brands = screen.getByRole('group', { name: 'Tarjetas aceptadas' })
+    for (const name of ['Visa', 'Mastercard', 'Diners Club', 'Discover', 'American Express']) {
+      expect(within(brands).getByRole('img', { name })).toBeInTheDocument()
+    }
   })
 
   it('muestra el resumen con subtotal, IVA 15% y total', async () => {

@@ -151,7 +151,8 @@ export async function payOnPagomedios(page: Page, url: string, brand: 'Visa' | '
   if (await otherMethods.isVisible()) await otherMethods.click()
   await form.waitFor({ state: 'visible' })
   const bank = form.locator('select').filter({ hasText: /seleccione banco/i })
-  if (await bank.count()) await bank.selectOption({ index: 1 })
+  // El banco solo aparece con algunas marcas.
+  if (await bank.isVisible().catch(() => false)) await bank.selectOption({ index: 1 })
   await form.frameLocator('iframe[name="card.number"]').locator('input[name="card.number"]')
     .pressSequentially(card.number, { delay: 20 })
   await form.locator('input[name="card.holder"]').fill(card.holder)

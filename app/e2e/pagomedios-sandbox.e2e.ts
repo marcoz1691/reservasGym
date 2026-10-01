@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import type { ChildProcess } from 'node:child_process'
-import { ACCOUNTS, PASSWORD, sql, userId } from './support/qa'
+import { randomUUID } from 'node:crypto'
+import { ACCOUNTS, PASSWORD, login, sql, userId } from './support/qa'
 import {
   APP_URL,
   FN_URL,
@@ -42,6 +43,8 @@ let socioId = ''
 let socioJwt = ''
 let staffJwt = ''
 let snapshot: Membership[] = []
+let approvedPaymentId = ''
+const STALE_REQUEST = randomUUID() // solicitud de "pago en recepción" de prueba
 const created: string[] = []
 
 const paymentRow = async (id: string) =>
@@ -91,6 +94,7 @@ test.afterAll(async () => {
   if (created.length) {
     await sql(`delete from payments where id in (${created.map((id) => `'${id}'`).join(',')})`)
   }
+  await sql(`delete from payments where id = '${STALE_REQUEST}'`)
   if (!socioId) return
   // Restaura la membresía del socio tal como estaba antes de pagar.
   await sql(`delete from memberships where user_id = '${socioId}'
@@ -157,6 +161,9 @@ test.describe('Edge Function pagomedios-payment + sandbox real', () => {
     const card = testCard('Visa')
     test.skip(!card, 'Faltan los datos de la tarjeta Visa de prueba')
     const endBefore = await latestEnd()
+    // El socio tenía pedido "pagar en recepción" otro plan y al final paga en línea.
+    await sql(`insert into payments (id, user_id, plan_id, membership_id, amount_cents, status, provider, manual_method, created_at)
+      values ('${STALE_REQUEST}', '${socioId}', '${PLAN_REJECTED.id}', null, ${PLAN_REJECTED.cents}, 'pending', 'manual', 'cash', now())`)
 
     const r = await create(PLAN_OK.id)
     expect(r.status).toBe(200)
@@ -187,9 +194,15 @@ test.describe('Edge Function pagomedios-payment + sandbox real', () => {
 
     await test.step('el pago queda aprobado con código de autorización', async () => {
       const row = await paymentRow(paymentId)
+      approvedPaymentId = paymentId
       expect(row?.status).toBe('approved')
       expect(row?.mp_payment_id).toMatch(/^\w{4,}$/)
       expect(row?.membership_id).toBeTruthy()
+    })
+
+    await test.step('la solicitud pendiente de pago en recepción desaparece', async () => {
+      const rows = await sql(`select id from payments where id = '${STALE_REQUEST}'`)
+      expect(rows).toHaveLength(0)
     })
 
     await test.step('la membresía suma exactamente la duración del plan', async () => {
@@ -227,6 +240,53 @@ test.describe('Edge Function pagomedios-payment + sandbox real', () => {
     await test.step('otro usuario no puede verificar este pago', async () => {
       const v = await callFunction({ action: 'verify', paymentId }, staffJwt)
       expect(v.status).toBe(403)
+    })
+  })
+
+  test('después del pago la app muestra el plan nuevo, la vigencia y el pago en el historial', async ({ browser }) => {
+    test.skip(!approvedPaymentId, 'Depende del pago aprobado con Visa')
+    const appUp = await fetch(APP_URL).then((res) => res.ok).catch(() => false)
+    test.skip(!appUp, 'La app no está corriendo en localhost:5173 (npm run dev:staging)')
+
+    const [membership] = await sql<{ plan_name: string; ends_at: string; status: string }>(
+      `select pl.name plan_name, m.ends_at, m.status from memberships m
+       join membership_plans pl on pl.id = m.plan_id
+       where m.user_id = '${socioId}' order by m.ends_at desc limit 1`,
+    )
+    const [pay] = await sql<{ mp_payment_id: string }>(`select mp_payment_id from payments where id = '${approvedPaymentId}'`)
+    const endsLabel = new Date(membership!.ends_at).toLocaleDateString('es-EC', {
+      day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Guayaquil',
+    })
+
+    const member = await (await browser.newContext({ baseURL: APP_URL })).newPage()
+    await login(member, ACCOUNTS.socio)
+
+    await test.step('Mi Plan: plan nuevo, activo y con la vigencia de la base', async () => {
+      await member.goto('/membresia')
+      const card = member.getByRole('region', { name: 'Tu membresía' }).or(member.getByLabel('Tu membresía')).first()
+      await expect(card).toContainText(membership!.plan_name)
+      await expect(card).toContainText('Membresía activa')
+      await expect(card).toContainText(endsLabel)
+      await expect(member.getByText(/Solicitud enviada/i)).toHaveCount(0)
+    })
+
+    await test.step('Historial de pagos: tarjeta en línea, $15.00, aprobado', async () => {
+      const history = member.getByText('Historial de pagos').locator('xpath=ancestor::div[3]')
+      await expect(history).toContainText('Tarjeta en línea')
+      await expect(history).toContainText('$15.00')
+      await expect(history).toContainText('Aprobado')
+    })
+
+    await test.step('Administración: el cobro en línea aparece con su autorización', async () => {
+      const admin = await (await browser.newContext({ baseURL: APP_URL, viewport: { width: 1280, height: 900 } })).newPage()
+      await login(admin, ACCOUNTS.admin)
+      await admin.goto('/admin/cobros')
+      await admin.getByText(/Historial General de Cobros/i).click()
+      await admin.getByRole('button', { name: 'En línea (Pagomedios)' }).click()
+      const row = admin.locator('tr', { hasText: `Aut. ${pay!.mp_payment_id}` })
+      await expect(row).toContainText('Tarjeta en línea')
+      await expect(row).toContainText('$15.00')
+      await expect(row).toContainText(/aprobado/i)
     })
   })
 
@@ -287,18 +347,30 @@ test.describe('Edge Function pagomedios-payment + sandbox real', () => {
     const card = testCard('Mastercard')
     test.skip(!card, 'Faltan los datos de la tarjeta Mastercard de prueba')
     const r = await create(PLAN_OK.id)
-    const returned = await captureReturn(page)
+    const paymentId = r.body.paymentId as string
+    await captureReturn(page)
     await payOnPagomedios(page, r.body.url, 'Mastercard', card!)
-    const rejected = page.getByText(/tarjeta inv[aá]lida|rechaz/i).first()
+
+    // El resultado se pregunta a la función (que consulta a Pagomedios), no al navegador.
+    // El sandbox a veces aprueba y a veces rechaza ("Tarjeta Invalida", "Entidad fuera de linea").
+    const rejected = page.getByText(/tarjeta inv[aá]lida|rechaz|fuera de l[ií]nea|no autorizad/i).first()
+    let outcome = ''
     await expect
-      .poll(async () => returned.length > 0 || (await rejected.isVisible().catch(() => false)), { timeout: 120_000 })
-      .toBe(true)
-    const status = (await paymentRow(r.body.paymentId))?.status
-    test.info().annotations.push({
-      type: 'sandbox',
-      description: returned.length ? `Mastercard aprobada (${status})` : 'Mastercard rechazada por el sandbox',
-    })
-    // Solo documenta el comportamiento: si aprueba, debe quedar aprobado en la base.
-    if (returned.length) expect(status).toBe('approved')
+      .poll(
+        async () => {
+          const v = await callFunction({ action: 'verify', paymentId }, socioJwt)
+          if (v.body?.status === 'approved') outcome = 'aprobada'
+          else if (await rejected.isVisible().catch(() => false)) {
+            outcome = `rechazada: "${(await rejected.textContent())?.trim()}"`
+          }
+          return outcome
+        },
+        { timeout: 150_000, intervals: [5_000] },
+      )
+      .not.toBe('')
+    test.info().annotations.push({ type: 'sandbox', description: `Mastercard ${outcome}` })
+    const status = (await paymentRow(paymentId))?.status
+    if (outcome === 'aprobada') expect(status).toBe('approved')
+    else expect(status).not.toBe('approved')
   })
 })

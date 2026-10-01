@@ -353,6 +353,15 @@ async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult>
       .from("payments")
       .update({ membership_id: membershipId })
       .eq("id", payment.id)
+    // Una solicitud de "pago en recepción" que seguía pendiente ya no aplica:
+    // el socio pagó en línea. Sin esto Mi Plan seguiría diciendo "Solicitud enviada".
+    await admin
+      .from("payments")
+      .delete()
+      .eq("user_id", payment.user_id)
+      .eq("provider", "manual")
+      .eq("status", "pending")
+      .is("membership_id", null)
     return {
       ok: true,
       status: "approved",

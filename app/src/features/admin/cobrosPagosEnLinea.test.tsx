@@ -108,7 +108,7 @@ describe('Cobros · pagos en línea (Pagomedios)', () => {
   it('muestra método, código de autorización y estados en español', async () => {
     await renderHistory()
     const row = screen.getByText('pm-token-ok').closest('tr')!
-    expect(within(row).getByText('Pagomedios')).toBeInTheDocument()
+    expect(within(row).getByText('Tarjeta en línea')).toBeInTheDocument()
     expect(within(row).getByText('Aut. 254848')).toBeInTheDocument()
     expect(within(row).getByText('Aprobado')).toBeInTheDocument()
     expect(

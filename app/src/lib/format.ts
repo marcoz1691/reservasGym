@@ -187,7 +187,7 @@ export function formatPaymentMethod(
     }
   }
   if (provider === 'datafast') return 'Datafast'
-  if (provider === 'pagomedios') return 'Pagomedios'
+  if (provider === 'pagomedios') return 'Tarjeta en línea'
   if (provider === 'mercadopago') return 'Mercado Pago'
   return provider
 }

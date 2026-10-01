@@ -36,6 +36,7 @@ function matches(row, filters) {
     const cell = row[col] === null || row[col] === undefined ? 'null' : String(row[col])
     if (op === 'eq') return cell === val
     if (op === 'neq') return cell !== val
+    if (op === 'is') return cell === val
     throw new Error(`operador no soportado: ${op}`)
   })
 }
@@ -126,6 +127,12 @@ const supabase = createServer(async (req, res) => {
     const patch = await readJson(req)
     const rows = table.filter((r) => matches(r, filters))
     rows.forEach((r) => Object.assign(r, patch))
+    return representation ? respondRows(rows) : reply(204)
+  }
+
+  if (req.method === 'DELETE') {
+    const rows = table.filter((r) => matches(r, filters))
+    db[m[1]] = table.filter((r) => !rows.includes(r))
     return representation ? respondRows(rows) : reply(204)
   }
 
@@ -336,6 +343,15 @@ async function run() {
   r = await create('pase10', 'jwt-u2')
   await payAndFollowNotify(r.body.url, 'approve')
   check('recompra con pase vigente acumula visitas (20)', membershipOf('u2')?.visits_left === 20, membershipOf('u2'))
+
+  console.log('\n9a. Al pagar en línea desaparece la solicitud pendiente de pago en recepción')
+  db.payments.push({ id: 'req-recepcion', user_id: 'u1', plan_id: 'mensual', membership_id: null, amount_cents: 3500, status: 'pending', provider: 'manual', manual_method: 'cash', created_at: new Date().toISOString() })
+  db.payments.push({ id: 'req-otro', user_id: 'u2', plan_id: 'mensual', membership_id: null, amount_cents: 3500, status: 'pending', provider: 'manual', manual_method: 'cash', created_at: new Date().toISOString() })
+  r = await create('mensual')
+  await payAndFollowNotify(r.body.url, 'approve')
+  check('pago en línea aprobado', paymentRow(r.body.paymentId)?.status === 'approved', paymentRow(r.body.paymentId))
+  check('la solicitud de recepción de ese socio se eliminó', !paymentRow('req-recepcion'))
+  check('la solicitud de otro socio no se tocó', paymentRow('req-otro')?.status === 'pending')
 
   console.log('\n9b. App nativa (navegador dentro de la app)')
   r = await create('mensual', 'jwt-u1', { native: true })
