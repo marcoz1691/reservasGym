@@ -107,10 +107,11 @@ export function AppRouter() {
         <Route path="/recuperar" element={<ForgotPasswordPage />} />
         <Route element={<RequireAuth />}>
           <Route path="bienvenida" element={<WelcomeFichaPage />} />
+          {/* Pago a pantalla completa (fuera del menú), como en las apps de compra. */}
+          <Route path="membresia/pago" element={<OnlineCheckoutPage />} />
           <Route element={<AppLayout />}>
             <Route index element={<HomePage />} />
             <Route path="membresia" element={<MiPlanPage />} />
-            <Route path="membresia/pago" element={<OnlineCheckoutPage />} />
             <Route path="explorar" element={<ExplorePage />} />
             <Route path="catalogo" element={<ExplorePage />} />
             <Route path="agenda" element={<AgendaPage />} />

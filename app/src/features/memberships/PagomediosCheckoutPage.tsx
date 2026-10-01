@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
+  X,
   Banknote,
   Check,
   CheckCircle2,
@@ -30,6 +31,7 @@ import { formatCurrency, formatDateSpanish } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
 import { TermsDialog } from '@/features/legal/TermsDialog'
 import { CardBrandLogos } from './components/CardBrandLogos'
+import { LeaveCheckoutSheet } from './components/LeaveCheckoutSheet'
 import { splitTax } from '../../../supabase/functions/pagomedios-payment/tax'
 import {
   ONLINE_PAYMENT_TAX_RATE,
@@ -99,6 +101,16 @@ export function PagomediosCheckoutPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [verify, setVerify] = useState<VerifyState>({ kind: 'checking' })
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const askToLeave = useCallback(() => setConfirmLeave(true), [])
+  // El botón "atrás" del teléfono o del navegador también pregunta antes de salir del formulario.
+  const guardActive = Boolean(plan) && !paymentId && !requestSent && !busy
+  useLeaveGuard(guardActive, askToLeave)
+
+  function leaveCheckout() {
+    setConfirmLeave(false)
+    leaveGuardedPage(() => navigate('/membresia', { replace: true }))
+  }
   const billingErrors = validateBilling({ documentType, document, phone, address })
   const fieldError = (field: keyof BillingErrors) =>
     touched[field] ? billingErrors[field] : undefined
@@ -309,6 +321,24 @@ export function PagomediosCheckoutPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6 p-4 pb-10">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={askToLeave}
+          aria-label="Volver"
+          className="rounded-xl p-2 text-ink transition hover:bg-surface"
+        >
+          <ArrowLeft className="h-6 w-6" />
+        </button>
+        <button
+          type="button"
+          onClick={askToLeave}
+          aria-label="Salir del pago"
+          className="rounded-xl p-2 text-ink transition hover:bg-surface"
+        >
+          <X className="h-6 w-6" />
+        </button>
+      </div>
       <PageHeader title="Pago" subtitle="Elige cómo quieres pagar tu plan" />
 
       <section className="rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
@@ -507,8 +537,10 @@ export function PagomediosCheckoutPage() {
         </div>
       </form>
 
-      <BackLink label="Cancelar y volver" />
       {showTerms ? <TermsDialog onClose={() => setShowTerms(false)} /> : null}
+      {confirmLeave ? (
+        <LeaveCheckoutSheet onStay={() => setConfirmLeave(false)} onLeave={leaveCheckout} />
+      ) : null}
     </div>
   )
 }
@@ -607,4 +639,45 @@ function BackLink({ label = 'Volver a Mi Plan' }: { label?: string }) {
       {label}
     </Link>
   )
+}
+
+const GUARD_KEY = 'zonaceroCheckoutGuard'
+/** Mientras se sale a propósito, el guardia no vuelve a interceptar "atrás". */
+let leavingCheckout = false
+
+/**
+ * Mientras está activo, "atrás" (teléfono o navegador) no saca al socio del
+ * pago: se agrega una entrada igual al historial y, si vuelve sobre ella, se
+ * repone y se pregunta. Conserva el estado de React Router (idx/key).
+ */
+function useLeaveGuard(active: boolean, onAttempt: () => void) {
+  useEffect(() => {
+    if (!active) return
+    const state = window.history.state as Record<string, unknown> | null
+    if (!state?.[GUARD_KEY]) window.history.pushState({ ...state, [GUARD_KEY]: true }, '')
+    const onPop = () => {
+      if (leavingCheckout) return
+      window.history.pushState({ ...(window.history.state ?? {}), [GUARD_KEY]: true }, '')
+      onAttempt()
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [active, onAttempt])
+}
+
+/** Quita la entrada extra del historial (si existe) y luego sale. */
+function leaveGuardedPage(go: () => void) {
+  const state = window.history.state as Record<string, unknown> | null
+  if (!state?.[GUARD_KEY]) {
+    go()
+    return
+  }
+  leavingCheckout = true
+  const onPop = () => {
+    window.removeEventListener('popstate', onPop)
+    leavingCheckout = false
+    go()
+  }
+  window.addEventListener('popstate', onPop)
+  window.history.back()
 }

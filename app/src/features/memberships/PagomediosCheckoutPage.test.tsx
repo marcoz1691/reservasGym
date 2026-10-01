@@ -324,6 +324,44 @@ describe('PagomediosCheckoutPage — pago único', () => {
     expect(screen.getByLabelText('Número de identificación')).toBeInTheDocument()
   })
 
+  it('salir con la X o "volver" pregunta antes; "Continuar con el pago" conserva lo escrito', async () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    await userEvent.type(screen.getByLabelText('Celular'), '0987569852')
+
+    for (const name of ['Salir del pago', 'Volver']) {
+      await userEvent.click(screen.getByRole('button', { name }))
+      const sheet = screen.getByRole('alertdialog', { name: '¿Quieres salir del pago?' })
+      expect(sheet).toHaveTextContent('tu plan no cambia')
+      await userEvent.click(within(sheet).getByRole('button', { name: 'Continuar con el pago' }))
+      expect(screen.queryByRole('alertdialog')).toBeNull()
+    }
+    expect(screen.getByLabelText('Celular')).toHaveValue('0987569852')
+    expect(screen.getByTestId('url')).toHaveTextContent('planId=plan_mensual')
+  })
+
+  it('confirmar "Salir del pago" vuelve a Mi Plan sin crear ningún pago', async () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    await userEvent.click(screen.getByRole('button', { name: 'Salir del pago' }))
+    const sheet = screen.getByRole('alertdialog')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Salir del pago' }))
+    await waitFor(() => expect(screen.getByTestId('url')).toHaveTextContent(/^\/membresia$/))
+    expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
+    expect(repo.requestPlanPayment).not.toHaveBeenCalled()
+  })
+
+  it('el botón atrás del teléfono también pregunta; Escape o tocar fuera mantiene el pago', async () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Volver' }))
+    await userEvent.click(screen.getByRole('alertdialog').parentElement!)
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(screen.getByTestId('url')).toHaveTextContent('planId=plan_mensual')
+  })
+
   it('muestra el resumen con subtotal, IVA 15% y total', async () => {
     renderAt('/membresia/pago?planId=plan_mensual')
     const summary = screen.getByRole('region', { name: 'Resumen del pago' })
