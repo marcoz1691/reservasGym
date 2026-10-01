@@ -575,7 +575,7 @@ export function FichaTecnicaModal({
                           >
                             <div
                               className={`flex h-4 w-4 items-center justify-center rounded-md border ${
-                                selected ? 'border-acc bg-acc text-[var(--color-acc-contrast)]' : 'border-line-strong'
+                                selected ? 'border-cta bg-cta text-cta-contrast' : 'border-line-strong'
                               }`}
                             >
                               {selected && <Check className="h-3 w-3 stroke-[3]" />}

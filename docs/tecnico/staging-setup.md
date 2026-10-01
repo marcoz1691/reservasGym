@@ -315,6 +315,7 @@ concurrencia, seguridad, app nativa).
 - [ ] Deploy de la función en prod con `APP_URL` del dominio real.
 - [ ] Variables `VITE_ONLINE_PAYMENTS` / `VITE_PAYMENT_PROVIDER` en `zona-cero-prod`.
 - [ ] Un pago real de monto bajo y su reverso desde el panel de Pagomedios.
+- [ ] Términos y condiciones de Zona Cero publicados: pegar el texto en `app/src/features/legal/termsContent.ts` (el socio los acepta antes de pagar; hoy la ventana dice "en preparación").
 
 ---
 

@@ -101,7 +101,7 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
         <button
           type="button"
           onClick={() => navigate('/membresia')}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-acc px-3.5 py-1.5 text-xs font-bold text-[var(--color-acc-contrast)] transition hover:brightness-110 active:scale-95"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-cta px-3.5 py-1.5 text-xs font-bold text-cta-contrast transition hover:brightness-110 active:scale-95"
         >
           <span>Renovar ahora</span>
           <ArrowRight className="h-3.5 w-3.5" />

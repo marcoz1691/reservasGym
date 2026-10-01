@@ -490,7 +490,7 @@ export function PlanesPage() {
                         }
                         className={`rounded-lg px-2 py-0.5 text-[10px] font-bold transition ${
                           formData.durationDays === String(preset.days)
-                            ? 'bg-acc text-[var(--color-acc-contrast)] font-bold'
+                            ? 'bg-cta text-cta-contrast font-bold'
                             : 'bg-surface text-ink-3 hover:text-ink'
                         }`}
                       >

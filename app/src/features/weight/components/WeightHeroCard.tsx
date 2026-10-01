@@ -94,7 +94,7 @@ export function WeightHeroCard({
           <button
             type="button"
             onClick={onOpenMeasurementModal}
-            className="focus-ring inline-flex items-center gap-1.5 rounded-2xl bg-acc px-4 py-2 text-xs font-black text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] transition hover:brightness-110 active:scale-95"
+            className="focus-ring inline-flex items-center gap-1.5 rounded-2xl bg-cta px-4 py-2 text-xs font-black text-cta-contrast shadow-sm transition hover:brightness-110 active:scale-95"
           >
             <Plus className="h-4 w-4" />
             {isStaff ? 'Registrar medidas' : 'Nueva medición'}

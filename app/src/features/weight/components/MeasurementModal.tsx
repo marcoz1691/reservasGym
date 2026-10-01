@@ -318,7 +318,7 @@ export function MeasurementModal({
             <button
               type="submit"
               disabled={saving}
-              className="focus-ring inline-flex items-center gap-2 rounded-2xl bg-acc px-5 py-2.5 text-xs font-black text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] transition hover:brightness-110 active:scale-95 disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-2xl bg-cta px-5 py-2.5 text-xs font-black text-cta-contrast shadow-sm transition hover:brightness-110 active:scale-95 disabled:opacity-50"
             >
               {saving ? 'Guardando...' : initialData ? 'Actualizar' : 'Guardar Medición'}
             </button>

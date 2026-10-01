@@ -400,7 +400,7 @@ export function CobrosPage() {
           }}
           className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
             activeTab === 'pos'
-              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+              ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
@@ -415,7 +415,7 @@ export function CobrosPage() {
           }}
           className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
             activeTab === 'vencimientos'
-              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+              ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
@@ -441,7 +441,7 @@ export function CobrosPage() {
           }}
           className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
             activeTab === 'historial'
-              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+              ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
@@ -987,7 +987,7 @@ export function CobrosPage() {
                 onClick={() => setExpirationFilter('all')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'all'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1171,7 +1171,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('all')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'all'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1182,7 +1182,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('card_pos')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'card_pos'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1193,7 +1193,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('cash')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'cash'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1204,7 +1204,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('transfer')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'transfer'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1215,7 +1215,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('pagomedios')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'pagomedios'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >

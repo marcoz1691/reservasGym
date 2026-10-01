@@ -228,7 +228,7 @@ export function ProgressChart({
             onClick={() => setMode('weight')}
             className={`focus-ring inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition ${
               mode === 'weight'
-                ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+                ? 'bg-cta text-cta-contrast shadow-sm'
                 : 'bg-surface-elevated text-ink-3 hover:text-ink'
             }`}
           >
@@ -240,7 +240,7 @@ export function ProgressChart({
             onClick={() => setMode('bmi')}
             className={`focus-ring inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition ${
               mode === 'bmi'
-                ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+                ? 'bg-cta text-cta-contrast shadow-sm'
                 : 'bg-surface-elevated text-ink-3 hover:text-ink'
             }`}
           >
@@ -252,7 +252,7 @@ export function ProgressChart({
             onClick={() => setMode('waistHip')}
             className={`focus-ring inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition ${
               mode === 'waistHip'
-                ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+                ? 'bg-cta text-cta-contrast shadow-sm'
                 : 'bg-surface-elevated text-ink-3 hover:text-ink'
             }`}
           >

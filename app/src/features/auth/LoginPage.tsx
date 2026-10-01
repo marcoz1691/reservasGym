@@ -241,7 +241,7 @@ export function LoginPage() {
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
               mode === 'login'
-                ? 'bg-acc text-[var(--color-acc-contrast)] font-bold shadow-xs'
+                ? 'bg-cta text-cta-contrast font-bold shadow-xs'
                 : 'text-ink-2 hover:text-ink'
             }`}
           >
@@ -256,7 +256,7 @@ export function LoginPage() {
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
               mode === 'register'
-                ? 'bg-acc text-[var(--color-acc-contrast)] font-bold shadow-xs'
+                ? 'bg-cta text-cta-contrast font-bold shadow-xs'
                 : 'text-ink-2 hover:text-ink'
             }`}
           >

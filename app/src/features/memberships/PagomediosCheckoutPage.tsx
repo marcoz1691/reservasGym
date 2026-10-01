@@ -15,6 +15,7 @@ import {
 } from '@/domain/rules/billing'
 import { formatCurrency, formatDateSpanish } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
+import { TermsDialog } from '@/features/legal/TermsDialog'
 import { splitTax } from '../../../supabase/functions/pagomedios-payment/tax'
 import {
   ONLINE_PAYMENT_TAX_RATE,
@@ -69,6 +70,8 @@ export function PagomediosCheckoutPage() {
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [touched, setTouched] = useState<Partial<Record<keyof BillingErrors, boolean>>>({})
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [verify, setVerify] = useState<VerifyState>({ kind: 'checking' })
@@ -133,7 +136,7 @@ export function PagomediosCheckoutPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!planId || !repo.createPagomediosPayment) return
-    if (Object.keys(billingErrors).length > 0) {
+    if (Object.keys(billingErrors).length > 0 || !acceptedTerms) {
       setTouched({ document: true, phone: true, address: true })
       return
     }
@@ -224,7 +227,7 @@ export function PagomediosCheckoutPage() {
 
   const amounts = splitTax(plan.priceCents, ONLINE_PAYMENT_TAX_RATE)
   const cents = (value: number) => Math.round(value * 100)
-  const formValid = Object.keys(billingErrors).length === 0
+  const formValid = Object.keys(billingErrors).length === 0 && acceptedTerms
 
   return (
     <div className="mx-auto max-w-lg space-y-6 p-4 pb-10">
@@ -240,7 +243,10 @@ export function PagomediosCheckoutPage() {
       </section>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
-        <Section title="Datos de facturación">
+        <Section
+          title="Datos del pagador"
+          hint="Pagomedios los pide para procesar el pago con tarjeta. No se emite factura electrónica."
+        >
           <div className="rounded-2xl border border-line bg-surface-elevated px-4 py-3">
             <p className="text-[11px] font-bold uppercase tracking-wider text-ink-3">A nombre de</p>
             <p className="font-semibold text-ink">{user.fullName}</p>
@@ -333,6 +339,25 @@ export function PagomediosCheckoutPage() {
           </div>
         </section>
 
+        <label className="flex items-start gap-3 text-sm text-ink-2">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 rounded border-line-strong accent-[var(--color-cta)]"
+          />
+          <span>
+            Acepto los{' '}
+            <button
+              type="button"
+              onClick={() => setShowTerms(true)}
+              className="font-semibold text-ink underline underline-offset-2"
+            >
+              términos y condiciones
+            </button>
+          </span>
+        </label>
+
         {error ? (
           <div
             role="alert"
@@ -346,7 +371,7 @@ export function PagomediosCheckoutPage() {
           <button
             type="submit"
             disabled={busy || !formValid}
-            className="flex w-full items-center justify-between rounded-2xl bg-ink px-5 py-4 text-base font-semibold text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-ink/25"
+            className="flex w-full items-center justify-between rounded-2xl bg-cta px-5 py-4 text-base font-semibold text-cta-contrast transition hover:bg-cta-hi disabled:cursor-not-allowed disabled:bg-cta/25"
           >
             {busy ? (
               <span className="flex w-full items-center justify-center gap-2">
@@ -368,6 +393,7 @@ export function PagomediosCheckoutPage() {
       </form>
 
       <BackLink label="Cancelar y volver" />
+      {showTerms ? <TermsDialog onClose={() => setShowTerms(false)} /> : null}
     </div>
   )
 }
@@ -375,10 +401,21 @@ export function PagomediosCheckoutPage() {
 const INPUT_CLASS =
   'w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-base text-ink placeholder:text-ink-3/70 focus:border-ink focus:outline-none aria-[invalid=true]:border-danger'
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string
+  hint?: string
+  children: ReactNode
+}) {
   return (
     <section className="space-y-3">
-      <h2 className="text-sm font-bold text-ink">{title}</h2>
+      <div>
+        <h2 className="text-sm font-bold text-ink">{title}</h2>
+        {hint ? <p className="text-xs text-ink-3">{hint}</p> : null}
+      </div>
       {children}
     </section>
   )
@@ -440,7 +477,7 @@ function ApprovedReceipt({ receipt }: { receipt?: OnlinePaymentReceipt }) {
       <Link
         to="/membresia"
         replace
-        className="flex w-full items-center justify-center rounded-xl bg-ink px-4 py-2.5 font-semibold text-white"
+        className="flex w-full items-center justify-center rounded-xl bg-cta px-4 py-2.5 font-semibold text-cta-contrast"
       >
         Ir a Mi Plan
       </Link>

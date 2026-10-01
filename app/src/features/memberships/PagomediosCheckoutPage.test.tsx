@@ -30,6 +30,7 @@ async function fillBilling() {
   await userEvent.type(screen.getByLabelText('Número de identificación'), '1710034065')
   await userEvent.type(screen.getByLabelText('Celular'), '0987569852')
   await userEvent.type(screen.getByLabelText('Dirección'), ADDRESS)
+  await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos y condiciones/ }))
 }
 
 const repo = {
@@ -242,6 +243,29 @@ describe('PagomediosCheckoutPage — pago único', () => {
     await userEvent.type(screen.getByLabelText('Número de identificación'), '1723358400')
     await userEvent.tab()
     expect(screen.getByText('La cédula no es válida.')).toBeInTheDocument()
+  })
+
+  it('sin aceptar los términos no deja pagar; se leen sin perder lo escrito', async () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    await fillBilling()
+    const pay = screen.getByRole('button', { name: /Pagar\s*\$35\.00/ })
+    expect(pay).toBeEnabled()
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos/ }))
+    expect(pay).toBeDisabled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'términos y condiciones' }))
+    expect(screen.getByRole('dialog', { name: 'Términos y condiciones' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Entendido' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByLabelText('Dirección')).toHaveValue(ADDRESS)
+    expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
+  })
+
+  it('aclara que los datos son del pagador y que no se emite factura', () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    expect(screen.getByRole('heading', { name: 'Datos del pagador' })).toBeInTheDocument()
+    expect(screen.getByText(/No se emite factura electrónica/)).toBeInTheDocument()
   })
 
   it('muestra el resumen con subtotal, IVA 15% y total', async () => {
