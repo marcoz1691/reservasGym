@@ -4,6 +4,12 @@ import { isSupabaseConfigured } from '@/data/supabaseRepository'
 export type OnlinePayProvider = 'pagomedios' | 'datafast'
 
 /**
+ * IVA para mostrar el desglose antes de pagar. Debe coincidir con el secret
+ * PAGOMEDIOS_TAX_RATE de la Edge Function, que es la que arma el cobro real.
+ */
+export const ONLINE_PAYMENT_TAX_RATE = 0.15
+
+/**
  * Pago en línea — activar con VITE_ONLINE_PAYMENTS=1.
  * Pagomedios (default) requiere el secret PAGOMEDIOS_TOKEN en Supabase;
  * Datafast (VITE_PAYMENT_PROVIDER=datafast) requiere los secrets DATAFAST_*.

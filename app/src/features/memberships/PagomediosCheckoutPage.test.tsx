@@ -19,8 +19,18 @@ const plan = {
   id: 'plan_mensual',
   name: 'Plan Mensual',
   priceCents: 3500,
+  durationDays: 30,
   active: true,
 } as MembershipPlan
+
+const ADDRESS = 'Av. Amazonas N34-120, Quito'
+
+/** Datos de facturación válidos (cédula con dígito verificador correcto). */
+async function fillBilling() {
+  await userEvent.type(screen.getByLabelText('Número de identificación'), '1710034065')
+  await userEvent.type(screen.getByLabelText('Celular'), '0987569852')
+  await userEvent.type(screen.getByLabelText('Dirección'), ADDRESS)
+}
 
 const repo = {
   createPagomediosPayment: vi.fn(),
@@ -99,18 +109,18 @@ describe('PagomediosCheckoutPage — pago único', () => {
     })
     renderAt('/membresia/pago?planId=plan_mensual')
 
-    expect(screen.getByText(/Plan Mensual · \$35\.00 · pago único/)).toBeInTheDocument()
+    expect(screen.getByText('Plan Mensual')).toBeInTheDocument()
+    expect(screen.getByLabelText('Dirección')).toHaveValue('') // sin datos precargados
 
-    await userEvent.type(screen.getByLabelText('Número de identificación'), '1723358400')
-    await userEvent.type(screen.getByLabelText('Celular'), '0987569852')
-    await userEvent.click(screen.getByRole('button', { name: /Pagar \$35\.00 en Pagomedios/ }))
+    await fillBilling()
+    await userEvent.click(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ }))
 
     expect(repo.createPagomediosPayment).toHaveBeenCalledWith({
       planId: 'plan_mensual',
-      document: '1723358400',
+      document: '1710034065',
       documentType: '05',
       phone: '0987569852',
-      address: 'Quito',
+      address: ADDRESS,
       native: false,
     })
     expect(assign).toHaveBeenCalledWith('https://payurl.link/ZTR3638000')
@@ -126,9 +136,8 @@ describe('PagomediosCheckoutPage — pago único', () => {
     repo.verifyPagomediosPayment.mockResolvedValue({ status: 'approved' })
     renderAt('/membresia/pago?planId=plan_mensual')
 
-    await userEvent.type(screen.getByLabelText('Número de identificación'), '1723358400')
-    await userEvent.type(screen.getByLabelText('Celular'), '0987569852')
-    await userEvent.click(screen.getByRole('button', { name: /en Pagomedios/ }))
+    await fillBilling()
+    await userEvent.click(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ }))
 
     await waitFor(() =>
       expect(browser.open).toHaveBeenCalledWith(
@@ -212,15 +221,45 @@ describe('PagomediosCheckoutPage — pago único', () => {
     expect(repo.verifyPagomediosPayment).not.toHaveBeenCalled()
   })
 
+  it('el formulario no acepta letras en cédula y celular, y no deja pagar con datos inválidos', async () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    const pay = screen.getByRole('button', { name: /Pagar\s*\$35\.00/ })
+    expect(pay).toBeDisabled()
+
+    await userEvent.type(screen.getByLabelText('Número de identificación'), 'fddfg34344')
+    expect(screen.getByLabelText('Número de identificación')).toHaveValue('34344')
+    await userEvent.type(screen.getByLabelText('Celular'), 'kjhb09875x69852')
+    expect(screen.getByLabelText('Celular')).toHaveValue('0987569852')
+    await userEvent.click(screen.getByLabelText('Dirección'))
+    await userEvent.tab()
+
+    expect(screen.getByText('La cédula tiene 10 dígitos.')).toBeInTheDocument()
+    expect(screen.getByText('Ingresa tu dirección.')).toBeInTheDocument()
+    expect(pay).toBeDisabled()
+    expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
+
+    await userEvent.clear(screen.getByLabelText('Número de identificación'))
+    await userEvent.type(screen.getByLabelText('Número de identificación'), '1723358400')
+    await userEvent.tab()
+    expect(screen.getByText('La cédula no es válida.')).toBeInTheDocument()
+  })
+
+  it('muestra el resumen con subtotal, IVA 15% y total', async () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    const summary = screen.getByRole('region', { name: 'Resumen del pago' })
+    expect(summary).toHaveTextContent('Subtotal$30.44')
+    expect(summary).toHaveTextContent('IVA 15%$4.56')
+    expect(summary).toHaveTextContent('Total$35.00')
+  })
+
   it('muestra el error de la pasarela y no redirige', async () => {
     repo.createPagomediosPayment.mockRejectedValue(
       new Error('Pagomedios no configurado. Falta el secret PAGOMEDIOS_TOKEN.'),
     )
     renderAt('/membresia/pago?planId=plan_mensual')
 
-    await userEvent.type(screen.getByLabelText('Número de identificación'), '1723358400')
-    await userEvent.type(screen.getByLabelText('Celular'), '0987569852')
-    await userEvent.click(screen.getByRole('button', { name: /en Pagomedios/ }))
+    await fillBilling()
+    await userEvent.click(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('PAGOMEDIOS_TOKEN')
     expect(assign).not.toHaveBeenCalled()

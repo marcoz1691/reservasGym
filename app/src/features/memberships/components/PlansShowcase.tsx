@@ -324,13 +324,9 @@ export function PlansShowcase({
                     type="button"
                     disabled={Boolean(payingPlanId)}
                     onClick={() => void onPayOnline(plan.id)}
-                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 active:scale-[0.98] ${
-                      isUpgrade
-                        ? 'bg-acc text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] hover:bg-acc-hi'
-                        : isCurrent
-                          ? 'bg-ink text-white hover:bg-ink/90'
-                          : 'border border-line-strong bg-surface text-ink hover:bg-surface-elevated'
-                    }`}
+                    // Mismo botón en todas las tarjetas: sobrio y del mismo alto.
+                    // El plan recomendado se distingue por su etiqueta, no por el botón.
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-60 active:scale-[0.98]"
                   >
                     {isPaying ? (
                       <>

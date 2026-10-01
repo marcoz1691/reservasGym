@@ -1,12 +1,23 @@
-import type { FormEvent } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Clock, CreditCard, Loader2, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Check, CheckCircle2, Clock, CreditCard, Loader2, Lock } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
-import type { OnlinePaymentReceipt, PagomediosDocumentType } from '@/data/types'
+import type { OnlinePaymentReceipt } from '@/data/types'
+import {
+  BILLING_DOCUMENT_TYPES,
+  isNumericDocument,
+  sanitizeDocument,
+  sanitizePhone,
+  validateBilling,
+  type BillingDocumentType,
+  type BillingErrors,
+} from '@/domain/rules/billing'
 import { formatCurrency, formatDateSpanish } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
+import { splitTax } from '../../../supabase/functions/pagomedios-payment/tax'
 import {
+  ONLINE_PAYMENT_TAX_RATE,
   isNativeApp,
   isOnlinePayEnabled,
   onPaymentScreenClosed,
@@ -15,12 +26,14 @@ import {
   takePendingPayment,
 } from './onlinePay'
 
-const DOCUMENT_OPTIONS: { value: PagomediosDocumentType; label: string }[] = [
-  { value: '05', label: 'Cédula' },
-  { value: '04', label: 'RUC' },
-  { value: '06', label: 'Pasaporte' },
-  { value: '08', label: 'Identificación del exterior' },
-]
+const CARD_BRANDS = ['Visa', 'Mastercard', 'Diners', 'Discover', 'Amex']
+
+const DOCUMENT_PLACEHOLDER: Record<BillingDocumentType, string> = {
+  '05': 'Ej. 1712345678',
+  '04': 'Ej. 1712345678001',
+  '06': 'Ej. A1234567',
+  '08': 'Número de identificación',
+}
 
 const verifyUrl = (id: string) =>
   `/membresia/pago?provider=pagomedios&paymentId=${encodeURIComponent(id)}`
@@ -51,13 +64,17 @@ export function PagomediosCheckoutPage() {
     [data.membershipPlans, planId],
   )
 
-  const [documentType, setDocumentType] = useState<PagomediosDocumentType>('05')
+  const [documentType, setDocumentType] = useState<BillingDocumentType>('05')
   const [document, setDocument] = useState('')
   const [phone, setPhone] = useState('')
-  const [address, setAddress] = useState(user?.residence ?? '')
+  const [address, setAddress] = useState('')
+  const [touched, setTouched] = useState<Partial<Record<keyof BillingErrors, boolean>>>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [verify, setVerify] = useState<VerifyState>({ kind: 'checking' })
+  const billingErrors = validateBilling({ documentType, document, phone, address })
+  const fieldError = (field: keyof BillingErrors) =>
+    touched[field] ? billingErrors[field] : undefined
 
   const onlineOk = isOnlinePayEnabled() && typeof repo.createPagomediosPayment === 'function'
 
@@ -116,6 +133,10 @@ export function PagomediosCheckoutPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!planId || !repo.createPagomediosPayment) return
+    if (Object.keys(billingErrors).length > 0) {
+      setTouched({ document: true, phone: true, address: true })
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -201,106 +222,185 @@ export function PagomediosCheckoutPage() {
     )
   }
 
-  const inputClass =
-    'w-full rounded-xl border border-line bg-surface px-3 py-2 text-ink focus:border-acc focus:outline-none'
+  const amounts = splitTax(plan.priceCents, ONLINE_PAYMENT_TAX_RATE)
+  const cents = (value: number) => Math.round(value * 100)
+  const formValid = Object.keys(billingErrors).length === 0
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 p-4">
-      <PageHeader
-        title="Pagar en línea"
-        subtitle={`${plan.name} · ${formatCurrency(plan.priceCents)} · pago único`}
-      />
+    <div className="mx-auto max-w-lg space-y-6 p-4 pb-10">
+      <PageHeader title="Pago" subtitle="Pago único con tarjeta" />
 
-      <div className="flex items-center gap-2 rounded-2xl border border-line bg-surface px-3 py-2 text-xs text-ink-2">
-        <ShieldCheck className="h-4 w-4 shrink-0 text-acc" />
-        Pagas en la página segura de Pagomedios. No guardamos datos de tu tarjeta ni se
-        realizan cobros recurrentes.
-      </div>
-
-      {error ? (
-        <div
-          role="alert"
-          className="rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
-        >
-          {error}
+      <section className="rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-ink-3">Tu plan</p>
+        <div className="mt-1 flex items-baseline justify-between gap-3">
+          <p className="font-display text-lg font-bold text-ink">{plan.name}</p>
+          <p className="shrink-0 text-lg font-bold text-ink">{formatCurrency(plan.priceCents)}</p>
         </div>
-      ) : null}
+        <p className="text-sm text-ink-3">Vigencia de {plan.durationDays} días · sin cobros recurrentes</p>
+      </section>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4 rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]"
-      >
-        <p className="text-xs text-ink-3">Datos para el comprobante de pago.</p>
-        <label className="block space-y-1 text-sm">
-          <span className="font-bold text-ink">Tipo de identificación</span>
-          <select
-            value={documentType}
-            onChange={(e) => setDocumentType(e.target.value as PagomediosDocumentType)}
-            className={inputClass}
-          >
-            {DOCUMENT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
+      <form onSubmit={handleSubmit} noValidate className="space-y-6">
+        <Section title="Datos de facturación">
+          <div className="rounded-2xl border border-line bg-surface-elevated px-4 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-3">A nombre de</p>
+            <p className="font-semibold text-ink">{user.fullName}</p>
+            <p className="text-xs text-ink-3">{user.email}</p>
+          </div>
+          <Field label="Tipo de identificación">
+            <select
+              value={documentType}
+              onChange={(e) => {
+                const type = e.target.value as BillingDocumentType
+                setDocumentType(type)
+                setDocument((current) => sanitizeDocument(type, current))
+              }}
+              className={INPUT_CLASS}
+            >
+              {BILLING_DOCUMENT_TYPES.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Número de identificación" error={fieldError('document')}>
+            <input
+              inputMode={isNumericDocument(documentType) ? 'numeric' : 'text'}
+              autoComplete="off"
+              value={document}
+              onChange={(e) => setDocument(sanitizeDocument(documentType, e.target.value))}
+              onBlur={() => setTouched((t) => ({ ...t, document: true }))}
+              aria-invalid={Boolean(fieldError('document'))}
+              className={INPUT_CLASS}
+              placeholder={DOCUMENT_PLACEHOLDER[documentType]}
+            />
+          </Field>
+          <Field label="Celular" error={fieldError('phone')}>
+            <input
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              value={phone}
+              onChange={(e) => setPhone(sanitizePhone(e.target.value))}
+              onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
+              aria-invalid={Boolean(fieldError('phone'))}
+              className={INPUT_CLASS}
+              placeholder="Ej. 0991234567"
+            />
+          </Field>
+          <Field label="Dirección" error={fieldError('address')}>
+            <input
+              autoComplete="street-address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value.slice(0, 150))}
+              onBlur={() => setTouched((t) => ({ ...t, address: true }))}
+              aria-invalid={Boolean(fieldError('address'))}
+              className={INPUT_CLASS}
+              placeholder="Ej. Av. Amazonas N34-120, Quito"
+            />
+          </Field>
+        </Section>
+
+        <Section title="Método de pago">
+          <div className="flex items-center gap-3 rounded-2xl border-2 border-ink bg-surface px-4 py-3">
+            <CreditCard className="h-5 w-5 text-ink" aria-hidden />
+            <div className="flex-1">
+              <p className="font-semibold text-ink">Tarjeta de crédito o débito</p>
+              <p className="text-xs text-ink-3">Procesado por Pagomedios</p>
+            </div>
+            <Check className="h-5 w-5 text-ink" aria-label="Seleccionado" />
+          </div>
+          <ul className="flex flex-wrap gap-1.5" aria-label="Tarjetas aceptadas">
+            {CARD_BRANDS.map((brand) => (
+              <li
+                key={brand}
+                className="rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] font-bold text-ink-2"
+              >
+                {brand}
+              </li>
             ))}
-          </select>
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="font-bold text-ink">Número de identificación</span>
-          <input
-            required
-            inputMode={documentType === '05' || documentType === '04' ? 'numeric' : 'text'}
-            minLength={documentType === '04' ? 13 : documentType === '05' ? 10 : 5}
-            maxLength={documentType === '04' ? 13 : documentType === '05' ? 10 : 20}
-            value={document}
-            onChange={(e) => setDocument(e.target.value)}
-            className={inputClass}
-            placeholder={documentType === '04' ? '1790012345001' : '0102030405'}
-          />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="font-bold text-ink">Celular</span>
-          <input
-            required
-            inputMode="tel"
-            minLength={9}
-            maxLength={15}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className={inputClass}
-            placeholder="0991234567"
-          />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="font-bold text-ink">Dirección</span>
-          <input
-            required
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className={inputClass}
-            placeholder="Calle y número, ciudad"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={busy}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-acc px-4 py-3 text-sm font-bold text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] disabled:opacity-60"
+          </ul>
+        </Section>
+
+        <section
+          aria-label="Resumen del pago"
+          className="space-y-2 rounded-3xl border border-line bg-surface p-5 text-sm"
         >
-          {busy ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Redirigiendo a Pagomedios…
-            </>
-          ) : (
-            <>
-              <CreditCard className="h-4 w-4" />
-              Pagar {formatCurrency(plan.priceCents)} en Pagomedios
-            </>
-          )}
-        </button>
+          <SummaryRow label="Subtotal" value={formatCurrency(cents(amounts.amount_with_tax + amounts.amount_without_tax))} />
+          <SummaryRow label={`IVA ${Math.round(ONLINE_PAYMENT_TAX_RATE * 100)}%`} value={formatCurrency(cents(amounts.tax_value))} />
+          <div className="border-t border-dashed border-line-strong pt-2">
+            <SummaryRow label="Total" value={formatCurrency(plan.priceCents)} strong />
+          </div>
+        </section>
+
+        {error ? (
+          <div
+            role="alert"
+            className="rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
+          >
+            {error}
+          </div>
+        ) : null}
+
+        <div className="space-y-3">
+          <button
+            type="submit"
+            disabled={busy || !formValid}
+            className="flex w-full items-center justify-between rounded-2xl bg-ink px-5 py-4 text-base font-semibold text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-ink/25"
+          >
+            {busy ? (
+              <span className="flex w-full items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Abriendo pago seguro…
+              </span>
+            ) : (
+              <>
+                <span>Pagar</span>
+                <span>{formatCurrency(plan.priceCents)}</span>
+              </>
+            )}
+          </button>
+          <p className="flex items-center justify-center gap-1.5 text-center text-xs text-ink-3">
+            <Lock className="h-3.5 w-3.5" aria-hidden />
+            Pago seguro en Pagomedios. No guardamos los datos de tu tarjeta.
+          </p>
+        </div>
       </form>
 
       <BackLink label="Cancelar y volver" />
+    </div>
+  )
+}
+
+const INPUT_CLASS =
+  'w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-base text-ink placeholder:text-ink-3/70 focus:border-ink focus:outline-none aria-[invalid=true]:border-danger'
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-bold text-ink">{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1.5 text-sm">
+      <label className="block space-y-1.5">
+        <span className="font-medium text-ink-2">{label}</span>
+        {children}
+      </label>
+      {error ? <p className="text-xs text-danger">{error}</p> : null}
+    </div>
+  )
+}
+
+function SummaryRow({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className={`flex justify-between ${strong ? 'text-base font-bold text-ink' : 'text-ink-2'}`}>
+      <span>{label}</span>
+      <span>{value}</span>
     </div>
   )
 }

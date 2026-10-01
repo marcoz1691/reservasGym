@@ -26,7 +26,7 @@
     "@capacitor/android": "^7.4.3",
     "@capacitor/core": "^7.4.3",
     "@capacitor/ios": "^7.4.3",
-    "@capgo/inappbrowser": "^7.29.4",
+    "@capgo/inappbrowser": "7.22.4",
     "@supabase/supabase-js": "^2.112.3",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.33.0",
