@@ -16,22 +16,18 @@ import {
   isBiometricsEnabled,
 } from '@/lib/biometrics'
 import { displayFirstName } from '@/domain/rules'
+import { DEMO_PASSWORD } from '@/data/seed'
 import { Button, Card, Input } from '@/ui/primitives'
 
-const IS_STAGING = import.meta.env.MODE === 'staging'
-const SHOW_DEMO_ACCESS = import.meta.env.DEV || IS_STAGING
-const DEMO_PASSWORD = IS_STAGING ? 'ZonaCero2026!' : 'demo1234'
-const DEMO_ACCOUNTS = IS_STAGING
-  ? {
-      socio: 'socio.staging@zonacero.test',
-      staff: 'staff.staging@zonacero.test',
-      admin: 'admin.staging@zonacero.test',
-    }
-  : {
-      socio: 'socio@gym.local',
-      staff: 'staff@gym.local',
-      admin: 'admin@gym.local',
-    }
+// Solo para `npm run dev` con datos locales en memoria. QA y producción son
+// públicos: ahí no se muestran ni se embeben credenciales.
+const SHOW_DEMO_ACCESS =
+  import.meta.env.DEV && import.meta.env.MODE !== 'staging'
+const DEMO_ACCOUNTS = {
+  socio: 'socio@gym.local',
+  staff: 'staff@gym.local',
+  admin: 'admin@gym.local',
+}
 
 export function LoginPage() {
   const user = useCurrentUser()
@@ -45,7 +41,6 @@ export function LoginPage() {
   const recoveredEmail = (useLocation().state as { recoveredEmail?: string } | null)
     ?.recoveredEmail
 
-  // Login fields — staging usa cuentas @zonacero.test (ver supabase/staging-users.sql)
   const [loginEmail, setLoginEmail] = useState(
     recoveredEmail ?? (SHOW_DEMO_ACCESS ? DEMO_ACCOUNTS.socio : ''),
   )
@@ -301,7 +296,7 @@ export function LoginPage() {
               type="email"
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
-              placeholder="socio@gym.local"
+              placeholder="tu.correo@ejemplo.com"
               required
             />
 
@@ -352,11 +347,7 @@ export function LoginPage() {
             {SHOW_DEMO_ACCESS ? (
             <div className="mt-6 rounded-2xl border border-line bg-bg p-3.5 text-xs text-ink-3 space-y-2">
               <p className="font-bold text-ink-2 flex items-center justify-between">
-                <span>
-                  {IS_STAGING
-                    ? 'Acceso rápido QA (staging):'
-                    : 'Acceso rápido demo (desarrollo):'}
-                </span>
+                <span>Acceso rápido demo (desarrollo):</span>
                 <span className="text-[10px] text-acc font-mono">{DEMO_PASSWORD}</span>
               </p>
               <div className="grid grid-cols-3 gap-1.5 pt-1">
