@@ -8,6 +8,7 @@ export interface MembershipPlanInput {
   visitQuota?: number | null
   allowedZoneIds?: string[]
   active?: boolean
+  kind?: MembershipPlan['kind']
 }
 
 export type MembershipPlanValidationResult =
@@ -121,9 +122,15 @@ const DURATION: Record<number, { label: string; months: number | null; badge: st
   420: { label: '14 meses', months: 14, badge: '2 meses gratis' },
 }
 
-export function planFamilyId(name: string): PlanFamilyId {
-  const n = name.toLowerCase()
-  if (n.includes('zona day')) return 'zona-day'
+/** Pase del día: manda `kind`; sin él (datos viejos) se reconoce por el nombre "Zona Day". */
+export function isDayPassPlan(plan: Pick<MembershipPlan, 'name' | 'kind'>): boolean {
+  if (plan.kind) return plan.kind === 'day_pass'
+  return plan.name.toLowerCase().includes('zona day')
+}
+
+export function planFamilyId(plan: Pick<MembershipPlan, 'name' | 'kind'>): PlanFamilyId {
+  if (isDayPassPlan(plan)) return 'zona-day'
+  const n = plan.name.toLowerCase()
   if (n.includes('zero start')) return 'zero-start'
   if (n.includes('zero active')) return 'zero-active'
   if (n.includes('zero pro')) return 'zero-pro'
@@ -136,7 +143,7 @@ export function describePlanOffer(plan: MembershipPlan): PlanOffer {
   const months = known?.months ?? null
   return {
     plan,
-    familyId: planFamilyId(plan.name),
+    familyId: planFamilyId(plan),
     durationLabel: known?.label ?? `${plan.durationDays} días`,
     months,
     badge: known?.badge ?? null,
@@ -158,28 +165,27 @@ const FAMILY_RANK: Record<PlanFamilyId, number> = {
 /**
  * Plan superior a ofrecer. Sin membresía, el de mayor precio.
  * Con plan, el siguiente nivel de familia (misma duración si existe);
- * si ya está en la familia más alta, el siguiente precio.
+ * si ya está en la familia más alta, el siguiente precio. Nunca sugiere un pase del día.
  */
 export function selectUpgradePlan(
   plans: MembershipPlan[],
   currentPlanId: string | null | undefined,
 ): MembershipPlan | null {
-  const active = plans.filter((plan) => plan.active)
-  if (active.length === 0) return null
-
   const current = currentPlanId
-    ? active.find((plan) => plan.id === currentPlanId)
+    ? plans.find((plan) => plan.active && plan.id === currentPlanId)
     : undefined
+  const active = plans.filter((plan) => plan.active && !isDayPassPlan(plan))
+  if (active.length === 0) return null
 
   if (!current) {
     return [...active].sort((a, b) => b.priceCents - a.priceCents)[0] ?? null
   }
 
-  const currentRank = FAMILY_RANK[planFamilyId(current.name)]
+  const currentRank = FAMILY_RANK[planFamilyId(current)]
   const higherFamily = active
-    .filter((plan) => plan.id !== current.id && FAMILY_RANK[planFamilyId(plan.name)] > currentRank)
+    .filter((plan) => plan.id !== current.id && FAMILY_RANK[planFamilyId(plan)] > currentRank)
     .sort((a, b) => {
-      const rank = FAMILY_RANK[planFamilyId(a.name)] - FAMILY_RANK[planFamilyId(b.name)]
+      const rank = FAMILY_RANK[planFamilyId(a)] - FAMILY_RANK[planFamilyId(b)]
       if (rank !== 0) return rank
       const duration =
         Math.abs(a.durationDays - current.durationDays) -

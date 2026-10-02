@@ -207,7 +207,7 @@ export function PlansShowcase({
           {!upgradeInView ? (
             <button
               type="button"
-              onClick={() => setFamilyId(planFamilyId(upgrade.name))}
+              onClick={() => setFamilyId(planFamilyId(upgrade))}
               className="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-elevated active:scale-[0.98]"
             >
               Ver este nivel

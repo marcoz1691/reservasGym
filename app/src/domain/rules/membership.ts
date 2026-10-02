@@ -25,7 +25,7 @@ export function zonedDateKey(
  * Índice de día calendario en la zona del gym (mediodía UTC del YMD local).
  * Evita desalineación medianoche UTC vs America/Guayaquil (ZC18-O2).
  */
-function zonedDayIndex(date: Date, timeZone: string = MEMBERSHIP_TIMEZONE): number {
+export function zonedDayIndex(date: Date, timeZone: string = MEMBERSHIP_TIMEZONE): number {
   const ymd = zonedDateKey(date, timeZone)
   return Date.parse(`${ymd}T12:00:00.000Z`) / MS_PER_DAY
 }
@@ -35,7 +35,7 @@ function zonedDayIndex(date: Date, timeZone: string = MEMBERSHIP_TIMEZONE): numb
  * Usa instantes absolutos (acceso real); los “días restantes” usan calendario Guayaquil.
  */
 export function computeMembershipStatus(
-  membership: Pick<Membership, 'endsAt' | 'graceEndsAt' | 'status'>,
+  membership: Pick<Membership, 'endsAt' | 'graceEndsAt' | 'status'> & { startsAt?: string },
   now: Date = new Date(),
 ): MembershipStatus {
   if (membership.status === 'cancelled') {
@@ -43,6 +43,9 @@ export function computeMembershipStatus(
   }
 
   const nowMs = now.getTime()
+  if (membership.startsAt && new Date(membership.startsAt).getTime() > nowMs) {
+    return 'scheduled'
+  }
   const endsAtMs = new Date(membership.endsAt).getTime()
   const graceEndsAtMs = membership.graceEndsAt
     ? new Date(membership.graceEndsAt).getTime()
@@ -104,6 +107,14 @@ export function canBookMembership(
     }
   }
 
+  if (status === 'scheduled') {
+    return {
+      allowed: false,
+      status: 'scheduled',
+      reason: 'Tu plan aún no empieza.',
+    }
+  }
+
   if (
     membership.visitsLeft !== null &&
     membership.visitsLeft !== undefined &&
@@ -122,13 +133,14 @@ export function canBookMembership(
   }
 }
 
-/** Agenda y Reservas: el socio solo las ve si puede reservar. Staff/admin siempre. */
+/** Agenda y Reservas: el socio solo las ve si puede reservar (plan o pase del día). Staff/admin siempre. */
 export function canUseBookingNav(
   role: 'member' | 'staff' | 'admin' | undefined,
   membership: Membership | null | undefined,
+  hasDayPass = false,
 ): boolean {
   if (role !== 'member') return true
-  return canBookMembership(membership).allowed
+  return hasDayPass || canBookMembership(membership).allowed
 }
 
 /**
@@ -172,6 +184,7 @@ export function isInGracePeriod(
 
 /**
  * Extends or activates a membership based on plan duration and payment date.
+ * Al sumar días a un plan vigente o en gracia se conserva su fecha de inicio.
  */
 export function extendMembership(
   current: Membership | null | undefined,
@@ -192,8 +205,16 @@ export function extendMembership(
     current!.status !== 'cancelled' &&
     new Date(current!.endsAt).getTime() > paidMs
 
+  const currentGraceEndMs = current
+    ? current.graceEndsAt
+      ? new Date(current.graceEndsAt).getTime()
+      : new Date(current.endsAt).getTime() + GRACE_PERIOD_DAYS * MS_PER_DAY
+    : 0
+  const keepsStart =
+    Boolean(current) && current!.status !== 'cancelled' && currentGraceEndMs >= paidMs
+
   const baseDate = isCurrentActive ? new Date(current!.endsAt) : paidDate
-  const startsAtDate = isCurrentActive ? new Date(current!.endsAt) : paidDate
+  const startsAtDate = keepsStart ? new Date(current!.startsAt) : paidDate
 
   const endDate = new Date(
     baseDate.getTime() + plan.durationDays * 24 * 60 * 60 * 1000,
