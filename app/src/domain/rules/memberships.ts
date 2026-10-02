@@ -180,20 +180,20 @@ export function planPurchaseDates(
         graceEndsAt: next.graceEndsAt,
         visitsLeft: next.visitsLeft,
       }
-      if (outcome.queued) {
-        const q = outcome.queued
-        const lengthMs = new Date(q.endsAt).getTime() - new Date(q.startsAt).getTime()
-        const endsAt = new Date(new Date(next.endsAt).getTime() + lengthMs).toISOString()
-        dates.shiftedQueued = {
-          id: q.id,
-          startsAt: next.endsAt,
-          endsAt,
-          graceEndsAt: plusDays(endsAt, GRACE_PERIOD_DAYS),
-        }
-      }
+      if (outcome.queued) dates.shiftedQueued = shiftQueuedMembership(outcome.queued, next.endsAt)
       return dates
     }
   }
+}
+
+/** Corre el plan en espera para que empiece en `startsAt`, con la misma duración. */
+export function shiftQueuedMembership(
+  queued: Pick<Membership, 'id' | 'startsAt' | 'endsAt'>,
+  startsAt: string,
+): { id: string; startsAt: string; endsAt: string; graceEndsAt: string } {
+  const lengthMs = new Date(queued.endsAt).getTime() - new Date(queued.startsAt).getTime()
+  const endsAt = new Date(new Date(startsAt).getTime() + lengthMs).toISOString()
+  return { id: queued.id, startsAt, endsAt, graceEndsAt: plusDays(endsAt, GRACE_PERIOD_DAYS) }
 }
 
 /**
