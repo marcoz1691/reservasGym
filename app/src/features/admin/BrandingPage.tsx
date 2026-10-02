@@ -7,7 +7,7 @@ import {
   useRepo,
 } from '@/data/RepositoryProvider'
 import type { GymSettings } from '@/domain/models'
-import { isFeatureEnabled, type AppFeature } from '@/domain/rules'
+import { isFeatureEnabled, normalizeWhatsAppPhone, type AppFeature } from '@/domain/rules'
 import { applyBrandColors } from '@/lib/format'
 import { Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
 
@@ -24,7 +24,7 @@ const FEATURE_SWITCHES: {
     feature: 'onlinePayments',
     setting: 'onlinePaymentsEnabled',
     label: 'Pago en línea',
-    detail: 'Los socios pagan su plan con tarjeta desde la app. Si lo apagas, solo verán efectivo y transferencia.',
+    detail: 'Los socios pagan su plan con tarjeta desde la app. Si lo apagas, solo verán efectivo, transferencia y Deuna.',
   },
   {
     feature: 'waitlist',
@@ -46,6 +46,56 @@ const FEATURE_SWITCHES: {
   },
 ]
 
+type PaymentDetailKey = keyof Pick<
+  GymSettings,
+  | 'whatsappPayments'
+  | 'bankName'
+  | 'bankAccountType'
+  | 'bankAccountNumber'
+  | 'bankAccountHolder'
+  | 'bankAccountId'
+  | 'deunaCode'
+  | 'deunaQrUrl'
+>
+
+const PAYMENT_DETAIL_FIELDS: {
+  key: PaymentDetailKey
+  label: string
+  placeholder: string
+  group: 'whatsapp' | 'bank' | 'deuna'
+}[] = [
+  { key: 'whatsappPayments', label: 'WhatsApp para comprobantes', placeholder: 'Ej. 0991234567', group: 'whatsapp' },
+  { key: 'bankName', label: 'Banco', placeholder: 'Ej. Banco Pichincha', group: 'bank' },
+  { key: 'bankAccountType', label: 'Tipo de cuenta', placeholder: 'Ahorros o corriente', group: 'bank' },
+  { key: 'bankAccountNumber', label: 'Número de cuenta', placeholder: 'Ej. 2201234567', group: 'bank' },
+  { key: 'bankAccountHolder', label: 'Titular', placeholder: 'Nombre del titular', group: 'bank' },
+  { key: 'bankAccountId', label: 'RUC o cédula del titular', placeholder: 'Ej. 1712345678001', group: 'bank' },
+  { key: 'deunaCode', label: 'Código de Deuna', placeholder: 'Código o número para pagar con Deuna', group: 'deuna' },
+  { key: 'deunaQrUrl', label: 'URL de la imagen del QR de Deuna', placeholder: 'https://…', group: 'deuna' },
+]
+
+const PAYMENT_GROUP_TITLES = {
+  whatsapp: 'Comprobantes',
+  bank: 'Transferencia bancaria',
+  deuna: 'Deuna',
+} as const
+
+function paymentDetailsFrom(settings: GymSettings): Record<PaymentDetailKey, string> {
+  return Object.fromEntries(
+    PAYMENT_DETAIL_FIELDS.map(({ key }) => [key, settings[key] ?? '']),
+  ) as Record<PaymentDetailKey, string>
+}
+
+function validatePaymentDetails(details: Record<PaymentDetailKey, string>): string | null {
+  if (details.whatsappPayments.trim() && !normalizeWhatsAppPhone(details.whatsappPayments)) {
+    return 'Revisa el número de WhatsApp: usa un celular como 0991234567 o 593991234567.'
+  }
+  if (details.deunaQrUrl.trim() && !/^https:\/\//i.test(details.deunaQrUrl.trim())) {
+    return 'La URL del QR de Deuna debe empezar con https://'
+  }
+  return null
+}
+
 function settingsErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : 'No se pudo guardar la marca.'
   if (/coerce the result|JSON object|row-level security|permission/i.test(msg)) {
@@ -64,13 +114,40 @@ export function BrandingPage() {
   const [accentColor, setAccentColor] = useState(data.settings.accentColor)
   const [msg, setMsg] = useState('')
   const [savingFeature, setSavingFeature] = useState<AppFeature | null>(null)
+  const [paymentDetails, setPaymentDetails] = useState(() => paymentDetailsFrom(data.settings))
+  const [paymentMsg, setPaymentMsg] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+  const [savingPayments, setSavingPayments] = useState(false)
   const pagomediosConfigured = import.meta.env.VITE_ONLINE_PAYMENTS === '1'
 
   useEffect(() => {
     setName(data.settings.name)
     setLogoUrl(data.settings.logoUrl ?? '')
     setAccentColor(data.settings.accentColor)
+    setPaymentDetails(paymentDetailsFrom(data.settings))
   }, [data.settings])
+
+  async function savePaymentDetails(e: FormEvent) {
+    e.preventDefault()
+    const invalid = validatePaymentDetails(paymentDetails)
+    if (invalid) {
+      setPaymentMsg({ tone: 'error', text: invalid })
+      return
+    }
+    setSavingPayments(true)
+    try {
+      await repo.updateSettings(
+        Object.fromEntries(
+          PAYMENT_DETAIL_FIELDS.map(({ key }) => [key, paymentDetails[key].trim() || null]),
+        ) as Partial<GymSettings>,
+      )
+      await refresh()
+      setPaymentMsg({ tone: 'ok', text: 'Datos de pago actualizados' })
+    } catch (err) {
+      setPaymentMsg({ tone: 'error', text: settingsErrorMessage(err) })
+    } finally {
+      setSavingPayments(false)
+    }
+  }
 
   async function toggleFeature(feature: AppFeature, setting: (typeof FEATURE_SWITCHES)[number]['setting']) {
     setSavingFeature(feature)
@@ -226,6 +303,52 @@ export function BrandingPage() {
             )
           })}
         </ul>
+      </Card>
+
+      <Card className="mt-6 max-w-lg space-y-4">
+        <div>
+          <h2 className="font-display text-lg font-bold text-ink">Datos de pago</h2>
+          <p className="text-xs text-ink-3">
+            Los socios los ven al elegir transferencia o Deuna. Lo que dejes vacío no se muestra:
+            sin WhatsApp no aparece el botón para enviar el comprobante y sin código ni QR no se
+            ofrece Deuna.
+          </p>
+        </div>
+        <form className="space-y-5" onSubmit={(e) => void savePaymentDetails(e)}>
+          {(Object.keys(PAYMENT_GROUP_TITLES) as (keyof typeof PAYMENT_GROUP_TITLES)[]).map((group) => (
+            <fieldset key={group} className="space-y-3">
+              <legend className="text-xs font-bold uppercase tracking-wide text-ink-3">
+                {PAYMENT_GROUP_TITLES[group]}
+              </legend>
+              {PAYMENT_DETAIL_FIELDS.filter((field) => field.group === group).map(
+                ({ key, label, placeholder }) => (
+                  <Input
+                    key={key}
+                    label={label}
+                    value={paymentDetails[key]}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setPaymentDetails((current) => ({ ...current, [key]: value }))
+                    }}
+                    placeholder={placeholder}
+                    inputMode={key === 'whatsappPayments' ? 'tel' : undefined}
+                  />
+                ),
+              )}
+            </fieldset>
+          ))}
+          {paymentMsg ? (
+            <p
+              role={paymentMsg.tone === 'error' ? 'alert' : 'status'}
+              className={`text-sm ${paymentMsg.tone === 'error' ? 'text-danger' : 'text-acc'}`}
+            >
+              {paymentMsg.text}
+            </p>
+          ) : null}
+          <Button type="submit" disabled={savingPayments}>
+            {savingPayments ? 'Guardando…' : 'Guardar datos de pago'}
+          </Button>
+        </form>
       </Card>
     </div>
   )

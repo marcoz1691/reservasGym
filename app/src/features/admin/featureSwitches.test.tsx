@@ -40,7 +40,7 @@ describe('Funciones de la app (interruptores del admin)', () => {
     expect(screen.getByRole('switch', { name: 'Lista de espera' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('switch', { name: 'Medidas corporales' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('switch', { name: 'Pases diarios en la app' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByText(/solo verán efectivo y transferencia/)).toBeInTheDocument()
+    expect(screen.getByText(/solo verán efectivo, transferencia y Deuna/)).toBeInTheDocument()
     expect(screen.getByText(/Recepción siempre puede venderlos en Cobros/)).toBeInTheDocument()
   })
 
@@ -86,5 +86,57 @@ describe('Funciones de la app (interruptores del admin)', () => {
     expect(await screen.findByText(/Acceso restringido/i)).toBeInTheDocument()
     expect(screen.getByText(/solo las puede cambiar un administrador/i)).toBeInTheDocument()
     expect(screen.queryByRole('switch')).toBeNull()
+  })
+})
+
+describe('Datos de pago (transferencia, Deuna y WhatsApp)', () => {
+  let repo: LocalRepository
+
+  beforeEach(async () => {
+    localStorage.clear()
+    repo = new LocalRepository()
+    resetRepositoryForTests(repo)
+    await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+  })
+
+  it('nacen vacíos y el admin los guarda', async () => {
+    renderBranding()
+
+    expect(await screen.findByRole('heading', { name: 'Datos de pago' })).toBeInTheDocument()
+    const whatsapp = screen.getByLabelText('WhatsApp para comprobantes')
+    expect(whatsapp).toHaveValue('')
+    expect(screen.getByLabelText('Número de cuenta')).toHaveValue('')
+    expect(screen.getByLabelText('Código de Deuna')).toHaveValue('')
+
+    await userEvent.type(whatsapp, '0991234567')
+    await userEvent.type(screen.getByLabelText('Banco'), 'Banco Pichincha')
+    await userEvent.type(screen.getByLabelText('Número de cuenta'), '2201234567')
+    await userEvent.type(screen.getByLabelText('Código de Deuna'), 'ZONACERO')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar datos de pago' }))
+
+    expect(await screen.findByText('Datos de pago actualizados')).toBeInTheDocument()
+    const { settings } = await repo.load()
+    expect(settings).toMatchObject({
+      whatsappPayments: '0991234567',
+      bankName: 'Banco Pichincha',
+      bankAccountNumber: '2201234567',
+      deunaCode: 'ZONACERO',
+      deunaQrUrl: null,
+      bankAccountHolder: null,
+    })
+  })
+
+  it('no guarda un WhatsApp que no es celular ni un QR sin https', async () => {
+    renderBranding()
+
+    await userEvent.type(await screen.findByLabelText('WhatsApp para comprobantes'), '123')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar datos de pago' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Revisa el número de WhatsApp')
+
+    await userEvent.clear(screen.getByLabelText('WhatsApp para comprobantes'))
+    await userEvent.type(screen.getByLabelText('URL de la imagen del QR de Deuna'), 'http://qr.png')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar datos de pago' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('https://')
+    expect((await repo.load()).settings.deunaQrUrl).toBeUndefined()
   })
 })
