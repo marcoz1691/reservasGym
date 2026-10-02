@@ -16,7 +16,7 @@ import {
 import type { Booking, Session, User, WaitlistEntry } from '@/domain/models'
 import { useAppData, useRefresh, useRepo } from '@/data/RepositoryProvider'
 import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
-import { canBookMembership, canBookZone } from '@/domain/rules'
+import { canBookMembership, canBookZone, isFeatureEnabled } from '@/domain/rules'
 import { getDisciplineMeta } from '@/domain/disciplines'
 import { formatEcuadorSessionWhen, formatEcuadorTime } from '@/lib/format'
 import { Badge, Button, Card, Input } from '@/ui/primitives'
@@ -35,6 +35,7 @@ export function StaffBookingModal({
   onSuccess,
 }: StaffBookingModalProps) {
   const data = useAppData()
+  const waitlistOn = isFeatureEnabled(data.settings, 'waitlist')
   const repo = useRepo()
   const refresh = useRefresh()
 
@@ -124,6 +125,7 @@ export function StaffBookingModal({
 
   const zone = data.zones.find((z) => z.id === session.zoneId)
   const meta = getDisciplineMeta(zone?.type ?? session.zoneId)
+  const sessionFull = session.bookedCount >= session.capacity
   const IconComponent = meta.icon
 
   const handleSelectMember = (member: User) => {
@@ -461,6 +463,7 @@ export function StaffBookingModal({
                     onClick={handleConfirmBooking}
                     disabled={
                       submitting ||
+                      (sessionFull && !waitlistOn) ||
                       (memberAssessment?.hasWarning && !overrideWarningConfirmed)
                     }
                     className="gap-2"
@@ -468,8 +471,10 @@ export function StaffBookingModal({
                     <CheckCircle2 className="h-4 w-4" />
                     {submitting
                       ? 'Confirmando...'
-                      : session.bookedCount >= session.capacity
-                        ? 'Registrar en Lista de Espera'
+                      : sessionFull
+                        ? waitlistOn
+                          ? 'Registrar en Lista de Espera'
+                          : 'Clase llena'
                         : 'Confirmar Reserva en Recepción'}
                   </Button>
                 </div>

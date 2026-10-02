@@ -40,15 +40,30 @@ const repo = {
 }
 const refresh = vi.fn().mockResolvedValue(undefined)
 
+const dayPass = {
+  id: 'plan_day',
+  name: 'Zona Day',
+  priceCents: 500,
+  durationDays: 1,
+  active: true,
+} as MembershipPlan
+
+const app = vi.hoisted(() => ({
+  settings: { onlinePaymentsEnabled: true, dayPassesEnabled: true } as Record<string, boolean>,
+}))
+
 vi.mock('@/data/RepositoryProvider', () => ({
   useCurrentUser: () => user,
-  useAppData: () => ({ membershipPlans: [plan] }),
+  useAppData: () => ({ membershipPlans: [plan, dayPass], settings: app.settings }),
   useGym: () => ({ repo, refresh }),
 }))
 
+// El ambiente tiene pasarela; lo que decide es el interruptor del admin.
 vi.mock('./onlinePay', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./onlinePay')>()),
-  isOnlinePayEnabled: () => true,
+  isOnlinePayEnvEnabled: () => true,
+  isOnlinePayEnabled: (settings?: { onlinePaymentsEnabled?: boolean }) =>
+    settings?.onlinePaymentsEnabled === true,
 }))
 
 const native = vi.hoisted(() => ({ value: false }))
@@ -95,6 +110,7 @@ describe('PagomediosCheckoutPage — pago único', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    app.settings = { onlinePaymentsEnabled: true, dayPassesEnabled: true }
     native.value = false
     browser.listeners = {}
     localStorage.clear()
@@ -449,6 +465,52 @@ describe('PagomediosCheckoutPage — pago único', () => {
     expect(await screen.findByText('Pago pendiente de confirmación.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Volver a verificar' }))
     expect(await screen.findByText(/Tu membresía ya está activa/)).toBeInTheDocument()
+  })
+
+  it('con el pago en línea apagado solo ofrece pagar en recepción', async () => {
+    app.settings = { onlinePaymentsEnabled: false, dayPassesEnabled: true }
+    repo.requestPlanPayment.mockResolvedValue({ id: 'req_1' })
+    renderAt('/membresia/pago?planId=plan_mensual')
+
+    expect(screen.queryByRole('radio', { name: /Tarjeta/ })).toBeNull()
+    expect(screen.getByRole('radio', { name: /Efectivo en recepción/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByText('Datos del pagador')).toBeNull()
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Confirmar solicitud/ }))
+    expect(repo.requestPlanPayment).toHaveBeenCalledWith({ planId: 'plan_mensual', manualMethod: 'cash' })
+    expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
+  })
+
+  it('si el admin apaga el pago en línea a mitad del pago, avisa y recarga la configuración', async () => {
+    repo.createPagomediosPayment.mockRejectedValue(new Error('Pago en línea desactivado'))
+    renderAt('/membresia/pago?planId=plan_mensual')
+
+    await fillBilling()
+    await userEvent.click(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'El pago en línea no está disponible en este momento. Puedes pagar en efectivo o por transferencia.',
+    )
+    expect(refresh).toHaveBeenCalled()
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('con el pago en línea apagado igual verifica un pago que ya estaba en curso', async () => {
+    app.settings = { onlinePaymentsEnabled: false, dayPassesEnabled: true }
+    repo.verifyPagomediosPayment.mockResolvedValue({ status: 'approved' })
+    renderAt('/membresia/pago?provider=pagomedios&paymentId=pay_1')
+
+    expect(await screen.findByText(/Tu membresía ya está activa/)).toBeInTheDocument()
+    expect(repo.verifyPagomediosPayment).toHaveBeenCalledWith({ paymentId: 'pay_1' })
+  })
+
+  it('con los pases diarios apagados no deja comprar un pase diario', () => {
+    app.settings = { onlinePaymentsEnabled: true, dayPassesEnabled: false }
+    renderAt('/membresia/pago?planId=plan_day')
+
+    expect(screen.getByText('Los pases diarios se venden en recepción.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Pagar/ })).toBeNull()
   })
 
   it('muestra el rechazo sin activar la membresía', async () => {

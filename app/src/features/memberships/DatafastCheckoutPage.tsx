@@ -3,9 +3,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CreditCard, Loader2, ShieldCheck } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
-import { isSupabaseConfigured } from '@/data/supabaseRepository'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
+import { isOnlinePayEnabled, isOnlinePayEnvEnabled } from './onlinePay'
 
 /**
  * Checkout Datafast Dataweb (COPYandPay widget).
@@ -41,10 +41,10 @@ export function DatafastCheckoutPage() {
     shopperResultUrl: string
   } | null>(null)
 
+  // Un pago que vuelve de Datafast se verifica aunque el admin haya apagado el interruptor.
   const onlineOk =
-    import.meta.env.VITE_ONLINE_PAYMENTS === '1' &&
-    isSupabaseConfigured() &&
-    typeof repo.createOnlineCheckout === 'function'
+    typeof repo.createOnlineCheckout === 'function' &&
+    (resourcePath && paymentId ? isOnlinePayEnvEnabled() : isOnlinePayEnabled(data.settings))
 
   // Handle return from Datafast widget
   useEffect(() => {

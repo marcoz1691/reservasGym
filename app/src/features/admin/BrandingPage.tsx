@@ -6,8 +6,45 @@ import {
   useRefresh,
   useRepo,
 } from '@/data/RepositoryProvider'
+import type { GymSettings } from '@/domain/models'
+import { isFeatureEnabled, type AppFeature } from '@/domain/rules'
 import { applyBrandColors } from '@/lib/format'
 import { Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
+
+const FEATURE_SWITCHES: {
+  feature: AppFeature
+  setting: keyof Pick<
+    GymSettings,
+    'onlinePaymentsEnabled' | 'waitlistEnabled' | 'measurementsEnabled' | 'dayPassesEnabled'
+  >
+  label: string
+  detail: string
+}[] = [
+  {
+    feature: 'onlinePayments',
+    setting: 'onlinePaymentsEnabled',
+    label: 'Pago en línea',
+    detail: 'Los socios pagan su plan con tarjeta desde la app. Si lo apagas, solo verán efectivo y transferencia.',
+  },
+  {
+    feature: 'waitlist',
+    setting: 'waitlistEnabled',
+    label: 'Lista de espera',
+    detail: 'Con la clase llena, el socio se anota y toma el cupo que se libere. Apagada, la clase llena no acepta más.',
+  },
+  {
+    feature: 'measurements',
+    setting: 'measurementsEnabled',
+    label: 'Medidas corporales',
+    detail: 'Los socios registran su peso y ven su progreso. Apagado, la sección se oculta.',
+  },
+  {
+    feature: 'dayPasses',
+    setting: 'dayPassesEnabled',
+    label: 'Pases diarios en la app',
+    detail: 'Los socios compran pases diarios desde la app. Recepción siempre puede venderlos en Cobros.',
+  },
+]
 
 function settingsErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : 'No se pudo guardar la marca.'
@@ -26,6 +63,8 @@ export function BrandingPage() {
   const [logoUrl, setLogoUrl] = useState(data.settings.logoUrl ?? '')
   const [accentColor, setAccentColor] = useState(data.settings.accentColor)
   const [msg, setMsg] = useState('')
+  const [savingFeature, setSavingFeature] = useState<AppFeature | null>(null)
+  const pagomediosConfigured = import.meta.env.VITE_ONLINE_PAYMENTS === '1'
 
   useEffect(() => {
     setName(data.settings.name)
@@ -33,12 +72,25 @@ export function BrandingPage() {
     setAccentColor(data.settings.accentColor)
   }, [data.settings])
 
-  if (user && user.role === 'member') {
+  async function toggleFeature(feature: AppFeature, setting: (typeof FEATURE_SWITCHES)[number]['setting']) {
+    setSavingFeature(feature)
+    try {
+      await repo.updateSettings({ [setting]: !isFeatureEnabled(data.settings, feature) })
+      await refresh()
+      setMsg('Funciones actualizadas')
+    } catch (err) {
+      setMsg(settingsErrorMessage(err))
+    } finally {
+      setSavingFeature(null)
+    }
+  }
+
+  if (user && user.role !== 'admin') {
     return (
       <div className="py-12 text-center">
         <EmptyState
           title="Acceso restringido"
-          description="La marca del gym solo la puede cambiar el equipo de staff y administradores."
+          description="La marca y las funciones del gym solo las puede cambiar un administrador."
           action={
             <Link to="/">
               <Button>Volver al inicio</Button>
@@ -130,6 +182,50 @@ export function BrandingPage() {
 
           <Button type="submit">Guardar marca</Button>
         </form>
+      </Card>
+
+      <Card className="mt-6 max-w-lg space-y-4">
+        <h2 className="font-display text-lg font-bold text-ink">Funciones de la app</h2>
+        <ul className="divide-y divide-line">
+          {FEATURE_SWITCHES.map(({ feature, setting, label, detail }) => {
+            const on = isFeatureEnabled(data.settings, feature)
+            const unavailable = feature === 'onlinePayments' && !pagomediosConfigured
+            const id = `feature-${feature}`
+            return (
+              <li key={feature} className="flex items-start justify-between gap-4 py-3">
+                <div className="min-w-0">
+                  <p id={id} className="text-sm font-semibold text-ink">
+                    {label}
+                  </p>
+                  <p className="text-xs text-ink-3">{detail}</p>
+                  {unavailable ? (
+                    <p className="mt-1 text-xs font-semibold text-warn">
+                      Pagomedios no está configurado en este ambiente
+                    </p>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={on}
+                  aria-labelledby={id}
+                  disabled={unavailable || savingFeature !== null}
+                  onClick={() => void toggleFeature(feature, setting)}
+                  className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                    on ? 'bg-acc' : 'bg-line-strong'
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transition ${
+                      on ? 'translate-x-5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
       </Card>
     </div>
   )

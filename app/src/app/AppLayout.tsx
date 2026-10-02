@@ -27,6 +27,7 @@ import { selectMyDayPasses, selectMyMembership } from '@/app/store'
 import {
   canUseBookingNav,
   displayInitials,
+  isFeatureEnabled,
   selectActiveBookings,
   selectPendingPlanRequest,
 } from '@/domain/rules'
@@ -111,15 +112,20 @@ export function AppLayout() {
     !pendingRequest &&
     !noPlanReminderDismissed &&
     pathname !== '/membresia'
+  const measurementsOn = isFeatureEnabled(settings, 'measurements')
   const desktopNav = (isMember ? memberDesktopNav : staffDesktopNav).filter(
     (item) =>
-      showBookingNav || (item.to !== '/agenda' && item.to !== '/reservas'),
+      (showBookingNav || (item.to !== '/agenda' && item.to !== '/reservas')) &&
+      (measurementsOn || item.to !== '/peso') &&
+      (user?.role === 'admin' || item.to !== '/admin/marca'),
   )
-  const mobileTabs = isMember
-    ? showBookingNav
-      ? memberMobileTabs
-      : memberMobileTabsNoPlan
-    : staffMobileTabs
+  const mobileTabs = (
+    isMember
+      ? showBookingNav
+        ? memberMobileTabs
+        : memberMobileTabsNoPlan
+      : staffMobileTabs
+  ).filter((item) => measurementsOn || item.to !== '/peso')
   const accent = settings.accentColor || '#F26D17'
 
   const activeBookingsCount = isMember && user

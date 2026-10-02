@@ -36,6 +36,8 @@ const BILLING = {
 }
 const DAY = 24 * 60 * 60 * 1000
 
+type FlagRow = { online_payments_enabled: boolean; day_passes_enabled: boolean }
+
 type Membership = { id: string; plan_id: string; status: string; starts_at: string; ends_at: string; grace_ends_at: string; visits_left: number | null }
 
 let fn: ChildProcess | undefined
@@ -43,6 +45,7 @@ let socioId = ''
 let socioJwt = ''
 let staffJwt = ''
 let snapshot: Membership[] = []
+let flagsSnapshot: FlagRow | undefined
 let approvedPaymentId = ''
 const STALE_REQUEST = randomUUID() // solicitud de "pago en recepción" de prueba
 const created: string[] = []
@@ -51,6 +54,9 @@ const paymentRow = async (id: string) =>
   (await sql<{ status: string; reference: string | null; mp_payment_id: string | null; membership_id: string | null; amount_cents: number }>(
     `select status, reference, mp_payment_id, membership_id, amount_cents from payments where id = '${id}'`,
   ))[0]
+const setFlags = (flags: FlagRow) =>
+  sql(`update gym_settings set online_payments_enabled = ${flags.online_payments_enabled},
+    day_passes_enabled = ${flags.day_passes_enabled} where id = 1`)
 const latestEnd = async () =>
   (await sql<{ ends_at: string | null }>(
     `select max(ends_at) ends_at from memberships where user_id = '${socioId}'`,
@@ -84,6 +90,11 @@ test.beforeAll(async () => {
   snapshot = await sql<Membership>(
     `select id, plan_id, status, starts_at, ends_at, grace_ends_at, visits_left from memberships where user_id = '${socioId}'`,
   )
+  // El create exige el interruptor encendido; PLAN_REJECTED es un pase diario.
+  flagsSnapshot = (await sql<FlagRow>(
+    `select online_payments_enabled, day_passes_enabled from gym_settings where id = 1`,
+  ))[0]
+  await setFlags({ online_payments_enabled: true, day_passes_enabled: true })
   socioJwt = await accessToken(ACCOUNTS.socio, PASSWORD)
   staffJwt = await accessToken(ACCOUNTS.staff, PASSWORD)
   fn = await startFunction()
@@ -91,6 +102,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   fn?.kill()
+  if (flagsSnapshot) await setFlags(flagsSnapshot)
   if (created.length) {
     await sql(`delete from payments where id in (${created.map((id) => `'${id}'`).join(',')})`)
   }
@@ -153,6 +165,25 @@ test.describe('Edge Function pagomedios-payment + sandbox real', () => {
     expect(badId.status).toBe(400)
     expect(badId.body.error).toMatch(/10 dígitos/)
     expect((await create('00000000-0000-4000-8000-000000000000')).status).toBe(404)
+    const after = (await sql<{ c: number }>(`select count(*)::int c from payments where provider = 'pagomedios'`))[0]!.c
+    expect(after).toBe(before)
+  })
+
+  test('interruptores del admin: pago en línea apagado (503) y pases diarios apagados (403)', async () => {
+    const before = (await sql<{ c: number }>(`select count(*)::int c from payments where provider = 'pagomedios'`))[0]!.c
+    try {
+      await setFlags({ online_payments_enabled: false, day_passes_enabled: true })
+      const off = await create(PLAN_OK.id)
+      expect(off.status).toBe(503)
+      expect(off.body.error).toBe('Pago en línea desactivado')
+
+      await setFlags({ online_payments_enabled: true, day_passes_enabled: false })
+      const dayPass = await create(PLAN_REJECTED.id)
+      expect(dayPass.status).toBe(403)
+      expect(dayPass.body.error).toMatch(/pases diarios se venden en recepción/)
+    } finally {
+      await setFlags({ online_payments_enabled: true, day_passes_enabled: true })
+    }
     const after = (await sql<{ c: number }>(`select count(*)::int c from payments where provider = 'pagomedios'`))[0]!.c
     expect(after).toBe(before)
   })

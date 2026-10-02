@@ -9,7 +9,7 @@ import {
 } from '@/data/RepositoryProvider'
 import type { Booking, Session, WaitlistEntry } from '@/domain/models'
 import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
-import { canAccessZone, canBookMembership, canBookZone } from '@/domain/rules'
+import { canAccessZone, canBookMembership, canBookZone, isFeatureEnabled } from '@/domain/rules'
 import { getDisciplineMeta, ZONA_CERO_DISCIPLINES } from '@/domain/disciplines'
 import { ecuadorTodayYmd, formatDateSpanish, formatEcuadorTime } from '@/lib/format'
 import {
@@ -45,6 +45,7 @@ function mineOnSession(
 
 export function AgendaPage() {
   const data = useAppData()
+  const waitlistOn = isFeatureEnabled(data.settings, 'waitlist')
   const user = useCurrentUser()
   const repo = useRepo()
   const refresh = useRefresh()
@@ -396,8 +397,8 @@ export function AgendaPage() {
             filtersByAccess && !canAccessZone(memberPlan, passPlans, session.zoneId)
 
           let action: { label: string; disabled: boolean; loading: boolean } = {
-            label: full ? 'Lista de espera' : 'Reservar',
-            disabled: false,
+            label: full ? (waitlistOn ? 'Lista de espera' : 'Clase llena') : 'Reservar',
+            disabled: full && !waitlistOn,
             loading: false,
           }
           if (busy) {

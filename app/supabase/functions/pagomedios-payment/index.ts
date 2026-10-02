@@ -10,6 +10,9 @@
 // Acciones:
 //   POST { action: "create", planId, document, documentType, phone, address, native? } (JWT)
 //     → crea payments(pending) + solicitud Pagomedios y devuelve { url, paymentId }
+//     → 503 si el admin apagó el pago en línea (gym_settings.online_payments_enabled);
+//       403 si apagó los pases diarios en la app y el plan es uno
+//       (verify y notify no revisan los interruptores: un pago ya iniciado se registra igual)
 //   POST { action: "verify", paymentId } (JWT)
 //     → consulta Pagomedios y, si está autorizado, activa/extiende la membresía
 //   POST|GET ?action=notify&paymentId=  (Pagomedios, sin JWT)
@@ -18,6 +21,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2"
 import { splitTax } from "./tax.ts"
+import { dayPassBlock, onlinePaymentsBlock, type FlagSettings } from "./flags.ts"
 
 const PAGOMEDIOS_API = (
   Deno.env.get("PAGOMEDIOS_API_URL") ?? "https://api.abitmedia.cloud/pagomedios/v2"
@@ -130,6 +134,16 @@ async function handleCreate(
   const address = String(body.address ?? "").trim() || "Quito"
   const native = body.native === true
 
+  const { admin } = env
+  const { data: settings } = await admin
+    .from("gym_settings")
+    .select("*")
+    .eq("id", 1)
+    .maybeSingle()
+  const flags = (settings ?? null) as FlagSettings
+  const disabled = onlinePaymentsBlock(flags)
+  if (disabled) return json({ error: disabled.error }, disabled.status)
+
   if (!planId) return json({ error: "planId requerido" }, 400)
   if (!DOCUMENT_TYPES.includes(documentType as typeof DOCUMENT_TYPES[number])) {
     return json({ error: "Tipo de identificación inválido" }, 400)
@@ -145,15 +159,16 @@ async function handleCreate(
     return json({ error: "Teléfono inválido (mín. 9 dígitos)" }, 400)
   }
 
-  const { admin } = env
   const { data: plan, error: planError } = await admin
     .from("membership_plans")
-    .select("id, name, price_cents, active")
+    .select("*")
     .eq("id", planId)
     .single()
   if (planError || !plan || !plan.active) {
     return json({ error: "Plan no encontrado o inactivo" }, 404)
   }
+  const dayPassOff = dayPassBlock(flags, plan)
+  if (dayPassOff) return json({ error: dayPassOff.error }, dayPassOff.status)
   if (!plan.price_cents || plan.price_cents < 100) {
     return json({ error: "Monto mínimo $1.00" }, 400)
   }
