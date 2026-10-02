@@ -29,6 +29,7 @@ import {
   pickWaitlistPromotion,
   reindexWaitlist,
   RESCHEDULE_FULL_MESSAGE,
+  seatsTaken,
 } from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
 import type {
@@ -586,6 +587,9 @@ export class LocalRepository implements GymRepository {
     }
     const session = this.state.sessions.find((s) => s.id === sessionId)
     if (!session) throw new Error('Sesión no encontrada')
+    if (actor.role === 'member' && new Date(session.startsAt).getTime() <= Date.now()) {
+      throw new Error('Esa clase ya empezó')
+    }
 
     const already = this.state.bookings.find(
       (b) =>
@@ -639,9 +643,7 @@ export class LocalRepository implements GymRepository {
       checkInCode: uid('QR').toUpperCase(),
     }
     this.state.bookings.push(booking)
-    session.bookedCount = this.state.bookings.filter(
-      (b) => b.sessionId === sessionId && b.status === 'confirmed',
-    ).length
+    session.bookedCount = seatsTaken(this.state.bookings, sessionId)
     this.persistState()
     return { ...booking }
   }
@@ -666,9 +668,7 @@ export class LocalRepository implements GymRepository {
 
     const session = this.state.sessions.find((s) => s.id === booking.sessionId)
     if (session) {
-      session.bookedCount = this.state.bookings.filter(
-        (b) => b.sessionId === session.id && b.status === 'confirmed',
-      ).length
+      session.bookedCount = seatsTaken(this.state.bookings, session.id)
     }
     this.persistState()
     return { ...booking }
@@ -792,9 +792,7 @@ export class LocalRepository implements GymRepository {
     this.state.waitlist = reindexWaitlist(this.state.waitlist, old.sessionId)
     for (const session of this.state.sessions) {
       if (session.id === old.sessionId || session.id === newSessionId) {
-        session.bookedCount = this.state.bookings.filter(
-          (b) => b.sessionId === session.id && b.status === 'confirmed',
-        ).length
+        session.bookedCount = seatsTaken(this.state.bookings, session.id)
       }
     }
     this.persistState()
@@ -1011,6 +1009,7 @@ export class LocalRepository implements GymRepository {
   ): Promise<MembershipPlan> {
     const actor = await this.requireUser()
     if (actor.role === 'member') throw new Error('Sin permiso')
+    if (actor.role !== 'admin') throw new Error('Solo admin')
     if (!this.state.membershipPlans) this.state.membershipPlans = []
     const existingIdx = plan.id
       ? this.state.membershipPlans.findIndex((p) => p.id === plan.id)

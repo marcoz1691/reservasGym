@@ -16,7 +16,7 @@ import {
   useRefresh,
 } from '@/data/RepositoryProvider'
 import type { Session } from '@/domain/models'
-import { confirmedCount } from '@/domain/rules'
+import { seatsTaken } from '@/domain/rules'
 import { getDisciplineMeta } from '@/domain/disciplines'
 import { ecuadorTodayYmd, formatEcuadorTime } from '@/lib/format'
 import { Badge, Button, Card, EmptyState, PageHeader } from '@/ui/primitives'
@@ -231,7 +231,7 @@ export function AdminPage() {
             </Card>
           ) : null}
           {todaySessions.map((s) => {
-            const taken = confirmedCount(data.bookings, s.id)
+            const taken = seatsTaken(data.bookings, s.id)
             const zone = data.zones.find((z) => z.id === s.zoneId)
             const meta = getDisciplineMeta(zone?.type ?? s.zoneId)
             const Icon = meta.icon

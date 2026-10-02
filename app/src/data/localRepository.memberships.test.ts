@@ -174,15 +174,26 @@ describe('LocalRepository memberships and billing', () => {
     expect(member2Membership?.status).toBe('active')
   })
 
-  it('Zero Active bloquea reserva de Hyrox y permite musculación', async () => {
+  it('staff cobra pero no crea ni edita planes: eso es solo de admin', async () => {
     const staff = new LocalRepository()
     await staff.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
-    const plan = await staff.upsertMembershipPlan({
+
+    await expect(
+      staff.upsertMembershipPlan({ name: 'Plan Staff', priceCents: 100, durationDays: 365 }),
+    ).rejects.toThrow(/solo admin/i)
+  })
+
+  it('Zero Active bloquea reserva de Hyrox y permite musculación', async () => {
+    const admin = new LocalRepository()
+    await admin.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    const plan = await admin.upsertMembershipPlan({
       name: 'Zero Active Mensual',
       priceCents: 3500,
       durationDays: 30,
       allowedZoneIds: ['zone-gimnasio', 'zone-muscu', 'zone-bailo'],
     })
+    const staff = new LocalRepository()
+    await staff.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
     await staff.registerManualPayment({
       userId: 'user_member_2',
       planId: plan.id,

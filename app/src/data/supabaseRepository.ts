@@ -31,7 +31,6 @@ import {
   canManageWeight,
   computeMembershipStatus,
   extendMembership,
-  isCheckInWindow,
 } from '@/domain/rules'
 import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
 import type {
@@ -50,10 +49,6 @@ import {
   readBiometricSession,
   saveBiometricSession,
 } from '@/lib/biometrics'
-
-function uid(prefix: string): string {
-  return `${prefix}-${crypto.randomUUID().slice(0, 8)}`
-}
 
 function mapUser(row: {
   id: string
@@ -240,7 +235,7 @@ function mapCheckIn(row: {
 function mapMeasurement(row: {
   id: string
   user_id: string
-  recorded_by: string
+  recorded_by: string | null
   weight_kg: number | string
   height_cm?: number | string | null
   bmi?: number | string | null
@@ -255,7 +250,7 @@ function mapMeasurement(row: {
   return {
     id: row.id,
     userId: row.user_id,
-    recordedBy: row.recorded_by,
+    recordedBy: row.recorded_by ?? '',
     weightKg: Number(row.weight_kg),
     heightCm: row.height_cm != null ? Number(row.height_cm) : undefined,
     bmi: row.bmi != null ? Number(row.bmi) : undefined,
@@ -400,12 +395,6 @@ export class SupabaseRepository implements GymRepository {
   private async requireUser(): Promise<User> {
     const user = await this.getCurrentUser()
     if (!user) throw new Error('No hay sesión activa')
-    return user
-  }
-
-  private async requireStaff(): Promise<User> {
-    const user = await this.requireUser()
-    if (user.role === 'member') throw new Error('Sin permiso')
     return user
   }
 
@@ -705,19 +694,14 @@ export class SupabaseRepository implements GymRepository {
     if (error) throw new Error(error.message)
   }
 
+  /**
+   * Borra auth.users y, en cascada, el perfil y todos sus datos (schema.sql).
+   * Los DELETE directos no sirven: RLS los ignora sin error.
+   */
   async deleteAccount(): Promise<void> {
-    const actor = await this.requireUser()
-    const userId = actor.id
-
-    // Delete personal records
-    await this.client.from('payments').delete().eq('user_id', userId)
-    await this.client.from('memberships').delete().eq('user_id', userId)
-    await this.client.from('body_measurements').delete().eq('user_id', userId)
-    await this.client.from('check_ins').delete().eq('user_id', userId)
-    await this.client.from('waitlist_entries').delete().eq('user_id', userId)
-    await this.client.from('bookings').delete().eq('user_id', userId)
-    await this.client.from('profiles').delete().eq('id', userId)
-
+    await this.requireUser()
+    const { error } = await this.client.rpc('delete_user_account')
+    if (error) throw new Error(error.message)
     await this.signOut()
   }
 
@@ -931,52 +915,15 @@ export class SupabaseRepository implements GymRepository {
     return mapBooking(data as BookingRow)
   }
 
+  /** Código, estado y ventana se validan en la base (check_in_booking en booking-rpc.sql). */
   async checkIn(bookingId: string, code: string): Promise<CheckIn> {
-    const actor = await this.requireUser()
-    const state = await this.fetchState()
-    const booking = state.bookings.find((b) => b.id === bookingId)
-    if (!booking) throw new Error('Reserva no encontrada')
-    if (actor.role === 'member' && booking.userId !== actor.id) {
-      throw new Error('Sin permiso para este check-in')
-    }
-    if (booking.checkInCode !== code.trim().toUpperCase()) {
-      throw new Error('Código QR inválido')
-    }
-    if (booking.status !== 'confirmed' && booking.status !== 'pending') {
-      throw new Error('La reserva no está activa')
-    }
-    const session = state.sessions.find((s) => s.id === booking.sessionId)
-    if (!session) throw new Error('Sesión no encontrada')
-    if (
-      !isCheckInWindow(
-        session.startsAt,
-        new Date(),
-        state.settings.checkInWindowMinutes,
-        10,
-      )
-    ) {
-      throw new Error('Fuera de la ventana de check-in')
-    }
-    const checkIn: CheckIn = {
-      id: uid('ci'),
-      bookingId: booking.id,
-      sessionId: session.id,
-      userId: booking.userId,
-      checkedInAt: new Date().toISOString(),
-    }
-    const { error } = await this.client.from('check_ins').insert({
-      id: checkIn.id,
-      booking_id: checkIn.bookingId,
-      session_id: checkIn.sessionId,
-      user_id: checkIn.userId,
-      checked_in_at: checkIn.checkedInAt,
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('check_in_booking', {
+      p_booking_id: bookingId,
+      p_code: code,
     })
     if (error) throw new Error(error.message)
-    await this.client
-      .from('bookings')
-      .update({ status: 'attended' })
-      .eq('id', booking.id)
-    return checkIn
+    return mapCheckIn(data as Parameters<typeof mapCheckIn>[0])
   }
 
   async listMeasurements(userId: string): Promise<BodyMeasurement[]> {
@@ -1232,7 +1179,7 @@ export class SupabaseRepository implements GymRepository {
   async upsertMembershipPlan(
     plan: Partial<MembershipPlan> & { name: string; priceCents: number; durationDays: number },
   ): Promise<MembershipPlan> {
-    await this.requireStaff()
+    await this.requireAdmin()
     const row: Record<string, unknown> = {
       name: plan.name,
       price_cents: plan.priceCents,

@@ -1,8 +1,11 @@
-import type { Booking, Session, WaitlistEntry } from '../models'
+import type { Booking, BookingStatus, Session, WaitlistEntry } from '../models'
 
-export function confirmedCount(bookings: Booking[], sessionId: string): number {
+/** Igual que session_seats_taken() en booking-rpc.sql: el check-in no libera el cupo. */
+export const SEAT_STATUSES: readonly BookingStatus[] = ['confirmed', 'pending', 'attended']
+
+export function seatsTaken(bookings: Booking[], sessionId: string): number {
   return bookings.filter(
-    (b) => b.sessionId === sessionId && b.status === 'confirmed',
+    (b) => b.sessionId === sessionId && SEAT_STATUSES.includes(b.status),
   ).length
 }
 
@@ -18,7 +21,7 @@ export function canBookSession(
   session: Session,
   bookings: Booking[],
 ): { ok: true } | { ok: false; reason: 'full' } {
-  if (confirmedCount(bookings, session.id) >= session.capacity) {
+  if (seatsTaken(bookings, session.id) >= session.capacity) {
     return { ok: false, reason: 'full' }
   }
   return { ok: true }

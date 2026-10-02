@@ -24,6 +24,19 @@ as $$
   select 'QR-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
 $$;
 
+-- Lugares ocupados en la sesión. Igual que seatsTaken() en src/domain/rules:
+-- 'attended' sigue ocupando lugar, si no cada check-in liberaría un cupo.
+create or replace function public.session_seats_taken(p_session_id text)
+returns int
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select count(*)::int from bookings
+  where session_id = p_session_id and status in ('confirmed', 'pending', 'attended');
+$$;
+
 -- Motivo por el que el socio no puede reservar en la zona, o null si puede.
 -- Replica canBookMembership + canBookZone (src/domain/rules) con los mismos textos.
 -- Staff y admin no pasan por esta validación.
@@ -121,10 +134,7 @@ begin
     where session_id = p_session_id
     order by position, created_at
   loop
-    exit when (
-      select count(*) from bookings
-      where session_id = p_session_id and status = 'confirmed'
-    ) >= v_session.capacity;
+    exit when public.session_seats_taken(p_session_id) >= v_session.capacity;
 
     perform 1 from profiles where id = v_entry.user_id for update;
     delete from waitlist_entries where id = v_entry.id;
@@ -190,6 +200,9 @@ begin
   end if;
   perform 1 from profiles where id = v_user for update;
 
+  if v_session.starts_at <= v_now and not public.is_staff() then
+    raise exception 'Esa clase ya empezó';
+  end if;
   if exists (
     select 1 from bookings
     where session_id = p_session_id and user_id = v_user
@@ -205,10 +218,7 @@ begin
     raise exception '%', v_reason;
   end if;
 
-  if (
-    select count(*) from bookings
-    where session_id = p_session_id and status = 'confirmed'
-  ) < v_session.capacity then
+  if public.session_seats_taken(p_session_id) < v_session.capacity then
     insert into bookings (id, session_id, user_id, status, created_at, check_in_code)
     values (
       'bk-' || gen_random_uuid(), p_session_id, v_user, 'confirmed', v_now,
@@ -339,10 +349,7 @@ begin
   if v_reason is not null then
     raise exception '%', v_reason;
   end if;
-  if (
-    select count(*) from bookings
-    where session_id = p_session_id and status = 'confirmed'
-  ) >= v_new_session.capacity then
+  if public.session_seats_taken(p_session_id) >= v_new_session.capacity then
     raise exception 'La clase nueva está llena. Tu reserva actual no cambió.';
   end if;
 
@@ -360,12 +367,68 @@ begin
 end;
 $$;
 
+-- Check-in del socio (QR o código dictado) o de staff en recepción. Código, estado y
+-- ventana se validan aquí: el socio ya no puede escribir check_ins ni bookings directo.
+-- Ventana: desde check_in_window_minutes antes del inicio hasta 10 min después.
+create or replace function public.check_in_booking(p_booking_id text, p_code text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_booking bookings%rowtype;
+  v_session sessions%rowtype;
+  v_window int;
+  v_now timestamptz := now();
+  v_check_in check_ins%rowtype;
+begin
+  if v_actor is null then
+    raise exception 'No autenticado';
+  end if;
+  select * into v_booking from bookings where id = p_booking_id;
+  if not found then
+    raise exception 'Reserva no encontrada';
+  end if;
+  if v_booking.user_id <> v_actor and not public.is_staff() then
+    raise exception 'Sin permiso para este check-in';
+  end if;
+
+  select * into v_session from sessions where id = v_booking.session_id for update;
+  select * into v_booking from bookings where id = p_booking_id for update;
+
+  if v_booking.check_in_code is distinct from upper(trim(coalesce(p_code, ''))) then
+    raise exception 'Código QR inválido';
+  end if;
+  if v_booking.status not in ('confirmed', 'pending') then
+    raise exception 'La reserva no está activa';
+  end if;
+  select coalesce(check_in_window_minutes, 15) into v_window from gym_settings where id = 1;
+  v_window := coalesce(v_window, 15);
+  if v_now < v_session.starts_at - make_interval(mins => v_window)
+    or v_now > v_session.starts_at + interval '10 minutes'
+  then
+    raise exception 'Fuera de la ventana de check-in';
+  end if;
+
+  insert into check_ins (id, booking_id, session_id, user_id, checked_in_at)
+  values ('ci-' || gen_random_uuid(), v_booking.id, v_booking.session_id, v_booking.user_id, v_now)
+  returning * into v_check_in;
+  update bookings set status = 'attended' where id = v_booking.id;
+  return to_jsonb(v_check_in);
+end;
+$$;
+
 -- Todo lo de `public` queda expuesto como /rest/v1/rpc/<fn> (ver fix-function-grants.sql).
 -- Los helpers solo los llaman las funciones de arriba, que corren como su dueño.
 revoke all on function public.member_booking_block_reason(uuid, text) from public, anon, authenticated;
 revoke all on function public.booking_overlaps(uuid, text) from public, anon, authenticated;
 revoke all on function public.promote_waitlist(text) from public, anon, authenticated;
 revoke all on function public.new_check_in_code() from public, anon, authenticated;
+revoke all on function public.session_seats_taken(text) from public, anon, authenticated;
+revoke all on function public.check_in_booking(text, text) from public, anon;
+grant execute on function public.check_in_booking(text, text) to authenticated;
 revoke all on function public.book_session(text, uuid) from public, anon;
 grant execute on function public.book_session(text, uuid) to authenticated;
 revoke all on function public.cancel_booking(text) from public, anon;
