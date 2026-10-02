@@ -8,8 +8,6 @@ const corsHeaders: Record<string, string> = {
     "authorization, x-client-info, apikey, content-type",
 }
 
-const GRACE_PERIOD_DAYS = 3
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
@@ -67,6 +65,9 @@ Deno.serve(async (req: Request) => {
     if (payment.status === "approved") {
       return json({ ok: true, alreadyApproved: true })
     }
+    if (payment.status === "refunded") {
+      return json({ ok: false, description: "El pago fue reembolsado." })
+    }
 
     const url = `${baseUrl}${resourcePath}${resourcePath.includes("?") ? "&" : "?"}entityId=${encodeURIComponent(entityId)}`
     const dfRes = await fetch(url, {
@@ -105,57 +106,31 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const { data: plan, error: planError } = await admin
-      .from("membership_plans")
-      .select("id, duration_days, visit_quota")
-      .eq("id", payment.plan_id)
-      .single()
-    if (planError || !plan) return json({ error: "Plan no encontrado" }, 404)
-
-    const { data: memberships } = await admin
-      .from("memberships")
-      .select("*")
-      .eq("user_id", payment.user_id)
-      .order("ends_at", { ascending: false })
-      .limit(5)
-
-    const current =
-      (memberships ?? []).find((m) => m.status === "active" || m.status === "grace") ??
-      (memberships ?? [])[0] ??
-      null
-
+    // Misma regla que recepción y Pagomedios (plan-rules.sql)
     const paidAt = new Date()
-    const dates = extendMembership(current, plan, paidAt)
-    const membershipPayload: Record<string, unknown> = {
-      user_id: payment.user_id,
-      plan_id: plan.id,
-      starts_at: dates.startsAt,
-      ends_at: dates.endsAt,
-      grace_ends_at: dates.graceEndsAt,
-      status: dates.status,
-      visits_left: dates.visitsLeft,
-    }
-    if (current?.id) membershipPayload.id = current.id
-
-    const { data: mem, error: memError } = await admin
-      .from("memberships")
-      .upsert(membershipPayload)
-      .select("id")
-      .single()
-    if (memError) return json({ error: memError.message }, 500)
+    const { data: mem, error: memError } = await admin.rpc("apply_plan_purchase", {
+      p_user_id: payment.user_id,
+      p_plan_id: payment.plan_id,
+      p_paid_at: paidAt.toISOString(),
+    })
+    const queueConflict = memError && /plan en espera/i.test(memError.message)
+    if (memError && !queueConflict) return json({ error: memError.message }, 500)
 
     await admin
       .from("payments")
       .update({
         status: "approved",
         approved_at: paidAt.toISOString(),
-        membership_id: mem.id,
+        membership_id: mem?.id ?? null,
         provider: "datafast",
         mp_payment_id: dfPaymentId.slice(0, 120),
+        ...(queueConflict
+          ? { notes: "Requiere revisión: ya había otro plan en espera al aprobar el pago." }
+          : {}),
       })
       .eq("id", payment.id)
 
-    return json({ ok: true, resultCode, membershipId: mem.id })
+    return json({ ok: true, resultCode, membershipId: mem?.id ?? null })
   } catch (err) {
     console.error(err)
     return json(
@@ -164,52 +139,6 @@ Deno.serve(async (req: Request) => {
     )
   }
 })
-
-function extendMembership(
-  current: {
-    ends_at: string
-    status: string
-    visits_left: number | null
-  } | null,
-  plan: { duration_days: number; visit_quota: number | null },
-  paidAt: Date,
-) {
-  const paidMs = paidAt.getTime()
-  const isCurrentActive =
-    Boolean(current) &&
-    current!.status !== "cancelled" &&
-    new Date(current!.ends_at).getTime() > paidMs
-
-  const baseDate = isCurrentActive ? new Date(current!.ends_at) : paidAt
-  const startsAtDate = isCurrentActive ? new Date(current!.ends_at) : paidAt
-  const endDate = new Date(
-    baseDate.getTime() + plan.duration_days * 24 * 60 * 60 * 1000,
-  )
-  const graceEndDate = new Date(
-    endDate.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000,
-  )
-
-  let visitsLeft: number | null = null
-  if (plan.visit_quota !== null && plan.visit_quota !== undefined) {
-    if (
-      isCurrentActive &&
-      current?.visits_left !== null &&
-      current?.visits_left !== undefined
-    ) {
-      visitsLeft = current.visits_left + plan.visit_quota
-    } else {
-      visitsLeft = plan.visit_quota
-    }
-  }
-
-  return {
-    startsAt: startsAtDate.toISOString(),
-    endsAt: endDate.toISOString(),
-    graceEndsAt: graceEndDate.toISOString(),
-    status: "active" as const,
-    visitsLeft,
-  }
-}
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {

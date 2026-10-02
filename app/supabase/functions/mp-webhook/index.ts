@@ -3,8 +3,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "jsr:@supabase/supabase-js@2"
 
-const GRACE_PERIOD_DAYS = 3
-
 Deno.serve(async (req: Request) => {
   // Always acknowledge quickly after processing to avoid MP retry storms.
   try {
@@ -104,7 +102,7 @@ Deno.serve(async (req: Request) => {
       return new Response("ok", { status: 200 })
     }
 
-    if (payment.status === "approved") {
+    if (payment.status === "approved" || payment.status === "refunded") {
       await admin
         .from("payments")
         .update({ mp_payment_id: mpPaymentId })
@@ -112,51 +110,16 @@ Deno.serve(async (req: Request) => {
       return new Response("ok", { status: 200 })
     }
 
-    const { data: plan, error: planError } = await admin
-      .from("membership_plans")
-      .select("id, duration_days, visit_quota")
-      .eq("id", payment.plan_id)
-      .single()
-
-    if (planError || !plan) {
-      console.error("Plan missing", payment.plan_id)
-      return new Response("ok", { status: 200 })
-    }
-
-    const { data: memberships } = await admin
-      .from("memberships")
-      .select("*")
-      .eq("user_id", payment.user_id)
-      .order("ends_at", { ascending: false })
-      .limit(5)
-
-    const current =
-      (memberships ?? []).find((m) => m.status === "active" || m.status === "grace") ??
-      (memberships ?? [])[0] ??
-      null
-
+    // Misma regla que recepción y Pagomedios (plan-rules.sql)
     const paidAt = new Date()
-    const dates = extendMembership(current, plan, paidAt)
-
-    const membershipPayload: Record<string, unknown> = {
-      user_id: payment.user_id,
-      plan_id: plan.id,
-      starts_at: dates.startsAt,
-      ends_at: dates.endsAt,
-      grace_ends_at: dates.graceEndsAt,
-      status: dates.status,
-      visits_left: dates.visitsLeft,
-    }
-    if (current?.id) membershipPayload.id = current.id
-
-    const { data: mem, error: memError } = await admin
-      .from("memberships")
-      .upsert(membershipPayload)
-      .select("id")
-      .single()
-
-    if (memError) {
-      console.error("Membership upsert failed", memError)
+    const { data: mem, error: memError } = await admin.rpc("apply_plan_purchase", {
+      p_user_id: payment.user_id,
+      p_plan_id: payment.plan_id,
+      p_paid_at: paidAt.toISOString(),
+    })
+    const queueConflict = memError && /plan en espera/i.test(memError.message)
+    if (memError && !queueConflict) {
+      console.error("apply_plan_purchase failed", memError)
       return new Response("ok", { status: 200 })
     }
 
@@ -165,9 +128,12 @@ Deno.serve(async (req: Request) => {
       .update({
         status: "approved",
         approved_at: paidAt.toISOString(),
-        membership_id: mem.id,
+        membership_id: mem?.id ?? null,
         mp_payment_id: mpPaymentId,
         provider: "mercadopago",
+        ...(queueConflict
+          ? { notes: "Requiere revisión: ya había otro plan en espera al aprobar el pago." }
+          : {}),
       })
       .eq("id", payment.id)
 
@@ -177,49 +143,3 @@ Deno.serve(async (req: Request) => {
     return new Response("ok", { status: 200 })
   }
 })
-
-function extendMembership(
-  current: {
-    ends_at: string
-    status: string
-    visits_left: number | null
-  } | null,
-  plan: { duration_days: number; visit_quota: number | null },
-  paidAt: Date,
-) {
-  const paidMs = paidAt.getTime()
-  const isCurrentActive =
-    Boolean(current) &&
-    current!.status !== "cancelled" &&
-    new Date(current!.ends_at).getTime() > paidMs
-
-  const baseDate = isCurrentActive ? new Date(current!.ends_at) : paidAt
-  const startsAtDate = isCurrentActive ? new Date(current!.ends_at) : paidAt
-  const endDate = new Date(
-    baseDate.getTime() + plan.duration_days * 24 * 60 * 60 * 1000,
-  )
-  const graceEndDate = new Date(
-    endDate.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000,
-  )
-
-  let visitsLeft: number | null = null
-  if (plan.visit_quota !== null && plan.visit_quota !== undefined) {
-    if (
-      isCurrentActive &&
-      current?.visits_left !== null &&
-      current?.visits_left !== undefined
-    ) {
-      visitsLeft = current.visits_left + plan.visit_quota
-    } else {
-      visitsLeft = plan.visit_quota
-    }
-  }
-
-  return {
-    startsAt: startsAtDate.toISOString(),
-    endsAt: endDate.toISOString(),
-    graceEndsAt: graceEndDate.toISOString(),
-    status: "active" as const,
-    visitsLeft,
-  }
-}
