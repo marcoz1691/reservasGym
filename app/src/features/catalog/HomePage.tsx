@@ -195,6 +195,8 @@ export function HomePage() {
         <PendingPlanRequestCard
           payment={pendingRequest}
           planName={pendingPlanName}
+          settings={data.settings}
+          memberName={user?.fullName}
         />
       ) : !membership ? (
         <WelcomeNoPlanCard onlinePayEnabled={isOnlinePayEnabled(data.settings)} />

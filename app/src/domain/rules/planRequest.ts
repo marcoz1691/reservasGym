@@ -7,11 +7,14 @@ export const MANUAL_PAYMENT_LABELS: Record<ManualPaymentMethod, string> = {
   deuna: 'Deuna',
 }
 
+export const PAYMENT_VALIDATION_NOTICE =
+  'Tu plan se activa cuando validemos el pago. Puede tardar hasta 24 horas después de enviar tu comprobante.'
+
 /** Medios en los que el socio paga por su cuenta y envía el comprobante. */
 export type RemotePaymentMethod = Extract<ManualPaymentMethod, 'transfer' | 'deuna'>
 
 export function isRemotePaymentMethod(
-  method: ManualPaymentMethod | null | undefined,
+  method: string | null | undefined,
 ): method is RemotePaymentMethod {
   return method === 'transfer' || method === 'deuna'
 }

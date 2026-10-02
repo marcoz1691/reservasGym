@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import type { MembershipPlan, User } from '@/domain/models'
+import { PAYMENT_VALIDATION_NOTICE } from '@/domain/rules/planRequest'
 import { splitTax } from '../../../supabase/functions/pagomedios-payment/tax'
 import { PagomediosCheckoutPage } from './PagomediosCheckoutPage'
 
@@ -49,7 +50,7 @@ const dayPass = {
 } as MembershipPlan
 
 const app = vi.hoisted(() => ({
-  settings: { onlinePaymentsEnabled: true, dayPassesEnabled: true } as Record<string, boolean>,
+  settings: { onlinePaymentsEnabled: true, dayPassesEnabled: true } as Record<string, unknown>,
 }))
 
 vi.mock('@/data/RepositoryProvider', () => ({
@@ -307,29 +308,156 @@ describe('PagomediosCheckoutPage — pago único', () => {
     }
   })
 
-  it.each([
-    ['Efectivo en recepción', 'cash', /paga \$35\.00 en efectivo/],
-    ['Transferencia bancaria', 'transfer', /datos de la cuenta para transferir \$35\.00/],
-  ] as const)('pagar con "%s" deja la solicitud a recepción sin pedir datos del pagador', async (label, manualMethod, message) => {
+  it('pagar en efectivo deja la solicitud a recepción sin pedir datos del pagador', async () => {
     repo.requestPlanPayment.mockResolvedValue({ id: 'req_1' })
     renderAt('/membresia/pago?planId=plan_mensual')
 
-    await userEvent.click(screen.getByRole('radio', { name: new RegExp(label) }))
-    expect(screen.getByRole('radio', { name: new RegExp(label) })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(screen.getByRole('radio', { name: /Efectivo en recepción/ }))
+    expect(screen.getByRole('radio', { name: /Efectivo en recepción/ })).toHaveAttribute('aria-checked', 'true')
     expect(screen.queryByText('Datos del pagador')).toBeNull()
     expect(screen.queryByRole('group', { name: 'Tarjetas aceptadas' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Datos para pagar' })).toBeNull()
 
     const confirm = screen.getByRole('button', { name: /Confirmar solicitud\s*\$35\.00/ })
     expect(confirm).toBeDisabled() // falta aceptar términos
     await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos/ }))
     await userEvent.click(confirm)
 
-    expect(repo.requestPlanPayment).toHaveBeenCalledWith({ planId: 'plan_mensual', manualMethod })
+    expect(repo.requestPlanPayment).toHaveBeenCalledWith({ planId: 'plan_mensual', manualMethod: 'cash' })
     expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
     expect(await screen.findByRole('heading', { name: 'Solicitud enviada' })).toBeInTheDocument()
-    expect(screen.getByText(message)).toBeInTheDocument()
+    expect(screen.getByText(/paga \$35\.00 en efectivo/)).toBeInTheDocument()
     expect(screen.getByText('Tu plan se activa cuando recepción registre el pago.')).toBeInTheDocument()
     expect(refresh).toHaveBeenCalled()
+  })
+
+  it('transferencia sin cuenta configurada: recepción da los datos, con referencia y aviso de 24 horas', async () => {
+    repo.requestPlanPayment.mockResolvedValue({ id: 'req_1' })
+    renderAt('/membresia/pago?planId=plan_mensual')
+
+    await userEvent.click(screen.getByRole('radio', { name: /Transferencia bancaria/ }))
+    const block = screen.getByRole('region', { name: 'Datos para pagar' })
+    expect(block).toHaveTextContent(/datos de la cuenta para transferir \$35\.00/)
+    expect(block).toHaveTextContent(PAYMENT_VALIDATION_NOTICE)
+    const reference = within(block).getByText(/^ZC-[0-9A-F]{6}$/).textContent!
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Confirmar solicitud/ }))
+
+    expect(repo.requestPlanPayment).toHaveBeenCalledWith({
+      planId: 'plan_mensual',
+      manualMethod: 'transfer',
+      reference,
+    })
+    expect(await screen.findByRole('heading', { name: 'Solicitud enviada' })).toBeInTheDocument()
+    const sent = screen.getByRole('region', { name: 'Datos para pagar' })
+    expect(sent).toHaveTextContent(reference)
+    expect(sent).toHaveTextContent(PAYMENT_VALIDATION_NOTICE)
+    // sin WhatsApp configurado no hay botón
+    expect(screen.queryByRole('link', { name: /WhatsApp/ })).toBeNull()
+    expect(screen.getByText(/muestra tu comprobante en recepción/)).toBeInTheDocument()
+  })
+
+  describe('Deuna y datos de pago configurados por el admin', () => {
+    const paymentSettings = {
+      onlinePaymentsEnabled: true,
+      dayPassesEnabled: true,
+      whatsappPayments: '0991234567',
+      bankName: 'Banco Pichincha',
+      bankAccountType: 'Ahorros',
+      bankAccountNumber: '2201234567',
+      bankAccountHolder: 'Zona Cero S.A.',
+      deunaCode: 'ZONACERO01',
+    }
+
+    it('sin código ni QR de Deuna no se ofrece Deuna', () => {
+      renderAt('/membresia/pago?planId=plan_mensual')
+      expect(screen.queryByRole('radio', { name: /Deuna/ })).toBeNull()
+    })
+
+    it('con el código configurado aparece Deuna con el código, el monto, la referencia y el aviso', async () => {
+      app.settings = paymentSettings
+      renderAt('/membresia/pago?planId=plan_mensual')
+
+      await userEvent.click(screen.getByRole('radio', { name: /Deuna \(Banco Pichincha\)/ }))
+      const block = screen.getByRole('region', { name: 'Datos para pagar' })
+      expect(block).toHaveTextContent('ZONACERO01')
+      expect(within(block).getByRole('button', { name: 'Copiar código deuna' })).toBeInTheDocument()
+      expect(block).toHaveTextContent('Monto exacto$35.00')
+      expect(within(block).getByText(/^ZC-[0-9A-F]{6}$/)).toBeInTheDocument()
+      expect(block).toHaveTextContent(PAYMENT_VALIDATION_NOTICE)
+      expect(within(block).queryByRole('link')).toBeNull() // WhatsApp recién al confirmar
+    })
+
+    it('con el QR configurado muestra la imagen', async () => {
+      app.settings = { ...paymentSettings, deunaCode: null, deunaQrUrl: 'https://cdn.example/qr.png' }
+      renderAt('/membresia/pago?planId=plan_mensual')
+
+      await userEvent.click(screen.getByRole('radio', { name: /Deuna/ }))
+      expect(screen.getByRole('img', { name: 'QR de Deuna del gym' })).toHaveAttribute(
+        'src',
+        'https://cdn.example/qr.png',
+      )
+    })
+
+    it('transferencia muestra la cuenta del gym con botón para copiar el número', async () => {
+      app.settings = paymentSettings
+      renderAt('/membresia/pago?planId=plan_mensual')
+
+      await userEvent.click(screen.getByRole('radio', { name: /Transferencia bancaria/ }))
+      const block = screen.getByRole('region', { name: 'Datos para pagar' })
+      expect(block).toHaveTextContent('BancoBanco Pichincha')
+      expect(block).toHaveTextContent('Tipo de cuentaAhorros')
+      expect(block).toHaveTextContent('Titular' + 'Zona Cero S.A.')
+      expect(block).not.toHaveTextContent('RUC o cédula')
+      expect(within(block).getByRole('button', { name: 'Copiar número de cuenta' })).toBeInTheDocument()
+    })
+
+    it('al confirmar con Deuna ofrece enviar el comprobante por WhatsApp con el mensaje correcto', async () => {
+      app.settings = paymentSettings
+      repo.requestPlanPayment.mockImplementation(async (params: { reference: string }) => ({
+        id: 'req_1',
+        reference: params.reference,
+      }))
+      renderAt('/membresia/pago?planId=plan_mensual')
+
+      await userEvent.click(screen.getByRole('radio', { name: /Deuna/ }))
+      const reference = within(screen.getByRole('region', { name: 'Datos para pagar' }))
+        .getByText(/^ZC-[0-9A-F]{6}$/).textContent!
+      await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos/ }))
+      await userEvent.click(screen.getByRole('button', { name: /Confirmar solicitud/ }))
+
+      expect(repo.requestPlanPayment).toHaveBeenCalledWith({
+        planId: 'plan_mensual',
+        manualMethod: 'deuna',
+        reference,
+      })
+      const link = await screen.findByRole('link', { name: 'Enviar comprobante por WhatsApp' })
+      expect(link).toHaveAttribute('target', '_blank')
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+      const url = new URL(link.getAttribute('href')!)
+      expect(url.origin + url.pathname).toBe('https://wa.me/593991234567')
+      const text = url.searchParams.get('text')!
+      for (const part of ['Socio Demo', 'Plan Mensual', '$35.00', 'Deuna', reference]) {
+        expect(text).toContain(part)
+      }
+      expect(screen.getByRole('region', { name: 'Datos para pagar' })).toHaveTextContent(
+        PAYMENT_VALIDATION_NOTICE,
+      )
+    })
+
+    it('si el admin apaga el pago en línea, el aviso menciona Deuna', async () => {
+      app.settings = paymentSettings
+      repo.createPagomediosPayment.mockRejectedValue(new Error('Pago en línea desactivado'))
+      renderAt('/membresia/pago?planId=plan_mensual')
+
+      await fillBilling()
+      await userEvent.click(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Puedes pagar en efectivo, por transferencia o con Deuna.',
+      )
+    })
   })
 
   it('la tarjeta es el método por defecto y vuelve a pedir los datos del pagador', async () => {

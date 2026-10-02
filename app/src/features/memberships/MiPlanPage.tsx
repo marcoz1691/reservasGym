@@ -2,7 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ArrowLeftRight, ArrowRight, Banknote, Check, CreditCard, ShieldAlert } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  Banknote,
+  Check,
+  CreditCard,
+  QrCode,
+  ShieldAlert,
+} from 'lucide-react'
 import { useAppData, useCurrentUser, useGym, useRepo } from '@/data/RepositoryProvider'
 import {
   selectMyDayPasses,
@@ -12,6 +20,8 @@ import {
 import type { ManualPaymentMethod } from '@/domain/models'
 import {
   MANUAL_PAYMENT_LABELS,
+  isDeunaConfigured,
+  isRemotePaymentMethod,
   selectPendingPlanRequest,
 } from '@/domain/rules/planRequest'
 import { plansForAppSale } from '@/domain/rules/featureFlags'
@@ -20,24 +30,27 @@ import { Button, PageHeader } from '@/ui/primitives'
 import { isOnlinePayEnabled } from './onlinePay'
 import {
   DayPassNotice,
+  ManualPaymentInstructions,
   MembershipCard,
   PaymentHistory,
   PendingPlanRequestCard,
   PlansShowcase,
 } from './components'
 
-const PAYMENT_METHODS: ManualPaymentMethod[] = ['cash', 'transfer', 'card_pos']
+const PAYMENT_METHODS: ManualPaymentMethod[] = ['cash', 'transfer', 'card_pos', 'deuna']
 
 const PAYMENT_ICONS = {
   cash: Banknote,
   transfer: ArrowLeftRight,
   card_pos: CreditCard,
+  deuna: QrCode,
 } as const
 
 const PAYMENT_HINTS: Record<ManualPaymentMethod, string> = {
   cash: 'En caja del counter',
   transfer: 'Bancos locales',
   card_pos: 'Datáfono en recepción',
+  deuna: 'QR o código del gym',
 }
 
 export function MiPlanPage() {
@@ -56,6 +69,9 @@ export function MiPlanPage() {
   const paymentStepRef = useRef<HTMLDivElement>(null)
 
   const onlinePayEnabled = isOnlinePayEnabled(data.settings)
+  const paymentMethods = isDeunaConfigured(data.settings)
+    ? PAYMENT_METHODS
+    : PAYMENT_METHODS.filter((method) => method !== 'deuna')
 
   const currentMembership = useMemo(
     () => selectMyMembership(data, user?.id),
@@ -210,6 +226,8 @@ export function MiPlanPage() {
           <PendingPlanRequestCard
             payment={pendingRequest}
             planName={pendingPlanName}
+            settings={data.settings}
+            memberName={user.fullName}
           />
           <button
             type="button"
@@ -337,10 +355,12 @@ export function MiPlanPage() {
               ¿Cómo vas a pagar?
             </h3>
             <p className="mt-1 text-sm leading-relaxed text-ink-2">
-              El pago se completa en recepción. Tu acceso se activa cuando lo registren.
+              Recepción registra o valida tu pago. Tu acceso se activa cuando lo hagan.
             </p>
-            <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
-              {PAYMENT_METHODS.map((method) => {
+            <div
+              className={`mt-4 grid gap-2.5 ${paymentMethods.length > 3 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}
+            >
+              {paymentMethods.map((method) => {
                 const selected = chosenMethod === method
                 const Icon = PAYMENT_ICONS[method]
                 return (
@@ -379,6 +399,15 @@ export function MiPlanPage() {
                 )
               })}
             </div>
+            {isRemotePaymentMethod(chosenMethod) ? (
+              <div className="mt-4">
+                <ManualPaymentInstructions
+                  method={chosenMethod}
+                  settings={data.settings}
+                  amountCents={chosenPlan.priceCents}
+                />
+              </div>
+            ) : null}
             <button
               type="button"
               disabled={!chosenMethod || requesting}
