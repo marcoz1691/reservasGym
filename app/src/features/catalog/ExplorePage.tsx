@@ -14,7 +14,7 @@ import {
 } from '@/data/RepositoryProvider'
 import type { Session } from '@/domain/models'
 import { selectMyMembership } from '@/app/store'
-import { canBookMembership, canBookZone } from '@/domain/rules'
+import { canBookMembership, canBookZone, isFeatureEnabled } from '@/domain/rules'
 import { getDisciplineMeta, ZONA_CERO_DISCIPLINES } from '@/domain/disciplines'
 import { formatEcuadorSessionWhen, formatEcuadorTime } from '@/lib/format'
 import { Badge, Button, Card, PageHeader, Spinner } from '@/ui/primitives'
@@ -24,6 +24,7 @@ import { StaffBookingModal } from '@/features/agenda/StaffBookingModal'
 
 export function ExplorePage() {
   const data = useAppData()
+  const waitlistOn = isFeatureEnabled(data.settings, 'waitlist')
   const user = useCurrentUser()
   const repo = useRepo()
   const refresh = useRefresh()
@@ -381,7 +382,7 @@ export function ExplorePage() {
                         variant={
                           mineReserved || mineWaiting || full ? 'secondary' : 'primary'
                         }
-                        disabled={mineReserved || mineWaiting}
+                        disabled={mineReserved || mineWaiting || (full && !waitlistOn)}
                         isLoading={busyId === s.id}
                         onClick={() => void onBookSession(s.id)}
                         className="text-xs py-1.5 px-3"
@@ -393,7 +394,9 @@ export function ExplorePage() {
                             : mineWaiting
                               ? 'En espera'
                               : full
-                                ? 'Lista de espera'
+                                ? waitlistOn
+                                  ? 'Lista de espera'
+                                  : 'Clase llena'
                                 : 'Reservar'}
                       </Button>
                     )}

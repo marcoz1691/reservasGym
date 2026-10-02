@@ -315,4 +315,78 @@ describe('Staff Booking Feature — Reception Booking on Behalf of Members', () 
       )
     })
   })
+
+  describe('con la lista de espera apagada', () => {
+    const fullSession: Session = { ...testSession, bookedCount: testSession.capacity }
+    const settings = {
+      name: 'Zona Cero Performance Center',
+      logoUrl: null,
+      primaryColor: '#000',
+      accentColor: '#c9ff3d',
+      bookingWindowHours: 72,
+      cancelWindowHours: 2,
+      checkInWindowMinutes: 20,
+    }
+
+    function repoFor(user: User, waitlistEnabled: boolean) {
+      return createMockRepo(user, {
+        settings: { ...settings, waitlistEnabled },
+        users: [staffUser, memberCarlos],
+        zones: [crossfitZone],
+        sessions: [fullSession],
+        membershipPlans: [planFull],
+        memberships: [membershipActive],
+      })
+    }
+
+    it('la agenda del socio muestra "Clase llena" sin opción de espera', async () => {
+      resetRepositoryForTests(repoFor(memberCarlos, false))
+      render(
+        <MemoryRouter>
+          <RepositoryProvider>
+            <AgendaPage />
+          </RepositoryProvider>
+        </MemoryRouter>,
+      )
+
+      const button = await screen.findByRole('button', { name: /Clase llena/ })
+      expect(button).toBeDisabled()
+      expect(screen.queryByRole('button', { name: /Lista de espera/ })).toBeNull()
+    })
+
+    it('encendida, la agenda sigue ofreciendo la lista de espera', async () => {
+      resetRepositoryForTests(repoFor(memberCarlos, true))
+      render(
+        <MemoryRouter>
+          <RepositoryProvider>
+            <AgendaPage />
+          </RepositoryProvider>
+        </MemoryRouter>,
+      )
+
+      expect(await screen.findByRole('button', { name: /Lista de espera/ })).toBeEnabled()
+    })
+
+    it('recepción no puede registrar en lista de espera', async () => {
+      const mockRepo = repoFor(staffUser, false)
+      resetRepositoryForTests(mockRepo)
+      render(
+        <MemoryRouter>
+          <RepositoryProvider>
+            <StaffBookingModal isOpen={true} onClose={vi.fn()} session={fullSession} />
+          </RepositoryProvider>
+        </MemoryRouter>,
+      )
+
+      await userEvent.type(
+        await screen.findByPlaceholderText(/buscar socio por nombre/i),
+        'Carlos Socio',
+      )
+      await userEvent.click(await screen.findByText('Carlos Socio Pérez'))
+
+      expect(screen.getByRole('button', { name: /Clase llena/ })).toBeDisabled()
+      expect(screen.queryByRole('button', { name: /Lista de Espera/i })).toBeNull()
+      expect(mockRepo.createBooking).not.toHaveBeenCalled()
+    })
+  })
 })

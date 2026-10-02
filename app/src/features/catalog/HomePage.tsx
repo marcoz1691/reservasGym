@@ -23,6 +23,7 @@ import {
   canBookZone,
   canUseBookingNav,
   displayFirstName,
+  isFeatureEnabled,
   selectActiveBookings,
 } from '@/domain/rules'
 import { computeMembershipStatus, daysRemaining } from '@/domain/rules/membership'
@@ -48,6 +49,7 @@ function dayKey(value: Date | string): string {
 export function HomePage() {
   const user = useCurrentUser()
   const data = useAppData()
+  const waitlistOn = isFeatureEnabled(data.settings, 'waitlist')
   const { loading } = useGym()
   const [now] = useState(() => new Date())
 
@@ -364,7 +366,9 @@ export function HomePage() {
                       </div>
                       <p className="mt-2 text-[11px] font-medium text-ink-3">
                         {full
-                          ? 'Cupo completo · entra a lista de espera'
+                          ? waitlistOn
+                            ? 'Cupo completo · entra a lista de espera'
+                            : 'Cupo completo'
                           : `${spots} ${spots === 1 ? 'cupo libre' : 'cupos libres'}`}
                       </p>
                     </Card>
