@@ -30,7 +30,12 @@ create table if not exists gym_settings (
   accent_color text not null default '#2DD4A8',
   booking_window_hours int not null default 168,
   cancel_window_hours int not null default 2,
-  check_in_window_minutes int not null default 15
+  check_in_window_minutes int not null default 15,
+  -- Interruptores del admin (feature-flags.sql)
+  online_payments_enabled boolean not null default false,
+  waitlist_enabled boolean not null default true,
+  measurements_enabled boolean not null default true,
+  day_passes_enabled boolean not null default true
 );
 
 create table if not exists trainers (
@@ -377,9 +382,11 @@ create policy "profiles update self or staff" on profiles for update
     or public.is_staff()
   );
 
--- Settings
+-- Settings: todos leen (incluye los interruptores de la app); solo admin escribe
 create policy "settings read all auth" on gym_settings for select to authenticated using (true);
-create policy "settings write staff" on gym_settings for all using (public.is_staff());
+create policy "settings write admin" on gym_settings for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- Catálogo (Zonas, Plantillas, Sesiones, Entrenadores)
 create policy "catalog read" on zones for select to authenticated using (true);

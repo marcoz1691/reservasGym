@@ -181,6 +181,11 @@ export interface GymSettings {
   bookingWindowHours: number
   cancelWindowHours: number
   checkInWindowMinutes: number
+  /** Interruptores del admin (feature-flags.sql). Leerlos con isFeatureEnabled(). */
+  onlinePaymentsEnabled?: boolean
+  waitlistEnabled?: boolean
+  measurementsEnabled?: boolean
+  dayPassesEnabled?: boolean
 }
 
 export interface GymState {

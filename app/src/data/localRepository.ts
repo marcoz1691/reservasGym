@@ -31,6 +31,7 @@ import {
   RESCHEDULE_FULL_MESSAGE,
   seatsTaken,
 } from '../domain/rules'
+import { SESSION_FULL_MESSAGE, assertPlanSellableInApp, isFeatureEnabled } from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
 import type {
   AuthCredentials,
@@ -488,7 +489,7 @@ export class LocalRepository implements GymRepository {
 
   async updateSettings(patch: Partial<GymSettings>): Promise<GymSettings> {
     const actor = await this.requireUser()
-    if (actor.role === 'member') throw new Error('Sin permiso')
+    if (actor.role !== 'admin') throw new Error('Solo admin')
     this.state.settings = { ...this.state.settings, ...patch }
     this.persistState()
     return { ...this.state.settings }
@@ -611,6 +612,9 @@ export class LocalRepository implements GymRepository {
 
     const capacity = canBookSession(session, this.state.bookings)
     if (!capacity.ok) {
+      if (!isFeatureEnabled(this.state.settings, 'waitlist')) {
+        throw new Error(SESSION_FULL_MESSAGE)
+      }
       const entry: WaitlistEntry = {
         id: uid('wl'),
         sessionId,
@@ -1111,6 +1115,7 @@ export class LocalRepository implements GymRepository {
       (p) => p.id === params.planId && p.active,
     )
     if (!plan) throw new Error('Plan no encontrado')
+    assertPlanSellableInApp(plan, this.state.settings)
     if (!this.state.payments) this.state.payments = []
 
     const existingIdx = this.state.payments.findIndex(

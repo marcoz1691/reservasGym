@@ -93,6 +93,22 @@ begin
 end;
 $$;
 
+-- Interruptor del admin (gym_settings.waitlist_enabled, feature-flags.sql). Se lee
+-- como jsonb para no fallar si este archivo corre antes que la migración: sin la
+-- columna la lista de espera sigue encendida, como hasta ahora.
+create or replace function public.waitlist_enabled()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select (to_jsonb(g) ->> 'waitlist_enabled')::boolean from gym_settings g where g.id = 1),
+    true
+  );
+$$;
+
 -- ¿El socio ya tiene una reserva confirmada o pendiente que se cruza con la sesión?
 create or replace function public.booking_overlaps(p_user_id uuid, p_session_id text)
 returns boolean
@@ -228,6 +244,12 @@ begin
     return jsonb_build_object('booking', to_jsonb(v_booking));
   end if;
 
+  -- Con la lista de espera apagada no entra nadie nuevo a la cola. Quienes ya
+  -- esperaban siguen: promote_waitlist no revisa el interruptor.
+  if not public.waitlist_enabled() then
+    raise exception 'La clase está llena';
+  end if;
+
   insert into waitlist_entries (id, session_id, user_id, position, created_at)
   values (
     'wl-' || gen_random_uuid(), p_session_id, v_user,
@@ -349,6 +371,7 @@ begin
   if v_reason is not null then
     raise exception '%', v_reason;
   end if;
+  -- Reagendar nunca deja en espera, con o sin lista de espera encendida.
   if public.session_seats_taken(p_session_id) >= v_new_session.capacity then
     raise exception 'La clase nueva está llena. Tu reserva actual no cambió.';
   end if;
@@ -424,6 +447,7 @@ $$;
 -- Los helpers solo los llaman las funciones de arriba, que corren como su dueño.
 revoke all on function public.member_booking_block_reason(uuid, text) from public, anon, authenticated;
 revoke all on function public.booking_overlaps(uuid, text) from public, anon, authenticated;
+revoke all on function public.waitlist_enabled() from public, anon, authenticated;
 revoke all on function public.promote_waitlist(text) from public, anon, authenticated;
 revoke all on function public.new_check_in_code() from public, anon, authenticated;
 revoke all on function public.session_seats_taken(text) from public, anon, authenticated;

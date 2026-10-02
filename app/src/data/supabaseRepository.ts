@@ -33,6 +33,7 @@ import {
   extendMembership,
 } from '@/domain/rules'
 import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
+import { assertPlanSellableInApp } from '@/domain/rules/featureFlags'
 import type {
   AuthCredentials,
   GymRepository,
@@ -88,6 +89,10 @@ function mapSettings(row: {
   booking_window_hours: number
   cancel_window_hours: number
   check_in_window_minutes: number
+  online_payments_enabled?: boolean | null
+  waitlist_enabled?: boolean | null
+  measurements_enabled?: boolean | null
+  day_passes_enabled?: boolean | null
 }): GymSettings {
   return {
     name: row.name,
@@ -97,6 +102,10 @@ function mapSettings(row: {
     bookingWindowHours: row.booking_window_hours,
     cancelWindowHours: row.cancel_window_hours,
     checkInWindowMinutes: row.check_in_window_minutes,
+    onlinePaymentsEnabled: row.online_payments_enabled ?? undefined,
+    waitlistEnabled: row.waitlist_enabled ?? undefined,
+    measurementsEnabled: row.measurements_enabled ?? undefined,
+    dayPassesEnabled: row.day_passes_enabled ?? undefined,
   }
 }
 
@@ -752,6 +761,14 @@ export class SupabaseRepository implements GymRepository {
     if (patch.checkInWindowMinutes !== undefined) {
       row.check_in_window_minutes = patch.checkInWindowMinutes
     }
+    if (patch.onlinePaymentsEnabled !== undefined) {
+      row.online_payments_enabled = patch.onlinePaymentsEnabled
+    }
+    if (patch.waitlistEnabled !== undefined) row.waitlist_enabled = patch.waitlistEnabled
+    if (patch.measurementsEnabled !== undefined) {
+      row.measurements_enabled = patch.measurementsEnabled
+    }
+    if (patch.dayPassesEnabled !== undefined) row.day_passes_enabled = patch.dayPassesEnabled
     const { data, error } = await this.client
       .from('gym_settings')
       .update(row)
@@ -1276,6 +1293,12 @@ export class SupabaseRepository implements GymRepository {
       .single()
     if (planError || !planRow) throw new Error('Plan no encontrado')
     const plan = mapMembershipPlan(planRow)
+    const { data: settingsRow } = await this.client
+      .from('gym_settings')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle()
+    assertPlanSellableInApp(plan, settingsRow ? mapSettings(settingsRow) : null)
 
     const { data: existing, error: existingError } = await this.client
       .from('payments')

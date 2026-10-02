@@ -80,6 +80,9 @@ export function nextWaitlistPosition(
 export const RESCHEDULE_FULL_MESSAGE =
   'La clase nueva está llena. Tu reserva actual no cambió.'
 
+/** Mismo texto que `book_session` cuando la clase está llena y la lista de espera apagada. */
+export const SESSION_FULL_MESSAGE = 'La clase está llena'
+
 /**
  * Primer socio de la cola que puede pasar a confirmado. Los que ya no son
  * elegibles (se solapan con otra reserva o su plan no les permite reservar)
@@ -183,5 +186,6 @@ export * from './zoneAccess'
 export * from './anthropometrics'
 export * from './profile'
 export * from './planRequest'
+export * from './featureFlags'
 
 export * from './bookingTimeline'
