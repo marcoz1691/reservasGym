@@ -465,7 +465,12 @@ create policy "body_goals delete" on body_goals for delete using (
 
 -- Planes de membresía: lectura de planes activos; escritura solo admin
 create policy "membership_plans read active or staff" on membership_plans for select using (
-  active = true or public.is_staff()
+  active = true
+  or public.is_staff()
+  or exists (
+    select 1 from memberships m
+    where m.plan_id = membership_plans.id and m.user_id = auth.uid()
+  )
 );
 create policy "membership_plans write admin" on membership_plans for all to authenticated
   using (public.is_admin())

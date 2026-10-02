@@ -28,12 +28,13 @@ export function isFeatureEnabled(
 export const DAY_PASSES_APP_DISABLED_MESSAGE = 'Los pases diarios se venden en recepción'
 
 /** Planes que el socio puede comprar desde la app. Cobros no usa este filtro. */
-export function plansForAppSale<T extends Pick<MembershipPlan, 'name' | 'kind'>>(
+export function plansForAppSale<T extends Pick<MembershipPlan, 'name' | 'kind' | 'active'>>(
   plans: T[],
   settings: FeatureSettings | null | undefined,
 ): T[] {
-  if (isFeatureEnabled(settings, 'dayPasses')) return plans
-  return plans.filter((plan) => !isDayPassPlan(plan))
+  const sellable = plans.filter((plan) => plan.active)
+  if (isFeatureEnabled(settings, 'dayPasses')) return sellable
+  return sellable.filter((plan) => !isDayPassPlan(plan))
 }
 
 export function assertPlanSellableInApp(

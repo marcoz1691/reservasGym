@@ -38,6 +38,18 @@ where id in (
 )
 and kind <> 'day_pass';
 
+-- Un plan descontinuado (active = false) sigue siendo legible para quien lo
+-- tiene asignado; si no, la app no conoce sus áreas y bloquea las reservas.
+drop policy if exists "membership_plans read active or staff" on public.membership_plans;
+create policy "membership_plans read active or staff" on public.membership_plans for select using (
+  active = true
+  or public.is_staff()
+  or exists (
+    select 1 from public.memberships m
+    where m.plan_id = membership_plans.id and m.user_id = auth.uid()
+  )
+);
+
 -- 2. Notas del pago (crédito de un cambio de plan) e índice por fechas ----------
 alter table public.payments add column if not exists notes text;
 

@@ -76,6 +76,11 @@ describe('pases diarios en la app', () => {
     expect(plansForAppSale([monthly, zonaDay, hyroxPass], off)).toEqual([monthly])
   })
 
+  it('un plan descontinuado que el socio aún tiene no aparece en la vitrina', () => {
+    const silver = plan({ id: 'silver', name: 'Plan Silver', active: false })
+    expect(plansForAppSale([monthly, silver], base)).toEqual([monthly])
+  })
+
   it('la compra en la app de un pase diario se rechaza con el interruptor apagado', () => {
     const off = { ...base, dayPassesEnabled: false }
     expect(() => assertPlanSellableInApp(zonaDay, off)).toThrow(DAY_PASSES_APP_DISABLED_MESSAGE)
