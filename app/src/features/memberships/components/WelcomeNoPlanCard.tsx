@@ -4,7 +4,7 @@ import { Card } from '@/ui/primitives'
 import { ButtonLink } from '@/ui/ButtonLink'
 
 interface WelcomeNoPlanCardProps {
-  /** Con VITE_ONLINE_PAYMENTS activo se menciona el pago con tarjeta */
+  /** Con el pago en línea activo (isOnlinePayEnabled) se menciona el pago con tarjeta */
   onlinePayEnabled?: boolean
 }
 

@@ -1,5 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { isSupabaseConfigured } from '@/data/supabaseRepository'
+import type { GymSettings } from '@/domain/models'
+import { isFeatureEnabled } from '@/domain/rules/featureFlags'
 
 export type OnlinePayProvider = 'pagomedios' | 'datafast'
 
@@ -10,12 +12,22 @@ export type OnlinePayProvider = 'pagomedios' | 'datafast'
 export const ONLINE_PAYMENT_TAX_RATE = 0.15
 
 /**
- * Pago en línea — activar con VITE_ONLINE_PAYMENTS=1.
+ * El ambiente tiene pasarela: VITE_ONLINE_PAYMENTS=1 y Supabase.
  * Pagomedios (default) requiere el secret PAGOMEDIOS_TOKEN en Supabase;
  * Datafast (VITE_PAYMENT_PROVIDER=datafast) requiere los secrets DATAFAST_*.
  */
-export function isOnlinePayEnabled(): boolean {
+export function isOnlinePayEnvEnabled(): boolean {
   return import.meta.env.VITE_ONLINE_PAYMENTS === '1' && isSupabaseConfigured()
+}
+
+/**
+ * Se ofrece cobrar en línea: el ambiente lo permite y el admin lo encendió
+ * (gym_settings.online_payments_enabled). La Edge Function revisa lo mismo.
+ */
+export function isOnlinePayEnabled(
+  settings: Pick<GymSettings, 'onlinePaymentsEnabled'> | null | undefined,
+): boolean {
+  return isOnlinePayEnvEnabled() && isFeatureEnabled(settings, 'onlinePayments')
 }
 
 export function getOnlinePayProvider(): OnlinePayProvider {

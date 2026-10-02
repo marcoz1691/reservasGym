@@ -10,6 +10,7 @@ import {
   MANUAL_PAYMENT_LABELS,
   selectPendingPlanRequest,
 } from '@/domain/rules/planRequest'
+import { plansForAppSale } from '@/domain/rules/featureFlags'
 import { formatCurrency } from '@/lib/format'
 import { Button, PageHeader } from '@/ui/primitives'
 import { isOnlinePayEnabled } from './onlinePay'
@@ -49,7 +50,7 @@ export function MiPlanPage() {
   const [requestError, setRequestError] = useState('')
   const paymentStepRef = useRef<HTMLDivElement>(null)
 
-  const onlinePayEnabled = isOnlinePayEnabled()
+  const onlinePayEnabled = isOnlinePayEnabled(data.settings)
 
   const currentMembership = useMemo(
     () => selectMyMembership(data, user?.id),
@@ -261,7 +262,7 @@ export function MiPlanPage() {
 
       {showCatalog ? (
         <PlansShowcase
-          plans={data.membershipPlans ?? []}
+          plans={plansForAppSale(data.membershipPlans ?? [], data.settings)}
           currentPlanId={
             currentMembership?.status === 'active' || currentMembership?.status === 'grace'
               ? currentMembership.planId

@@ -193,7 +193,7 @@ export function HomePage() {
           planName={pendingPlanName}
         />
       ) : !membership ? (
-        <WelcomeNoPlanCard onlinePayEnabled={isOnlinePayEnabled()} />
+        <WelcomeNoPlanCard onlinePayEnabled={isOnlinePayEnabled(data.settings)} />
       ) : (
         <div className="relative overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)]">
           <div className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-acc/70" aria-hidden />

@@ -27,6 +27,7 @@ import {
   type BillingDocumentType,
   type BillingErrors,
 } from '@/domain/rules/billing'
+import { isDayPassPlan, isFeatureEnabled } from '@/domain/rules/featureFlags'
 import { formatCurrency, formatDateSpanish } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
 import { TermsDialog } from '@/features/legal/TermsDialog'
@@ -37,6 +38,7 @@ import {
   ONLINE_PAYMENT_TAX_RATE,
   isNativeApp,
   isOnlinePayEnabled,
+  isOnlinePayEnvEnabled,
   onPaymentScreenClosed,
   openPaymentPage,
   rememberPendingPayment,
@@ -51,6 +53,9 @@ const METHOD_OPTIONS: { value: CheckoutMethod; title: string; detail: string; ic
   { value: 'cash', title: 'Efectivo en recepción', detail: 'Pagas al llegar al gimnasio', icon: Banknote },
   { value: 'transfer', title: 'Transferencia bancaria', detail: 'Recepción confirma tu comprobante', icon: Landmark },
 ]
+
+const ONLINE_OFF_MESSAGE =
+  'El pago en línea no está disponible en este momento. Puedes pagar en efectivo o por transferencia.'
 
 const DOCUMENT_PLACEHOLDER: Record<BillingDocumentType, string> = {
   '05': 'Ej. 1712345678',
@@ -96,7 +101,7 @@ export function PagomediosCheckoutPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [payerOpen, setPayerOpen] = useState(true)
-  const [method, setMethod] = useState<CheckoutMethod>('card')
+  const [chosenMethod, setMethod] = useState<CheckoutMethod>('card')
   const [requestSent, setRequestSent] = useState<Exclude<CheckoutMethod, 'card'> | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -127,7 +132,14 @@ export function PagomediosCheckoutPage() {
   const fieldError = (field: keyof BillingErrors) =>
     touched[field] ? billingErrors[field] : undefined
 
-  const onlineOk = isOnlinePayEnabled() && typeof repo.createPagomediosPayment === 'function'
+  // El ambiente con pasarela basta para verificar un pago ya iniciado; cobrar con
+  // tarjeta además requiere el interruptor del admin.
+  const onlineOk = isOnlinePayEnvEnabled() && typeof repo.createPagomediosPayment === 'function'
+  const cardEnabled = onlineOk && isOnlinePayEnabled(data.settings)
+  const method: CheckoutMethod = !cardEnabled && chosenMethod === 'card' ? 'cash' : chosenMethod
+  const methodOptions = cardEnabled ? METHOD_OPTIONS : METHOD_OPTIONS.filter((o) => o.value !== 'card')
+  const dayPassBlocked =
+    plan !== null && isDayPassPlan(plan) && !isFeatureEnabled(data.settings, 'dayPasses')
 
   const runVerify = useCallback(async () => {
     const verifyPayment = repo.verifyPagomediosPayment?.bind(repo)
@@ -224,8 +236,14 @@ export function PagomediosCheckoutPage() {
       })
       if (native) setBusy(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo iniciar el pago')
+      const message = err instanceof Error ? err.message : 'No se pudo iniciar el pago'
       setBusy(false)
+      if (/Pago en línea desactivado/i.test(message)) {
+        setError(ONLINE_OFF_MESSAGE)
+        await refresh()
+      } else {
+        setError(message)
+      }
     }
   }
 
@@ -285,6 +303,15 @@ export function PagomediosCheckoutPage() {
     return (
       <div className="mx-auto max-w-lg space-y-4 p-4">
         <p className="text-sm text-ink-2">Selecciona un plan desde Mi Plan.</p>
+        <BackLink label="Ir a Mi Plan" />
+      </div>
+    )
+  }
+
+  if (dayPassBlocked) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 p-4">
+        <p className="text-sm text-ink-2">Los pases diarios se venden en recepción.</p>
         <BackLink label="Ir a Mi Plan" />
       </div>
     )
@@ -365,7 +392,7 @@ export function PagomediosCheckoutPage() {
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
         <Section title="Método de pago">
           <div role="radiogroup" aria-label="Método de pago" className="space-y-2">
-            {METHOD_OPTIONS.map((option) => {
+            {methodOptions.map((option) => {
               const selected = method === option.value
               const Icon = option.icon
               return (
