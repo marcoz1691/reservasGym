@@ -11,11 +11,13 @@ import {
   DollarSign,
   History,
   PlusCircle,
+  QrCode,
   RefreshCw,
   Search,
   ShieldCheck,
   UserCheck,
   X,
+  type LucideIcon,
 } from 'lucide-react'
 import {
   useCurrentUser,
@@ -41,6 +43,7 @@ import {
   planChangeCredit,
   planPurchaseOutcome,
 } from '@/domain/rules/memberships'
+import { MANUAL_PAYMENT_LABELS } from '@/domain/rules/planRequest'
 import {
   formatCurrency,
   formatDateShort,
@@ -50,6 +53,27 @@ import {
 import { Badge, Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
 
 type TabType = 'pos' | 'vencimientos' | 'historial'
+
+const POS_METHODS: {
+  value: ManualPaymentMethod
+  title: string
+  detail: string
+  icon: LucideIcon
+}[] = [
+  { value: 'card_pos', title: 'Datáfono POS Datafast', detail: 'Tarjeta débito/crédito', icon: CreditCard },
+  { value: 'cash', title: 'Efectivo', detail: 'Cobro en caja', icon: Banknote },
+  { value: 'transfer', title: 'Transferencia Bancaria', detail: 'Banco / App', icon: Building2 },
+  { value: 'deuna', title: MANUAL_PAYMENT_LABELS.deuna, detail: 'QR o código del gym', icon: QrCode },
+]
+
+const HISTORY_FILTERS: { value: string; label: string }[] = [
+  { value: 'all', label: 'Todos los métodos' },
+  ...(['card_pos', 'cash', 'transfer', 'deuna'] as const).map((method) => ({
+    value: method,
+    label: formatPaymentMethod('manual', method),
+  })),
+  { value: 'pagomedios', label: 'En línea (Pagomedios)' },
+]
 
 interface ReceiptData {
   payment: Payment
@@ -301,6 +325,9 @@ export function CobrosPage() {
     const cardPosCents = approved
       .filter((p) => p.manualMethod === 'card_pos')
       .reduce((sum, p) => sum + p.amountCents, 0)
+    const deunaCents = approved
+      .filter((p) => p.manualMethod === 'deuna')
+      .reduce((sum, p) => sum + p.amountCents, 0)
     const onlineCents = approved
       .filter((p) => p.provider === 'pagomedios')
       .reduce((sum, p) => sum + p.amountCents, 0)
@@ -310,6 +337,7 @@ export function CobrosPage() {
       cashUsd: cashCents / 100,
       transferUsd: transferCents / 100,
       cardPosUsd: cardPosCents / 100,
+      deunaUsd: deunaCents / 100,
       onlineUsd: onlineCents / 100,
       totalTransactions: approved.length,
     }
@@ -543,6 +571,7 @@ export function CobrosPage() {
                           setMemberSearchQuery('')
                           handleSelectPlan(payment.planId)
                           if (payment.manualMethod) setPaymentMethod(payment.manualMethod)
+                          setReference(payment.reference ?? '')
                           setReceipt(null)
                         }}
                         className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-bg px-4 py-3 text-left hover:border-acc"
@@ -553,12 +582,15 @@ export function CobrosPage() {
                           </span>
                           <span className="text-xs text-ink-3">
                             {plan?.name ?? 'Plan'} ·{' '}
-                            {payment.manualMethod === 'cash'
-                              ? 'Efectivo'
-                              : payment.manualMethod === 'transfer'
-                                ? 'Transferencia'
-                                : 'Tarjeta Datafast'}
+                            {payment.manualMethod
+                              ? MANUAL_PAYMENT_LABELS[payment.manualMethod]
+                              : 'Recepción'}
                           </span>
+                          {payment.reference ? (
+                            <span className="block font-mono text-xs font-bold text-ink-2">
+                              Ref. {payment.reference}
+                            </span>
+                          ) : null}
                         </span>
                         <span className="text-sm font-bold text-acc">Cobrar</span>
                       </button>
@@ -923,48 +955,24 @@ export function CobrosPage() {
                     <span className="text-xs font-bold uppercase tracking-wide text-ink-3">
                       Medio de Pago Presencial
                     </span>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('card_pos')}
-                        className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-center transition ${
-                          paymentMethod === 'card_pos'
-                            ? 'border-acc bg-acc/10 text-acc font-bold'
-                            : 'border-line bg-bg text-ink-2 hover:bg-surface'
-                        }`}
-                      >
-                        <CreditCard className="h-5 w-5 mb-1 text-acc" />
-                        <span className="text-xs">Datáfono POS Datafast</span>
-                        <span className="text-[10px] text-ink-3">Tarjeta débito/crédito</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('cash')}
-                        className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-center transition ${
-                          paymentMethod === 'cash'
-                            ? 'border-acc bg-acc/10 text-acc font-bold'
-                            : 'border-line bg-bg text-ink-2 hover:bg-surface'
-                        }`}
-                      >
-                        <Banknote className="h-5 w-5 mb-1 text-acc" />
-                        <span className="text-xs">Efectivo</span>
-                        <span className="text-[10px] text-ink-3">Cobro en caja</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('transfer')}
-                        className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-center transition ${
-                          paymentMethod === 'transfer'
-                            ? 'border-acc bg-acc/10 text-acc font-bold'
-                            : 'border-line bg-bg text-ink-2 hover:bg-surface'
-                        }`}
-                      >
-                        <Building2 className="h-5 w-5 mb-1 text-acc" />
-                        <span className="text-xs">Transferencia Bancaria</span>
-                        <span className="text-[10px] text-ink-3">Banco / App</span>
-                      </button>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {POS_METHODS.map(({ value, title, detail, icon: Icon }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          aria-pressed={paymentMethod === value}
+                          onClick={() => setPaymentMethod(value)}
+                          className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-center transition ${
+                            paymentMethod === value
+                              ? 'border-acc bg-acc/10 text-acc font-bold'
+                              : 'border-line bg-bg text-ink-2 hover:bg-surface'
+                          }`}
+                        >
+                          <Icon className="h-5 w-5 mb-1 text-acc" />
+                          <span className="text-xs">{title}</span>
+                          <span className="text-[10px] text-ink-3">{detail}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
@@ -1046,9 +1054,7 @@ export function CobrosPage() {
                 <div className="flex justify-between py-1.5">
                   <span className="text-ink-3">Medio de cobro:</span>
                   <span className="font-bold text-ink">
-                    {paymentMethod === 'card_pos' && 'Datáfono POS'}
-                    {paymentMethod === 'cash' && 'Efectivo'}
-                    {paymentMethod === 'transfer' && 'Transferencia'}
+                    {formatPaymentMethod('manual', paymentMethod)}
                   </span>
                 </div>
 
@@ -1226,7 +1232,7 @@ export function CobrosPage() {
       {activeTab === 'historial' && (
         <div className="space-y-4">
           {/* Metrics summary cards */}
-          <div className="grid gap-3 sm:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <Card>
               <div className="text-[11px] font-bold uppercase text-ink-3">Total Recaudado</div>
               <div className="mt-1 text-2xl font-black text-acc">
@@ -1262,6 +1268,14 @@ export function CobrosPage() {
             </Card>
 
             <Card>
+              <div className="text-[11px] font-bold uppercase text-ink-3">Deuna</div>
+              <div className="mt-1 text-2xl font-black text-ink">
+                ${metrics.deunaUsd.toFixed(2)} USD
+              </div>
+              <div className="text-[11px] text-ink-3 mt-1">QR o código Deuna</div>
+            </Card>
+
+            <Card>
               <div className="text-[11px] font-bold uppercase text-ink-3">En línea</div>
               <div className="mt-1 text-2xl font-black text-ink">
                 ${metrics.onlineUsd.toFixed(2)} USD
@@ -1273,61 +1287,21 @@ export function CobrosPage() {
           {/* Filters */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setHistoryMethodFilter('all')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
-                  historyMethodFilter === 'all'
-                    ? 'bg-cta text-cta-contrast'
-                    : 'bg-surface text-ink-2 hover:bg-surface/80'
-                }`}
-              >
-                Todos los métodos
-              </button>
-              <button
-                type="button"
-                onClick={() => setHistoryMethodFilter('card_pos')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
-                  historyMethodFilter === 'card_pos'
-                    ? 'bg-cta text-cta-contrast'
-                    : 'bg-surface text-ink-2 hover:bg-surface/80'
-                }`}
-              >
-                Datáfono POS
-              </button>
-              <button
-                type="button"
-                onClick={() => setHistoryMethodFilter('cash')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
-                  historyMethodFilter === 'cash'
-                    ? 'bg-cta text-cta-contrast'
-                    : 'bg-surface text-ink-2 hover:bg-surface/80'
-                }`}
-              >
-                Efectivo
-              </button>
-              <button
-                type="button"
-                onClick={() => setHistoryMethodFilter('transfer')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
-                  historyMethodFilter === 'transfer'
-                    ? 'bg-cta text-cta-contrast'
-                    : 'bg-surface text-ink-2 hover:bg-surface/80'
-                }`}
-              >
-                Transferencia
-              </button>
-              <button
-                type="button"
-                onClick={() => setHistoryMethodFilter('pagomedios')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
-                  historyMethodFilter === 'pagomedios'
-                    ? 'bg-cta text-cta-contrast'
-                    : 'bg-surface text-ink-2 hover:bg-surface/80'
-                }`}
-              >
-                En línea (Pagomedios)
-              </button>
+              {HISTORY_FILTERS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={historyMethodFilter === value}
+                  onClick={() => setHistoryMethodFilter(value)}
+                  className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                    historyMethodFilter === value
+                      ? 'bg-cta text-cta-contrast'
+                      : 'bg-surface text-ink-2 hover:bg-surface/80'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
             <div className="relative w-full sm:w-64">
