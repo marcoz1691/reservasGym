@@ -27,6 +27,7 @@ import {
   type BillingDocumentType,
   type BillingErrors,
 } from '@/domain/rules/billing'
+import { planPurchaseOutcome } from '@/domain/rules/memberships'
 import { formatCurrency, formatDateSpanish } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
 import { TermsDialog } from '@/features/legal/TermsDialog'
@@ -86,6 +87,17 @@ export function PagomediosCheckoutPage() {
   const plan = useMemo(
     () => (data.membershipPlans ?? []).find((p) => p.id === planId && p.active) ?? null,
     [data.membershipPlans, planId],
+  )
+  const purchase = useMemo(
+    () =>
+      plan && user
+        ? planPurchaseOutcome({
+            memberships: (data.memberships ?? []).filter((m) => m.userId === user.id),
+            plans: data.membershipPlans ?? [],
+            plan,
+          })
+        : null,
+    [data.memberships, data.membershipPlans, plan, user],
   )
 
   const [documentType, setDocumentType] = useState<BillingDocumentType>('05')
@@ -359,7 +371,20 @@ export function PagomediosCheckoutPage() {
           <p className="font-display text-lg font-bold text-ink">{plan.name}</p>
           <p className="shrink-0 text-lg font-bold text-ink">{formatCurrency(plan.priceCents)}</p>
         </div>
-        <p className="text-sm text-ink-3">Vigencia de {plan.durationDays} días · sin cobros recurrentes</p>
+        <p className="text-sm text-ink-3">
+          {purchase?.kind === 'day_pass'
+            ? 'Válido solo hoy · sin cobros recurrentes'
+            : `Vigencia de ${plan.durationDays} días · sin cobros recurrentes`}
+        </p>
+        {purchase?.kind === 'queue' ? (
+          <p className="mt-2 text-sm font-semibold text-ink">
+            Empieza el {formatDateSpanish(purchase.startsAt)} cuando termine tu plan actual
+          </p>
+        ) : purchase?.kind === 'reject' ? (
+          <p className="mt-2 text-sm font-semibold text-danger" role="alert">
+            {purchase.reason}
+          </p>
+        ) : null}
       </section>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
@@ -521,7 +546,7 @@ export function PagomediosCheckoutPage() {
         <div className="space-y-3">
           <button
             type="submit"
-            disabled={busy || !formValid}
+            disabled={busy || !formValid || purchase?.kind === 'reject'}
             className="flex w-full items-center justify-between rounded-2xl bg-cta px-5 py-4 text-base font-semibold text-cta-contrast transition hover:bg-cta-hi disabled:cursor-not-allowed disabled:bg-cta/25"
           >
             {busy ? (
@@ -607,6 +632,9 @@ function ApprovedReceipt({ receipt }: { receipt?: OnlinePaymentReceipt }) {
         ['Plan', receipt.planName ?? '—'],
         ['Monto', formatCurrency(receipt.amountCents)],
         ['Código de autorización', receipt.authorizationCode ?? '—'],
+        ...(receipt.membershipStartsAt
+          ? [['Empieza el', formatDateSpanish(receipt.membershipStartsAt)] as [string, string]]
+          : []),
         [
           'Membresía activa hasta',
           receipt.membershipEndsAt ? formatDateSpanish(receipt.membershipEndsAt) : '—',

@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useCurrentUser, useGym } from '@/data/RepositoryProvider'
-import { selectMyMembership } from '@/app/store'
+import { selectMyDayPasses, selectMyMembership } from '@/app/store'
 import { canUseBookingNav, isFichaPending } from '@/domain/rules'
 import { wasFichaSkipped } from '@/features/profile/fichaOnboarding'
 import { Spinner } from '@/ui/primitives'
@@ -23,8 +23,9 @@ export function RequireAuth() {
     return <Navigate to="/" replace />
   }
   const membership = state ? selectMyMembership(state, user.id) : undefined
+  const hasDayPass = selectMyDayPasses(state, user.id).length > 0
   if (
-    !canUseBookingNav(user.role, membership) &&
+    !canUseBookingNav(user.role, membership, hasDayPass) &&
     (location.pathname === '/agenda' || location.pathname === '/reservas')
   ) {
     return <Navigate to="/membresia" replace />

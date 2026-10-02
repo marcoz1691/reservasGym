@@ -13,7 +13,7 @@ import {
 import type { Membership, MembershipPlan, MembershipStatus, Zone } from '@/domain/models'
 import { ZONE_LABELS } from '@/domain/models'
 import { computeMembershipStatus, daysRemaining } from '@/domain/rules/membership'
-import { formatCurrency, formatDateSpanish } from '@/lib/format'
+import { formatCurrency, formatDateSpanish, formatEcuadorTime } from '@/lib/format'
 
 interface MembershipCardProps {
   membership: Membership
@@ -25,6 +25,36 @@ interface MembershipCardProps {
   memberSince?: string
   /** Lleva al catálogo para renovar o mejorar. */
   onRenew?: () => void
+  /** Plan pagado que empieza cuando termine el actual. */
+  queued?: PlanWithMembership | null
+  dayPasses?: PlanWithMembership[]
+}
+
+export interface PlanWithMembership {
+  membership: Membership
+  plan?: MembershipPlan | null
+}
+
+/** Pases del día vigentes: la vigencia termina a las 23:59 del día de compra. */
+export function DayPassNotice({ passes }: { passes: PlanWithMembership[] }) {
+  if (passes.length === 0) return null
+  return (
+    <div className="space-y-2">
+      {passes.map(({ membership, plan }) => (
+        <div
+          key={membership.id}
+          className="flex items-start gap-3 rounded-2xl border border-acc/25 bg-acc-soft p-4 text-sm text-ink"
+        >
+          <Ticket className="h-5 w-5 shrink-0 text-acc" aria-hidden />
+          <p>
+            <span className="font-bold">Pase del día activo:</span>{' '}
+            {plan?.name ?? 'Pase del día'}, válido hasta las{' '}
+            {formatEcuadorTime(membership.endsAt)}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function getStatusBadge(status: MembershipStatus) {
@@ -40,6 +70,12 @@ function getStatusBadge(status: MembershipStatus) {
         label: 'En período de gracia',
         className: 'bg-warn-soft text-warn border border-warn/25',
         dotClass: 'bg-warn animate-pulse',
+      }
+    case 'scheduled':
+      return {
+        label: 'Plan programado',
+        className: 'bg-surface-elevated text-ink-2 border border-line',
+        dotClass: 'bg-ink-3',
       }
     case 'expired':
       return {
@@ -152,6 +188,8 @@ export function MembershipCard({
   memberName,
   memberSince,
   onRenew,
+  queued = null,
+  dayPasses = [],
 }: MembershipCardProps) {
   // ZC18-O3: reloj vivo (1 min) para que la barra de progreso avance con la pantalla abierta
   const [nowMs, setNowMs] = useState(() => Date.now())
@@ -318,6 +356,19 @@ export function MembershipCard({
       </div>
 
       <div className="space-y-5 px-5 py-5 sm:px-6">
+        {queued ? (
+          <div className="flex items-start gap-3 rounded-2xl border border-line bg-surface-elevated p-4 text-sm text-ink">
+            <CalendarClock className="h-5 w-5 shrink-0 text-ink-3" aria-hidden />
+            <p>
+              <span className="font-bold">Próximo plan:</span>{' '}
+              {queued.plan?.name ?? 'Plan de Membresía'}, empieza el{' '}
+              {formatDateSpanish(queued.membership.startsAt)}
+            </p>
+          </div>
+        ) : null}
+
+        <DayPassNotice passes={dayPasses} />
+
         {/* Avisos de vencimiento */}
         {status === 'grace' && membership.graceEndsAt ? (
           <div className="flex items-start gap-3 rounded-2xl border border-warn/25 bg-warn-soft p-4 text-xs text-warn">
@@ -377,7 +428,7 @@ export function MembershipCard({
         </div>
 
         {/* Renovación: solo aparece cuando de verdad toca */}
-        {onRenew && (nearExpiry || status === 'grace' || status === 'expired') ? (
+        {onRenew && !queued && (nearExpiry || status === 'grace' || status === 'expired') ? (
           <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-elevated p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-ink-2">
               {status === 'active'

@@ -11,15 +11,21 @@ import type { MembershipPlan, Zone } from '@/domain/models'
 import { ZONE_LABELS } from '@/domain/models'
 import {
   groupPlansByFamily,
+  isDayPassPlan,
   planFamilyId,
   selectUpgradePlan,
   type PlanFamilyId,
 } from '@/domain/rules/membershipPlan'
+import { QUEUED_PLAN_LIMIT_MESSAGE } from '@/domain/rules/memberships'
 import { formatCurrency } from '@/lib/format'
 
 interface PlansShowcaseProps {
   plans: MembershipPlan[]
   currentPlanId?: string | null
+  /** Plan pagado que empieza cuando termine el actual (máximo uno). */
+  queuedPlanId?: string | null
+  /** Comprar otro plan lo deja en espera (plan actual activo, no en gracia). */
+  queuesChanges?: boolean
   zones: Zone[]
   onPayOnline?: (planId: string) => void | Promise<void>
   onChoosePlan?: (planId: string) => void
@@ -96,6 +102,8 @@ function FeatureRow({
 export function PlansShowcase({
   plans,
   currentPlanId,
+  queuedPlanId = null,
+  queuesChanges,
   zones,
   onPayOnline,
   onChoosePlan,
@@ -122,6 +130,7 @@ export function PlansShowcase({
   if (!activeGroup) return null
 
   const currentPlan = plans.find((plan) => plan.id === currentPlanId) ?? null
+  const changesQueue = queuesChanges ?? Boolean(currentPlan)
   const upgrade = selectUpgradePlan(plans, currentPlanId)
   const offers = [...activeGroup.offers].sort((a, b) => {
     if (a.plan.id === upgrade?.id) return -1
@@ -226,6 +235,19 @@ export function PlansShowcase({
           const isUpgrade = plan.id === upgrade?.id
           const hasQuota = plan.visitQuota !== null && plan.visitQuota !== undefined
           const isPaying = payingPlanId === plan.id
+          const isDayPass = isDayPassPlan(plan)
+          const isQueued = plan.id === queuedPlanId
+          const blockedByQueue =
+            Boolean(queuedPlanId) && !isDayPass && !isQueued && !isCurrent
+          const onlineLabel = isDayPass
+            ? 'Comprar pase del día'
+            : isCurrent
+              ? 'Renovar plan'
+              : isQueued
+                ? 'Extender plan en espera'
+                : changesQueue
+                  ? 'Programar cambio'
+                  : 'Elegir plan'
           const title =
             offer.familyId === 'otros'
               ? plan.name
@@ -271,6 +293,11 @@ export function PlansShowcase({
                   <span className="inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
                     <Check className="h-3 w-3" />
                     <span>Tu plan actual</span>
+                  </span>
+                ) : null}
+                {isQueued ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-ink/25 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-ink-2">
+                    <span>En espera</span>
                   </span>
                 ) : null}
                 {offer.badge ? <OfferBadge badge={offer.badge} /> : null}
@@ -322,7 +349,7 @@ export function PlansShowcase({
                 {onlinePayEnabled && onPayOnline ? (
                   <button
                     type="button"
-                    disabled={Boolean(payingPlanId)}
+                    disabled={Boolean(payingPlanId) || blockedByQueue}
                     onClick={() => void onPayOnline(plan.id)}
                     // Mismo botón en todas las tarjetas: sobrio y del mismo alto.
                     // El plan recomendado se distingue por su etiqueta, no por el botón.
@@ -336,32 +363,38 @@ export function PlansShowcase({
                     ) : (
                       <>
                         <CreditCard className="h-4 w-4" />
-                        {isCurrent
-                          ? 'Renovar plan'
-                          : isUpgrade && currentPlan
-                            ? 'Mejorar plan'
-                            : 'Elegir plan'}
+                        {onlineLabel}
                       </>
                     )}
                   </button>
                 ) : null}
                 {onlinePayEnabled && onPayOnline ? (
                   <p className="text-center text-xs text-ink-3">
-                    Tarjeta, efectivo o transferencia
+                    {blockedByQueue
+                      ? QUEUED_PLAN_LIMIT_MESSAGE
+                      : 'Tarjeta, efectivo o transferencia'}
                   </p>
                 ) : null}
                 {onChoosePlan && !onlinePayEnabled && !isCurrent ? (
                   <button
                     type="button"
+                    disabled={blockedByQueue}
                     onClick={() => onChoosePlan(plan.id)}
-                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 active:scale-[0.98] ${
                       isUpgrade
                         ? 'bg-cta text-cta-contrast shadow-sm hover:bg-cta-hi'
                         : 'border border-line-strong bg-surface text-ink hover:bg-surface-elevated'
                     }`}
                   >
-                    {isUpgrade && currentPlan ? 'Mejorar plan' : 'Elegir este plan'}
+                    {isDayPass
+                      ? 'Comprar pase del día'
+                      : isUpgrade && currentPlan
+                        ? 'Mejorar plan'
+                        : 'Elegir este plan'}
                   </button>
+                ) : null}
+                {onChoosePlan && !onlinePayEnabled && blockedByQueue ? (
+                  <p className="text-center text-xs text-ink-3">{QUEUED_PLAN_LIMIT_MESSAGE}</p>
                 ) : null}
                 {isCurrent && onChoosePlan && !onlinePayEnabled ? (
                   <button

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import type { Booking, Session, User, WaitlistEntry } from '@/domain/models'
 import { useAppData, useRefresh, useRepo } from '@/data/RepositoryProvider'
-import { selectMyMembership } from '@/app/store'
+import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
 import { canBookMembership, canBookZone } from '@/domain/rules'
 import { getDisciplineMeta } from '@/domain/disciplines'
 import { formatEcuadorSessionWhen, formatEcuadorTime } from '@/lib/format'
@@ -72,14 +72,16 @@ export function StaffBookingModal({
       ? (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
       : null
     const zoneCheck = canBookZone(plan, session.zoneId)
+    const passOpens = selectMyDayPassPlans(data, selectedMember.id, new Date(), session.startsAt)
+      .some((pass) => canBookZone(pass, session.zoneId).allowed)
 
-    const isExpired = memCheck.status === 'expired'
-    const isGrace = memCheck.status === 'grace'
-    const isNoMembership = memCheck.status === 'none'
-    const isZoneRestricted = !zoneCheck.allowed
+    const isExpired = !passOpens && memCheck.status === 'expired'
+    const isGrace = !passOpens && memCheck.status === 'grace'
+    const isNoMembership = !passOpens && memCheck.status === 'none'
+    const isZoneRestricted = !passOpens && !zoneCheck.allowed
 
     const hasWarning =
-      !memCheck.allowed || isGrace || isExpired || isNoMembership || isZoneRestricted
+      (!passOpens && !memCheck.allowed) || isGrace || isExpired || isNoMembership || isZoneRestricted
 
     let warningMessage = ''
     if (isNoMembership) {
@@ -100,8 +102,9 @@ export function StaffBookingModal({
       zoneCheck,
       hasWarning,
       warningMessage,
-      statusLabel:
-        memCheck.status === 'active'
+      statusLabel: passOpens && !memCheck.allowed
+        ? 'Pase del día activo'
+        : memCheck.status === 'active'
           ? 'Membresía Activa'
           : memCheck.status === 'grace'
             ? 'En Período de Gracia'
@@ -109,7 +112,7 @@ export function StaffBookingModal({
               ? 'Membresía Vencida'
               : 'Sin Membresía',
       tone:
-        memCheck.status === 'active' && zoneCheck.allowed
+        passOpens || (memCheck.status === 'active' && zoneCheck.allowed)
           ? ('ok' as const)
           : memCheck.status === 'grace'
             ? ('warn' as const)

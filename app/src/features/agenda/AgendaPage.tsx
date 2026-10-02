@@ -8,8 +8,8 @@ import {
   useRepo,
 } from '@/data/RepositoryProvider'
 import type { Booking, Session, WaitlistEntry } from '@/domain/models'
-import { selectMyMembership } from '@/app/store'
-import { canBookMembership, canBookZone } from '@/domain/rules'
+import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
+import { canAccessZone, canBookMembership, canBookZone } from '@/domain/rules'
 import { getDisciplineMeta, ZONA_CERO_DISCIPLINES } from '@/domain/disciplines'
 import { ecuadorTodayYmd, formatDateSpanish, formatEcuadorTime } from '@/lib/format'
 import {
@@ -57,19 +57,25 @@ export function AgendaPage() {
     () => (user ? selectMyMembership(data, user.id) : null),
     [data, user],
   )
+  const passPlans = useMemo(
+    () => (user ? selectMyDayPassPlans(data, user.id) : []),
+    [data, user],
+  )
   const planStatus = useMemo(
     () => canBookMembership(membership).status,
     [membership],
   )
-  const neverHadPlan = isMember && planStatus === 'none'
+  const neverHadPlan = isMember && planStatus === 'none' && passPlans.length === 0
   const needsPlan =
     isMember &&
+    passPlans.length === 0 &&
     (planStatus === 'none' ||
       planStatus === 'expired' ||
       planStatus === 'cancelled')
   const memberPlan = membership
     ? (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
     : undefined
+  const filtersByAccess = isMember && (!!memberPlan || passPlans.length > 0)
 
   // ?dia=YYYY-MM-DD&sesion=<id>: viene de Inicio, abre ese día y resalta la clase (ZCAPP-58)
   const [anchorYmd, setAnchorYmd] = useState(() => {
@@ -117,10 +123,9 @@ export function AgendaPage() {
   }
 
   const selectedAreaBlocked =
-    isMember &&
-    !!memberPlan &&
+    filtersByAccess &&
     zoneFilter !== 'all' &&
-    !canBookZone(memberPlan, zoneFilter).allowed
+    !canAccessZone(memberPlan, passPlans, zoneFilter)
 
   const daySessions = useMemo(() => {
     return data.sessions
@@ -129,8 +134,8 @@ export function AgendaPage() {
         if (!sessionStillOpen(session.endsAt)) return false
         if (!matchesZone(session)) return false
         if (selectedAreaBlocked) return false
-        if (isMember && memberPlan && zoneFilter === 'all') {
-          return canBookZone(memberPlan, session.zoneId).allowed
+        if (filtersByAccess && zoneFilter === 'all') {
+          return canAccessZone(memberPlan, passPlans, session.zoneId)
         }
         return true
       })
@@ -142,8 +147,9 @@ export function AgendaPage() {
     data.zones,
     zoneFilter,
     anchorYmd,
-    isMember,
+    filtersByAccess,
     memberPlan,
+    passPlans,
     selectedAreaBlocked,
   ])
 
@@ -151,8 +157,8 @@ export function AgendaPage() {
     const visible = data.sessions.filter((session) => {
       if (!matchesZone(session)) return false
       if (selectedAreaBlocked) return false
-      if (isMember && memberPlan && zoneFilter === 'all') {
-        return canBookZone(memberPlan, session.zoneId).allowed
+      if (filtersByAccess && zoneFilter === 'all') {
+        return canAccessZone(memberPlan, passPlans, session.zoneId)
       }
       return true
     })
@@ -162,8 +168,9 @@ export function AgendaPage() {
     data.zones,
     zoneFilter,
     anchorYmd,
-    isMember,
+    filtersByAccess,
     memberPlan,
+    passPlans,
     selectedAreaBlocked,
   ])
 
@@ -192,6 +199,12 @@ export function AgendaPage() {
       }
 
       const currentMembership = selectMyMembership(data, user.id)
+      const coveringPasses = selectMyDayPassPlans(data, user.id, new Date(), session.startsAt)
+      if (coveringPasses.some((pass) => canBookZone(pass, session.zoneId).allowed)) {
+        await repo.createBooking(sessionId, user.id)
+        await refresh()
+        return
+      }
       const memCheck = canBookMembership(currentMembership)
       if (!memCheck.allowed) {
         const gateType: BookingGateType =
@@ -334,10 +347,10 @@ export function AgendaPage() {
       </div>
 
       <div className="space-y-2">
-        {selectedAreaBlocked && memberPlan ? (
+        {selectedAreaBlocked ? (
           <p className="py-10 text-center text-sm text-ink-3">
-            Tu plan ({memberPlan.name}) no incluye esta área. Esas clases no se
-            pueden reservar.
+            {memberPlan ? `Tu plan (${memberPlan.name})` : 'Tu pase del día'} no incluye esta
+            área. Esas clases no se pueden reservar.
           </p>
         ) : null}
 
@@ -380,7 +393,7 @@ export function AgendaPage() {
           const error = rowError?.sessionId === session.id ? rowError.message : null
           const busy = busyId === session.id
           const zoneBlocked =
-            isMember && memberPlan && !canBookZone(memberPlan, session.zoneId).allowed
+            filtersByAccess && !canAccessZone(memberPlan, passPlans, session.zoneId)
 
           let action: { label: string; disabled: boolean; loading: boolean } = {
             label: full ? 'Lista de espera' : 'Reservar',
