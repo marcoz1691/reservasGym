@@ -3,7 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './AppLayout'
 import { RequireAuth } from './RequireAuth'
 import { NotFoundPage } from './NotFoundPage'
-import { useCurrentUser, useGym } from '@/data/RepositoryProvider'
+import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
+import { isFeatureEnabled } from '@/domain/rules'
 import { Skeleton, SkeletonCard, Spinner } from '@/ui/primitives'
 
 function RouteFallback() {
@@ -98,6 +99,16 @@ function RootRedirect() {
   return <Navigate to={user.role === 'member' ? '/' : '/admin'} replace />
 }
 
+/** Con medidas apagadas por el admin, /peso devuelve al inicio de cada rol. */
+function WeightRoute() {
+  const user = useCurrentUser()
+  const { settings } = useAppData()
+  if (!isFeatureEnabled(settings, 'measurements')) {
+    return <Navigate to={user?.role === 'member' ? '/' : '/admin'} replace />
+  }
+  return <WeightPage />
+}
+
 export function AppRouter() {
   return (
     <Suspense fallback={<RouteFallback />}>
@@ -117,7 +128,7 @@ export function AppRouter() {
             <Route path="agenda" element={<AgendaPage />} />
             <Route path="reservas" element={<MyBookingsPage />} />
             <Route path="check-in" element={<CheckInPage />} />
-            <Route path="peso" element={<WeightPage />} />
+            <Route path="peso" element={<WeightRoute />} />
             <Route path="perfil" element={<ProfilePage />} />
             <Route path="admin" element={<AdminPage />} />
             <Route path="admin/cobros" element={<CobrosPage />} />

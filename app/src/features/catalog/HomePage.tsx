@@ -50,6 +50,7 @@ export function HomePage() {
   const user = useCurrentUser()
   const data = useAppData()
   const waitlistOn = isFeatureEnabled(data.settings, 'waitlist')
+  const measurementsOn = isFeatureEnabled(data.settings, 'measurements')
   const { loading } = useGym()
   const [now] = useState(() => new Date())
 
@@ -229,7 +230,11 @@ export function HomePage() {
         aria-label="Tu actividad"
         className="overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)]"
       >
-        <div className="grid grid-cols-2 divide-x divide-y divide-line sm:grid-cols-4 sm:divide-y-0">
+        <div
+          className={`grid divide-x divide-line ${
+            measurementsOn ? 'grid-cols-2 divide-y sm:grid-cols-4 sm:divide-y-0' : 'grid-cols-3'
+          }`}
+        >
           <PulseLink
             to={canBook ? '/reservas' : '/explorar'}
             label="Reservas activas"
@@ -248,20 +253,22 @@ export function HomePage() {
             value={String(data.zones.length)}
             hint="En el complejo"
           />
-          <PulseLink
-            to="/peso"
-            label="Último peso"
-            value={lastWeight ? String(lastWeight.weightKg) : '—'}
-            unit={lastWeight ? 'kg' : undefined}
-            hint={
-              lastWeight
-                ? formatDistanceToNow(parseISO(lastWeight.measuredAt), {
-                    locale: es,
-                    addSuffix: true,
-                  })
-                : 'Todavía sin registro'
-            }
-          />
+          {measurementsOn ? (
+            <PulseLink
+              to="/peso"
+              label="Último peso"
+              value={lastWeight ? String(lastWeight.weightKg) : '—'}
+              unit={lastWeight ? 'kg' : undefined}
+              hint={
+                lastWeight
+                  ? formatDistanceToNow(parseISO(lastWeight.measuredAt), {
+                      locale: es,
+                      addSuffix: true,
+                    })
+                  : 'Todavía sin registro'
+              }
+            />
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2 border-t border-line bg-surface-elevated/60 px-4 py-3 sm:px-5">
           {canBook ? (
@@ -273,9 +280,11 @@ export function HomePage() {
               Explorar áreas
             </ActionChip>
           )}
-          <ActionChip to="/peso" icon={<Plus className="h-4 w-4" />}>
-            Registrar peso
-          </ActionChip>
+          {measurementsOn ? (
+            <ActionChip to="/peso" icon={<Plus className="h-4 w-4" />}>
+              Registrar peso
+            </ActionChip>
+          ) : null}
           <ActionChip to="/membresia" icon={<CreditCard className="h-4 w-4" />}>
             Mi plan
           </ActionChip>
@@ -415,57 +424,59 @@ export function HomePage() {
             </Card>
           </section>
 
-          <section>
-            <div className="mb-3 flex items-end justify-between">
-              <h2 className="font-display text-xl font-bold tracking-tight text-ink">
-                Progreso
-              </h2>
-              <Link
-                to="/peso"
-                className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
-              >
-                Ver detalle
-              </Link>
-            </div>
-            <Card>
-              {lastWeight ? (
-                <>
-                  {/* El peso exacto vive en el panel de arriba; aquí manda la tendencia. */}
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-ink-3">
-                      Tendencia
+          {measurementsOn ? (
+            <section>
+              <div className="mb-3 flex items-end justify-between">
+                <h2 className="font-display text-xl font-bold tracking-tight text-ink">
+                  Progreso
+                </h2>
+                <Link
+                  to="/peso"
+                  className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
+                >
+                  Ver detalle
+                </Link>
+              </div>
+              <Card>
+                {lastWeight ? (
+                  <>
+                    {/* El peso exacto vive en el panel de arriba; aquí manda la tendencia. */}
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-ink-3">
+                        Tendencia
+                      </p>
+                      <DeltaPill delta={weightDelta} />
+                    </div>
+                    <p className="mt-2 text-sm text-ink-2">
+                      {myMeasurements.length}{' '}
+                      {myMeasurements.length === 1 ? 'registro' : 'registros'} · último el{' '}
+                      {format(parseISO(lastWeight.measuredAt), "d 'de' MMM", { locale: es })}{' '}
+                      con {lastWeight.weightKg} kg
                     </p>
-                    <DeltaPill delta={weightDelta} />
+                    <Sparkbars
+                      values={myMeasurements
+                        .slice(0, 8)
+                        .map((m) => m.weightKg)
+                        .reverse()}
+                    />
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-ink-2">
+                      Registra tu peso para ver la evolución aquí.
+                    </p>
+                    <Link
+                      to="/peso"
+                      className="focus-ring inline-flex items-center gap-1.5 rounded-lg text-sm font-bold text-acc hover:text-acc-hi"
+                    >
+                      Registrar peso
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
-                  <p className="mt-2 text-sm text-ink-2">
-                    {myMeasurements.length}{' '}
-                    {myMeasurements.length === 1 ? 'registro' : 'registros'} · último el{' '}
-                    {format(parseISO(lastWeight.measuredAt), "d 'de' MMM", { locale: es })}{' '}
-                    con {lastWeight.weightKg} kg
-                  </p>
-                  <Sparkbars
-                    values={myMeasurements
-                      .slice(0, 8)
-                      .map((m) => m.weightKg)
-                      .reverse()}
-                  />
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-sm text-ink-2">
-                    Registra tu peso para ver la evolución aquí.
-                  </p>
-                  <Link
-                    to="/peso"
-                    className="focus-ring inline-flex items-center gap-1.5 rounded-lg text-sm font-bold text-acc hover:text-acc-hi"
-                  >
-                    Registrar peso
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
-              )}
-            </Card>
-          </section>
+                )}
+              </Card>
+            </section>
+          ) : null}
 
           {data.zones.length > 0 ? (
             <section>
