@@ -319,35 +319,36 @@ export function PlansShowcase({
               </div>
 
               <div className="mt-4 space-y-2">
-                {onlinePayEnabled && onPayOnline && (!currentPlanId || isCurrent || isUpgrade) ? (
+                {onlinePayEnabled && onPayOnline ? (
                   <button
                     type="button"
                     disabled={Boolean(payingPlanId)}
                     onClick={() => void onPayOnline(plan.id)}
-                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 active:scale-[0.98] ${
-                      isUpgrade
-                        ? 'bg-acc text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] hover:bg-acc-hi'
-                        : isCurrent
-                          ? 'bg-ink text-white hover:bg-ink/90'
-                          : 'border border-line-strong bg-surface text-ink hover:bg-surface-elevated'
-                    }`}
+                    // Mismo botón en todas las tarjetas: sobrio y del mismo alto.
+                    // El plan recomendado se distingue por su etiqueta, no por el botón.
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-cta px-4 py-3 text-sm font-semibold text-cta-contrast transition hover:bg-cta-hi disabled:opacity-60 active:scale-[0.98]"
                   >
                     {isPaying ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Redirigiendo…
+                        Abriendo…
                       </>
                     ) : (
                       <>
                         <CreditCard className="h-4 w-4" />
                         {isCurrent
-                          ? 'Renovar en línea'
+                          ? 'Renovar plan'
                           : isUpgrade && currentPlan
-                            ? 'Mejorar en línea'
-                            : 'Pagar en línea'}
+                            ? 'Mejorar plan'
+                            : 'Elegir plan'}
                       </>
                     )}
                   </button>
+                ) : null}
+                {onlinePayEnabled && onPayOnline ? (
+                  <p className="text-center text-xs text-ink-3">
+                    Tarjeta, efectivo o transferencia
+                  </p>
                 ) : null}
                 {onChoosePlan && !onlinePayEnabled && !isCurrent ? (
                   <button
@@ -355,7 +356,7 @@ export function PlansShowcase({
                     onClick={() => onChoosePlan(plan.id)}
                     className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
                       isUpgrade
-                        ? 'bg-acc text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] hover:bg-acc-hi'
+                        ? 'bg-cta text-cta-contrast shadow-sm hover:bg-cta-hi'
                         : 'border border-line-strong bg-surface text-ink hover:bg-surface-elevated'
                     }`}
                   >
@@ -430,7 +431,7 @@ export function PlansShowcase({
         Todos los planes incluyen reserva de clases desde la app, check-in con código y
         seguimiento de tu progreso.{' '}
         {onlinePayEnabled
-          ? 'Puedes pagar en línea con tarjeta o en recepción (efectivo, transferencia o Datafast).'
+          ? 'Puedes pagar en línea con tarjeta (pago único) o en recepción (efectivo, transferencia o Datafast).'
           : currentPlanId
             ? 'Elige el plan y cómo vas a pagar: recepción activa el cambio al registrar el cobro.'
             : 'Elige el plan y cómo vas a pagar: el cobro se completa en recepción.'}

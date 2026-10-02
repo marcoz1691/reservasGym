@@ -235,7 +235,7 @@ export function DatafastCheckoutPage() {
           <button
             type="submit"
             disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-acc px-4 py-3 text-sm font-bold text-[var(--color-acc-contrast)] disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-cta px-4 py-3 text-sm font-bold text-cta-contrast disabled:opacity-60"
           >
             {busy ? (
               <>

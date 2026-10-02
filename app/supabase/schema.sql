@@ -187,7 +187,7 @@ create table if not exists payments (
   membership_id uuid references memberships(id) on delete set null,
   amount_cents int not null,
   status text not null check (status in ('pending', 'approved', 'rejected', 'refunded')),
-  provider text not null check (provider in ('manual', 'datafast', 'mercadopago')),
+  provider text not null check (provider in ('manual', 'datafast', 'mercadopago', 'pagomedios')),
   manual_method text check (manual_method in ('cash', 'transfer', 'card_pos')),
   reference text,
   mp_payment_id text,

@@ -133,4 +133,36 @@ export interface GymRepository {
     paymentId: string
     resourcePath: string
   }): Promise<{ ok: boolean; description?: string }>
+  /**
+   * Crea una solicitud de pago único en Pagomedios y devuelve la URL a la que
+   * se redirige al socio. Solo con Supabase + Edge Function pagomedios-payment.
+   */
+  createPagomediosPayment?(params: {
+    planId: string
+    document: string
+    documentType: PagomediosDocumentType
+    phone: string
+    address: string
+    /** App nativa: el retorno muestra "cierra esta ventana" en vez de volver a la web. */
+    native?: boolean
+  }): Promise<{ url: string; paymentId: string }>
+  /** Consulta el estado en Pagomedios y activa la membresía si está autorizado. */
+  verifyPagomediosPayment?(params: { paymentId: string }): Promise<OnlinePaymentResult>
 }
+
+/** Comprobante de un pago en línea aprobado. */
+export interface OnlinePaymentReceipt {
+  planName: string | null
+  amountCents: number
+  authorizationCode: string | null
+  membershipEndsAt: string | null
+}
+
+export interface OnlinePaymentResult {
+  status: 'approved' | 'pending' | 'rejected'
+  description?: string
+  receipt?: OnlinePaymentReceipt
+}
+
+/** 05 cédula, 04 RUC, 06 pasaporte, 08 identificación del exterior */
+export type PagomediosDocumentType = '04' | '05' | '06' | '08'

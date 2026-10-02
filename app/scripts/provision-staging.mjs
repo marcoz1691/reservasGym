@@ -75,6 +75,7 @@ async function main() {
 
   await runSql('schema', join(appRoot, 'supabase', 'schema.sql'))
   await runSql('booking-rpc', join(appRoot, 'supabase', 'booking-rpc.sql'))
+  await runSql('pagomedios-provider', join(appRoot, 'supabase', 'pagomedios-provider.sql'))
   await runSql('seed', join(appRoot, 'supabase', 'seed.sql'))
 
   console.log('\n▶ Verificando tablas...')

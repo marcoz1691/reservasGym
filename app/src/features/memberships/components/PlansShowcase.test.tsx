@@ -88,4 +88,29 @@ describe('PlansShowcase', () => {
     expect(screen.getByRole('button', { name: 'Mejorar plan' })).toBeInTheDocument()
     expect(screen.getByText('Mejorar')).toBeInTheDocument()
   })
+
+  it('con pago en línea, un socio con plan puede elegir cualquier plan (no solo renovar o mejorar)', async () => {
+    const user = userEvent.setup()
+    const paid: string[] = []
+    render(
+      <PlansShowcase
+        plans={catalog}
+        zones={[]}
+        currentPlanId="s30"
+        onlinePayEnabled
+        onPayOnline={(id) => void paid.push(id)}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: /Renovar plan/ })).toBeInTheDocument()
+    // Start Mensual (actual) + Trimestral, Semestral y Anual de la misma familia
+    expect(screen.getAllByRole('button', { name: /Renovar plan|Mejorar plan|Elegir plan/ })).toHaveLength(4)
+    expect(screen.getAllByText('Tarjeta, efectivo o transferencia')).toHaveLength(4)
+
+    await user.click(screen.getAllByRole('button', { name: /Elegir plan/ })[0]!)
+    expect(paid).toEqual(['s90'])
+
+    await user.click(screen.getByRole('tab', { name: 'Zero Elite' }))
+    expect(screen.getByRole('button', { name: /Mejorar plan|Elegir plan/ })).toBeInTheDocument()
+  })
 })

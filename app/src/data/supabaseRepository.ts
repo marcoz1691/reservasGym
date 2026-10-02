@@ -34,7 +34,13 @@ import {
   isCheckInWindow,
 } from '@/domain/rules'
 import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
-import type { AuthCredentials, GymRepository } from './types'
+import type {
+  AuthCredentials,
+  GymRepository,
+  OnlinePaymentReceipt,
+  OnlinePaymentResult,
+  PagomediosDocumentType,
+} from './types'
 import { isSupabaseEnvConfigured } from './selectRepositoryBackend'
 import { scopeGymState } from './scopeGymState'
 import {
@@ -339,6 +345,7 @@ function mapPayment(row: {
   provider: string
   manual_method: string | null
   reference?: string | null
+  mp_payment_id?: string | null
   created_at: string
   approved_at: string | null
 }): Payment {
@@ -352,6 +359,7 @@ function mapPayment(row: {
     provider: row.provider as PaymentProvider,
     manualMethod: (row.manual_method as ManualPaymentMethod) ?? null,
     reference: row.reference,
+    authorizationCode: row.provider === 'pagomedios' ? (row.mp_payment_id ?? null) : null,
     createdAt: row.created_at,
     approvedAt: row.approved_at,
   }
@@ -1492,4 +1500,76 @@ export class SupabaseRepository implements GymRepository {
     if (error) throw new Error(error.message || 'No se pudo verificar el pago')
     return { ok: false, description: payload.description ?? 'Pago no aprobado' }
   }
+
+  async createPagomediosPayment(params: {
+    planId: string
+    document: string
+    documentType: PagomediosDocumentType
+    phone: string
+    address: string
+    native?: boolean
+  }): Promise<{ url: string; paymentId: string }> {
+    await this.requireUser()
+    const { data, error } = await this.invokePagomedios({ action: 'create', ...params })
+    const payload = (data ?? {}) as { url?: string; paymentId?: string; error?: string }
+    if (payload.url && payload.paymentId) {
+      return { url: payload.url, paymentId: payload.paymentId }
+    }
+    if (payload.error) throw new Error(payload.error)
+    throw new Error(
+      (await functionErrorMessage(error)) ??
+        'Pasarela Pagomedios no disponible. Revisa secrets en Supabase.',
+    )
+  }
+
+  async verifyPagomediosPayment(params: { paymentId: string }): Promise<OnlinePaymentResult> {
+    await this.requireUser()
+    const { data, error } = await this.invokePagomedios({
+      action: 'verify',
+      paymentId: params.paymentId,
+    })
+    const payload = (data ?? {}) as {
+      status?: OnlinePaymentResult['status']
+      description?: string
+      receipt?: OnlinePaymentReceipt
+      error?: string
+    }
+    if (payload.status) {
+      return { status: payload.status, description: payload.description, receipt: payload.receipt }
+    }
+    if (payload.error) throw new Error(payload.error)
+    throw new Error((await functionErrorMessage(error)) ?? 'No se pudo verificar el pago')
+  }
+
+  /** En dev, VITE_FUNCTIONS_URL apunta a la función corriendo con Deno (simulador local). */
+  private async invokePagomedios(
+    body: Record<string, unknown>,
+  ): Promise<{ data: unknown; error: unknown }> {
+    const localUrl = import.meta.env.DEV ? import.meta.env.VITE_FUNCTIONS_URL : undefined
+    if (!localUrl) return this.client.functions.invoke('pagomedios-payment', { body })
+    const {
+      data: { session },
+    } = await this.client.auth.getSession()
+    const res = await fetch(localUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json().catch(() => null)
+    return { data, error: res.ok ? null : new Error(`Función local respondió ${res.status}`) }
+  }
+}
+
+/** Las Edge Functions responden JSON { error } con status != 2xx; invoke() lo esconde en error.context. */
+async function functionErrorMessage(error: unknown): Promise<string | null> {
+  if (!error) return null
+  const context = (error as { context?: unknown }).context
+  if (context instanceof Response) {
+    const body = await context.clone().json().catch(() => null)
+    if (body && typeof body.error === 'string') return body.error
+  }
+  return error instanceof Error ? error.message : null
 }

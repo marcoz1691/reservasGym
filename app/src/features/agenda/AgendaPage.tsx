@@ -273,7 +273,7 @@ export function AgendaPage() {
                 onClick={() => setAnchorYmd(ymd)}
                 className={`flex flex-col items-center rounded-2xl py-2 text-center transition ${
                   selected
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : today
                       ? 'border border-line bg-surface text-ink'
                       : 'text-ink-3'
@@ -305,7 +305,7 @@ export function AgendaPage() {
           onClick={() => handleFilterChange('all')}
           className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${
             zoneFilter === 'all'
-              ? 'bg-acc text-[var(--color-acc-contrast)]'
+              ? 'bg-cta text-cta-contrast'
               : 'border border-line text-ink-2'
           }`}
         >
@@ -323,7 +323,7 @@ export function AgendaPage() {
               onClick={() => handleFilterChange(meta.defaultZoneId)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${
                 selected
-                  ? 'bg-acc text-[var(--color-acc-contrast)]'
+                  ? 'bg-cta text-cta-contrast'
                   : 'border border-line text-ink-2'
               }`}
             >

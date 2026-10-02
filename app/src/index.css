@@ -35,6 +35,12 @@
   /* Carbón sobre el naranja: 5.9:1 (AA). Blanco daba 2.76:1 y no pasaba. */
   --color-acc-contrast: #231F20;
 
+  /* Botones de acción (CTA): carbón sobrio con texto blanco (17:1, AAA).
+     El naranja queda como acento (etiquetas, indicadores, contadores). */
+  --color-cta: #1C1917;
+  --color-cta-hi: #3A3532;
+  --color-cta-contrast: #FFFFFF;
+
   /* Semánticos — pares fondo tenue + texto oscuro, como en las maquetas */
   --color-success: #1E8E5A;
   --color-success-soft: #E8F6EE;

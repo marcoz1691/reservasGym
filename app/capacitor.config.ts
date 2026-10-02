@@ -7,6 +7,11 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
   },
+  android: {
+    // Android 15 dibuja la app detrás de la barra de estado y la de gestos; el
+    // WebView no informa esos márgenes, así que Capacitor los aplica.
+    adjustMarginsForEdgeToEdge: 'auto',
+  },
 }
 
 export default config

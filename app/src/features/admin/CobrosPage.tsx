@@ -34,7 +34,12 @@ import {
   daysRemaining,
   isNearExpiration,
 } from '@/domain/rules/membership'
-import { formatCurrency, formatDateShort, formatPaymentMethod } from '@/lib/format'
+import {
+  formatCurrency,
+  formatDateShort,
+  formatPaymentMethod,
+  formatPaymentStatus,
+} from '@/lib/format'
 import { Badge, Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
 
 type TabType = 'pos' | 'vencimientos' | 'historial'
@@ -236,22 +241,28 @@ export function CobrosPage() {
         member?.email.toLowerCase().includes(q) ||
         plan?.name.toLowerCase().includes(q) ||
         p.reference?.toLowerCase().includes(q) ||
+        p.authorizationCode?.toLowerCase().includes(q) ||
         p.id.toLowerCase().includes(q)
       )
     })
   }, [payments, members, plans, historyMethodFilter, historySearch])
 
   // Metrics
+  // Solo cuenta dinero cobrado: un pago en línea pendiente o rechazado no suma.
   const metrics = useMemo(() => {
-    const totalCents = payments.reduce((sum, p) => sum + p.amountCents, 0)
-    const cashCents = payments
+    const approved = payments.filter((p) => p.status === 'approved')
+    const totalCents = approved.reduce((sum, p) => sum + p.amountCents, 0)
+    const cashCents = approved
       .filter((p) => p.manualMethod === 'cash')
       .reduce((sum, p) => sum + p.amountCents, 0)
-    const transferCents = payments
+    const transferCents = approved
       .filter((p) => p.manualMethod === 'transfer')
       .reduce((sum, p) => sum + p.amountCents, 0)
-    const cardPosCents = payments
+    const cardPosCents = approved
       .filter((p) => p.manualMethod === 'card_pos')
+      .reduce((sum, p) => sum + p.amountCents, 0)
+    const onlineCents = approved
+      .filter((p) => p.provider === 'pagomedios')
       .reduce((sum, p) => sum + p.amountCents, 0)
 
     return {
@@ -259,7 +270,8 @@ export function CobrosPage() {
       cashUsd: cashCents / 100,
       transferUsd: transferCents / 100,
       cardPosUsd: cardPosCents / 100,
-      totalTransactions: payments.length,
+      onlineUsd: onlineCents / 100,
+      totalTransactions: approved.length,
     }
   }, [payments])
 
@@ -388,7 +400,7 @@ export function CobrosPage() {
           }}
           className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
             activeTab === 'pos'
-              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+              ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
@@ -403,7 +415,7 @@ export function CobrosPage() {
           }}
           className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
             activeTab === 'vencimientos'
-              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+              ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
@@ -429,7 +441,7 @@ export function CobrosPage() {
           }}
           className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
             activeTab === 'historial'
-              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+              ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
@@ -975,7 +987,7 @@ export function CobrosPage() {
                 onClick={() => setExpirationFilter('all')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'all'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1107,14 +1119,14 @@ export function CobrosPage() {
       {activeTab === 'historial' && (
         <div className="space-y-4">
           {/* Metrics summary cards */}
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-5">
             <Card>
               <div className="text-[11px] font-bold uppercase text-ink-3">Total Recaudado</div>
               <div className="mt-1 text-2xl font-black text-acc">
                 ${metrics.totalUsd.toFixed(2)} USD
               </div>
               <div className="text-[11px] text-ink-3 mt-1">
-                {metrics.totalTransactions} cobros totales
+                {metrics.totalTransactions} cobros aprobados
               </div>
             </Card>
 
@@ -1141,6 +1153,14 @@ export function CobrosPage() {
               </div>
               <div className="text-[11px] text-ink-3 mt-1">Bancos acreditados</div>
             </Card>
+
+            <Card>
+              <div className="text-[11px] font-bold uppercase text-ink-3">En línea</div>
+              <div className="mt-1 text-2xl font-black text-ink">
+                ${metrics.onlineUsd.toFixed(2)} USD
+              </div>
+              <div className="text-[11px] text-ink-3 mt-1">Pagomedios</div>
+            </Card>
           </div>
 
           {/* Filters */}
@@ -1151,7 +1171,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('all')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'all'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1162,7 +1182,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('card_pos')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'card_pos'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1173,7 +1193,7 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('cash')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'cash'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1184,11 +1204,22 @@ export function CobrosPage() {
                 onClick={() => setHistoryMethodFilter('transfer')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   historyMethodFilter === 'transfer'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
                 Transferencia
+              </button>
+              <button
+                type="button"
+                onClick={() => setHistoryMethodFilter('pagomedios')}
+                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                  historyMethodFilter === 'pagomedios'
+                    ? 'bg-cta text-cta-contrast'
+                    : 'bg-surface text-ink-2 hover:bg-surface/80'
+                }`}
+              >
+                En línea (Pagomedios)
               </button>
             </div>
 
@@ -1252,7 +1283,10 @@ export function CobrosPage() {
                           </span>
                         </td>
                         <td className="p-3.5 font-mono text-ink-3">
-                          {pay.reference || '—'}
+                          {pay.authorizationCode ? (
+                            <div className="text-ink">Aut. {pay.authorizationCode}</div>
+                          ) : null}
+                          <div>{pay.reference || '—'}</div>
                         </td>
                         <td className="p-3.5">
                           <Badge
@@ -1264,7 +1298,7 @@ export function CobrosPage() {
                                 : 'danger'
                             }
                           >
-                            {pay.status === 'approved' ? 'Aprobado' : pay.status}
+                            {formatPaymentStatus(pay.status)}
                           </Badge>
                         </td>
                       </tr>
