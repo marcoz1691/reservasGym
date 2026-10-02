@@ -165,6 +165,8 @@ create table if not exists membership_plans (
   visit_quota int,
   allowed_zone_ids text[] not null default '{}',
   active boolean not null default true,
+  -- 'day_pass': pase del día (fila aparte hasta las 23:59 de Guayaquil). Ver plan-rules.sql.
+  kind text not null default 'membership' check (kind in ('membership', 'day_pass')),
   created_at timestamptz not null default now()
 );
 
@@ -191,12 +193,14 @@ create table if not exists payments (
   manual_method text check (manual_method in ('cash', 'transfer', 'card_pos')),
   reference text,
   mp_payment_id text,
+  notes text,
   created_at timestamptz not null default now(),
   approved_at timestamptz
 );
 
 -- Índices de optimización
 create index if not exists idx_memberships_user_id on memberships(user_id);
+create index if not exists idx_memberships_user_dates on memberships(user_id, starts_at, ends_at);
 create index if not exists idx_memberships_status on memberships(status);
 create index if not exists idx_payments_user_id on payments(user_id);
 create index if not exists idx_payments_status on payments(status);

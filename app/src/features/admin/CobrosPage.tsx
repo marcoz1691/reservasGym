@@ -34,6 +34,13 @@ import {
   daysRemaining,
   isNearExpiration,
 } from '@/domain/rules/membership'
+import { isDayPassPlan } from '@/domain/rules/membershipPlan'
+import {
+  currentMembership,
+  memberMembership,
+  planChangeCredit,
+  planPurchaseOutcome,
+} from '@/domain/rules/memberships'
 import {
   formatCurrency,
   formatDateShort,
@@ -74,6 +81,7 @@ export function CobrosPage() {
   const [processingPayment, setProcessingPayment] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<ReceiptData | null>(null)
+  const [changeNow, setChangeNow] = useState(false)
 
   // Expiration Filter state
   const [expirationFilter, setExpirationFilter] = useState<'all' | 'grace' | 'expired' | 'warning'>('all')
@@ -108,6 +116,7 @@ export function CobrosPage() {
   // Auto-fill price when plan changes
   const handleSelectPlan = (planId: string) => {
     setSelectedPlanId(planId)
+    setChangeNow(false)
     const plan = plans.find((p) => p.id === planId)
     if (plan) {
       setAmountUsd((plan.priceCents / 100).toFixed(2))
@@ -120,26 +129,23 @@ export function CobrosPage() {
   }, [plans])
 
   // Map of active membership by user ID
-  const membershipByUser = useMemo(() => {
-    const map = new Map<string, Membership>()
+  const membershipsByUser = useMemo(() => {
+    const map = new Map<string, Membership[]>()
     for (const m of memberships) {
-      const existing = map.get(m.userId)
-      if (!existing) {
-        map.set(m.userId, m)
-      } else {
-        const statusExisting = computeMembershipStatus(existing)
-        const statusM = computeMembershipStatus(m)
-        if (
-          (statusM === 'active' && statusExisting !== 'active') ||
-          (statusM === 'grace' && statusExisting === 'expired') ||
-          new Date(m.endsAt).getTime() > new Date(existing.endsAt).getTime()
-        ) {
-          map.set(m.userId, m)
-        }
-      }
+      map.set(m.userId, [...(map.get(m.userId) ?? []), m])
     }
     return map
   }, [memberships])
+
+  // Membresía vigente (o la última ya empezada) por socio; ignora planes en espera y pases
+  const membershipByUser = useMemo(() => {
+    const map = new Map<string, Membership>()
+    for (const [userId, rows] of membershipsByUser) {
+      const shown = memberMembership(rows, plans)
+      if (shown) map.set(userId, shown)
+    }
+    return map
+  }, [membershipsByUser, plans])
 
   // Selected member helper
   const selectedMember = useMemo(() => {
@@ -150,6 +156,40 @@ export function CobrosPage() {
     if (!selectedMemberId) return null
     return membershipByUser.get(selectedMemberId) ?? null
   }, [membershipByUser, selectedMemberId])
+
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId) ?? null
+
+  const posOutcome = useMemo(() => {
+    if (!selectedMemberId || !selectedPlan) return null
+    return planPurchaseOutcome({
+      memberships: membershipsByUser.get(selectedMemberId) ?? [],
+      plans,
+      plan: selectedPlan,
+    })
+  }, [membershipsByUser, plans, selectedMemberId, selectedPlan])
+
+  // "Cambiar plan hoy": cierra el plan vigente y abona los días no usados
+  const planChange = useMemo(() => {
+    if (!repo.changePlanNow || !selectedMemberId || !selectedPlan) return null
+    if (isDayPassPlan(selectedPlan)) return null
+    const current = currentMembership(membershipsByUser.get(selectedMemberId) ?? [], plans)
+    if (!current || current.planId === selectedPlan.id) return null
+    const currentPlan = plans.find((p) => p.id === current.planId)
+    const creditCents = planChangeCredit(current, currentPlan)
+    return {
+      currentPlanName: currentPlan?.name ?? 'Plan actual',
+      creditCents,
+      amountCents: Math.max(0, selectedPlan.priceCents - creditCents),
+    }
+  }, [repo, membershipsByUser, plans, selectedMemberId, selectedPlan])
+
+  const applyChangeNow = Boolean(planChange) && changeNow
+
+  const handleToggleChangeNow = (checked: boolean) => {
+    setChangeNow(checked)
+    if (checked && planChange) setAmountUsd((planChange.amountCents / 100).toFixed(2))
+    else if (selectedPlan) setAmountUsd((selectedPlan.priceCents / 100).toFixed(2))
+  }
 
   // Search filtered members for POS picker
   const filteredMembers = useMemo(() => {
@@ -301,8 +341,12 @@ export function CobrosPage() {
       return
     }
     const numAmount = parseFloat(amountUsd)
-    if (isNaN(numAmount) || numAmount <= 0) {
+    if (isNaN(numAmount) || numAmount < 0 || (numAmount === 0 && !applyChangeNow)) {
       setPaymentError('El monto debe ser mayor a 0.00 USD.')
+      return
+    }
+    if (!applyChangeNow && posOutcome?.kind === 'reject') {
+      setPaymentError(posOutcome.reason)
       return
     }
 
@@ -310,13 +354,22 @@ export function CobrosPage() {
 
     try {
       const amountCents = Math.round(numAmount * 100)
-      const res = await repo.registerManualPayment({
-        userId: selectedMemberId,
-        planId: selectedPlanId,
-        amountCents,
-        manualMethod: paymentMethod,
-        reference: reference.trim() || undefined,
-      })
+      const res =
+        applyChangeNow && repo.changePlanNow
+          ? await repo.changePlanNow({
+              userId: selectedMemberId,
+              planId: selectedPlanId,
+              amountCents,
+              manualMethod: paymentMethod,
+            })
+          : await repo.registerManualPayment({
+              userId: selectedMemberId,
+              planId: selectedPlanId,
+              amountCents,
+              manualMethod: paymentMethod,
+              reference: reference.trim() || undefined,
+            })
+      setChangeNow(false)
 
       const targetMember = members.find((m) => m.id === selectedMemberId)
       const targetPlan = plans.find((p) => p.id === selectedPlanId)
@@ -347,6 +400,22 @@ export function CobrosPage() {
     setReference('')
     setPaymentError(null)
     setReceipt(null)
+    setChangeNow(false)
+  }
+
+  const handleRefund = async (payment: Payment) => {
+    if (!repo.refundPayment) return
+    if (!window.confirm('¿Marcar este pago como reembolsado?')) return
+    const cancelMembership = payment.membershipId
+      ? window.confirm('¿Cancelar también la membresía que activó este pago?')
+      : false
+    try {
+      await repo.refundPayment({ paymentId: payment.id, cancelMembership })
+      await refresh()
+      await loadData()
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'No se pudo marcar el reembolso.')
+    }
   }
 
   // Guard: Staff or Admin role only
@@ -807,6 +876,39 @@ export function CobrosPage() {
                       })}
                     </div>
                   )}
+
+                  {posOutcome && !applyChangeNow ? (
+                    posOutcome.kind === 'reject' ? (
+                      <div className="rounded-2xl border border-danger/40 bg-danger/10 p-3 text-xs font-medium text-danger">
+                        {posOutcome.reason}
+                      </div>
+                    ) : posOutcome.kind === 'queue' ? (
+                      <p className="text-xs font-medium text-ink-2">
+                        Empieza el {formatDateShort(posOutcome.startsAt)} cuando termine el plan actual.
+                      </p>
+                    ) : posOutcome.kind === 'day_pass' ? (
+                      <p className="text-xs font-medium text-ink-2">
+                        Válido solo hoy, hasta las 23:59. No cambia la membresía del socio.
+                      </p>
+                    ) : null
+                  ) : null}
+
+                  {planChange ? (
+                    <label className="flex items-start gap-2.5 rounded-2xl border border-line bg-surface p-3 text-xs text-ink-2">
+                      <input
+                        type="checkbox"
+                        checked={changeNow}
+                        onChange={(e) => handleToggleChangeNow(e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="block font-bold text-ink">Cambiar plan hoy</span>
+                        Cierra {planChange.currentPlanName} hoy y abona{' '}
+                        {formatCurrency(planChange.creditCents)} por los días no usados. Monto
+                        sugerido: {formatCurrency(planChange.amountCents)}.
+                      </span>
+                    </label>
+                  ) : null}
                 </Card>
 
                 {/* 3. Método de Pago y Monto */}
@@ -872,7 +974,7 @@ export function CobrosPage() {
                       label="Monto a Cobrar (USD)"
                       type="number"
                       step="0.01"
-                      min="0.01"
+                      min={applyChangeNow ? '0' : '0.01'}
                       value={amountUsd}
                       onChange={(e) => setAmountUsd(e.target.value)}
                       placeholder="0.00"
@@ -897,7 +999,12 @@ export function CobrosPage() {
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    disabled={processingPayment || !selectedMemberId || !selectedPlanId}
+                    disabled={
+                      processingPayment ||
+                      !selectedMemberId ||
+                      !selectedPlanId ||
+                      (!applyChangeNow && posOutcome?.kind === 'reject')
+                    }
                     className="w-full py-3 text-base gap-2"
                   >
                     {processingPayment ? (
@@ -1252,6 +1359,9 @@ export function CobrosPage() {
                     <th className="p-3.5">Método</th>
                     <th className="p-3.5">Referencia</th>
                     <th className="p-3.5">Estado</th>
+                    <th className="p-3.5">
+                      <span className="sr-only">Acciones</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -1300,6 +1410,20 @@ export function CobrosPage() {
                           >
                             {formatPaymentStatus(pay.status)}
                           </Badge>
+                          {pay.notes ? (
+                            <div className="mt-1 max-w-[220px] text-[10px] text-ink-3">{pay.notes}</div>
+                          ) : null}
+                        </td>
+                        <td className="p-3.5">
+                          {pay.status === 'approved' && repo.refundPayment ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleRefund(pay)}
+                              className="whitespace-nowrap text-[11px] font-bold text-danger hover:underline"
+                            >
+                              Marcar reembolsado
+                            </button>
+                          ) : null}
                         </td>
                       </tr>
                     )

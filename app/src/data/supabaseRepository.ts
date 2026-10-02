@@ -30,7 +30,8 @@ import {
   canManageGoals,
   canManageWeight,
   computeMembershipStatus,
-  extendMembership,
+  memberMembership,
+  planPurchaseOutcome,
 } from '@/domain/rules'
 import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
 import type {
@@ -292,6 +293,7 @@ function mapMembershipPlan(row: {
   visit_quota: number | null
   allowed_zone_ids: string[] | null
   active: boolean
+  kind?: string | null
   created_at?: string
 }): MembershipPlan {
   return {
@@ -302,6 +304,8 @@ function mapMembershipPlan(row: {
     visitQuota: row.visit_quota,
     allowedZoneIds: row.allowed_zone_ids ?? [],
     active: row.active,
+    // Sin columna kind (antes de plan-rules.sql) queda undefined y decide el nombre.
+    kind: row.kind === 'day_pass' || row.kind === 'membership' ? row.kind : undefined,
     createdAt: row.created_at,
   }
 }
@@ -341,6 +345,7 @@ function mapPayment(row: {
   manual_method: string | null
   reference?: string | null
   mp_payment_id?: string | null
+  notes?: string | null
   created_at: string
   approved_at: string | null
 }): Payment {
@@ -355,6 +360,7 @@ function mapPayment(row: {
     manualMethod: (row.manual_method as ManualPaymentMethod) ?? null,
     reference: row.reference,
     authorizationCode: row.provider === 'pagomedios' ? (row.mp_payment_id ?? null) : null,
+    notes: row.notes ?? null,
     createdAt: row.created_at,
     approvedAt: row.approved_at,
   }
@@ -1189,6 +1195,7 @@ export class SupabaseRepository implements GymRepository {
     if (plan.visitQuota !== undefined) row.visit_quota = plan.visitQuota
     if (plan.allowedZoneIds !== undefined) row.allowed_zone_ids = plan.allowedZoneIds
     if (plan.active !== undefined) row.active = plan.active
+    if (plan.kind !== undefined) row.kind = plan.kind
 
     const { data, error } = await this.client
       .from('membership_plans')
@@ -1208,25 +1215,26 @@ export class SupabaseRepository implements GymRepository {
     if (error) throw new Error(error.message)
   }
 
-  async getMemberMembership(userId: string): Promise<Membership | null> {
+  /** Membresías del socio con su plan embebido (para distinguir pases del día). */
+  private async membershipsWithPlans(
+    userId: string,
+  ): Promise<{ memberships: Membership[]; plans: MembershipPlan[] }> {
     const { data, error } = await this.client
       .from('memberships')
-      .select('*')
+      .select('*, membership_plans(*)')
       .eq('user_id', userId)
       .order('ends_at', { ascending: false })
     if (error) throw new Error(error.message)
-    if (!data || data.length === 0) return null
-    const mapped = data.map(mapMembership)
-    const active = mapped.find((m) => {
-      const s = computeMembershipStatus(m)
-      return s === 'active' || s === 'grace'
-    })
-    if (active) {
-      return { ...active, status: computeMembershipStatus(active) }
-    }
-    const latest = mapped[0]
-    if (!latest) return null
-    return { ...latest, status: computeMembershipStatus(latest) }
+    const rows = data ?? []
+    const plans = rows.flatMap((row) =>
+      row.membership_plans ? [mapMembershipPlan(row.membership_plans)] : [],
+    )
+    return { memberships: rows.map(mapMembership), plans }
+  }
+
+  async getMemberMembership(userId: string): Promise<Membership | null> {
+    const { memberships, plans } = await this.membershipsWithPlans(userId)
+    return memberMembership(memberships, plans)
   }
 
   async getMemberPayments(userId: string): Promise<Payment[]> {
@@ -1276,6 +1284,9 @@ export class SupabaseRepository implements GymRepository {
       .single()
     if (planError || !planRow) throw new Error('Plan no encontrado')
     const plan = mapMembershipPlan(planRow)
+    const mine = await this.membershipsWithPlans(user.id)
+    const outcome = planPurchaseOutcome({ ...mine, plan })
+    if (outcome.kind === 'reject') throw new Error(outcome.reason)
 
     const { data: existing, error: existingError } = await this.client
       .from('payments')
@@ -1314,42 +1325,16 @@ export class SupabaseRepository implements GymRepository {
   }): Promise<{ payment: Payment; membership: Membership }> {
     await this.requireUser()
 
-    // 1. Get plan
-    const { data: planRow, error: planError } = await this.client
-      .from('membership_plans')
-      .select('*')
-      .eq('id', params.planId)
-      .single()
-    if (planError || !planRow) throw new Error('Plan no encontrado')
-    const plan = mapMembershipPlan(planRow)
-
-    // 2. Get current membership & compute extension
-    const currentMembership = await this.getMemberMembership(params.userId)
-    const newDates = extendMembership(currentMembership, plan, new Date())
-
-    // 3. Upsert membership
-    const membershipPayload: Record<string, unknown> = {
-      user_id: params.userId,
-      plan_id: plan.id,
-      starts_at: newDates.startsAt,
-      ends_at: newDates.endsAt,
-      grace_ends_at: newDates.graceEndsAt,
-      status: newDates.status,
-      visits_left: newDates.visitsLeft,
-    }
-    if (currentMembership) {
-      membershipPayload.id = currentMembership.id
-    }
-
-    const { data: memData, error: memError } = await this.client
-      .from('memberships')
-      .upsert(membershipPayload)
-      .select('*')
-      .single()
+    // La base decide vigente / en espera / pase del día y bloquea al socio (plan-rules.sql)
+    const { data: memData, error: memError } = await this.client.rpc('apply_plan_purchase', {
+      p_user_id: params.userId,
+      p_plan_id: params.planId,
+    })
     if (memError) throw new Error(memError.message)
-    const membership = mapMembership(memData)
+    const membershipRow = mapMembership(memData)
+    const membership = { ...membershipRow, status: computeMembershipStatus(membershipRow) }
 
-    // 4. Aprueba la solicitud pendiente o registra un cobro nuevo
+    // Aprueba la solicitud pendiente o registra un cobro nuevo
     const { data: pending, error: pendingError } = await this.client
       .from('payments')
       .select('id, created_at, reference')
@@ -1362,7 +1347,7 @@ export class SupabaseRepository implements GymRepository {
 
     const paymentPayload = {
       user_id: params.userId,
-      plan_id: plan.id,
+      plan_id: params.planId,
       membership_id: membership.id,
       amount_cents: params.amountCents,
       status: 'approved',
@@ -1382,6 +1367,37 @@ export class SupabaseRepository implements GymRepository {
     const payment = mapPayment(payData)
 
     return { payment, membership }
+  }
+
+  async changePlanNow(params: {
+    userId: string
+    planId: string
+    amountCents: number
+    manualMethod: ManualPaymentMethod
+  }): Promise<{ payment: Payment; membership: Membership }> {
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('change_plan_now', {
+      p_user_id: params.userId,
+      p_plan_id: params.planId,
+      p_amount_cents: params.amountCents,
+      p_method: params.manualMethod,
+    })
+    if (error) throw new Error(error.message)
+    const membership = mapMembership(data.membership)
+    return {
+      payment: mapPayment(data.payment),
+      membership: { ...membership, status: computeMembershipStatus(membership) },
+    }
+  }
+
+  async refundPayment(params: { paymentId: string; cancelMembership: boolean }): Promise<Payment> {
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('refund_payment', {
+      p_payment_id: params.paymentId,
+      p_cancel_membership: params.cancelMembership,
+    })
+    if (error) throw new Error(error.message)
+    return mapPayment(data)
   }
 
   async createOnlineCheckout(params: {

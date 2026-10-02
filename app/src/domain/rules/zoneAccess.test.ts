@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Membership, MembershipPlan } from '../models'
-import { canBookZone, assertMemberBookingAllowed } from './zoneAccess'
+import { canAccessZone, canBookZone, assertMemberBookingAllowed } from './zoneAccess'
 
 describe('domain/rules/zoneAccess', () => {
   const allAccessPlan: MembershipPlan = {
@@ -102,5 +102,61 @@ describe('domain/rules/zoneAccess', () => {
     expect(
       assertMemberBookingAllowed(membership, zeroActive, 'zone-muscu').ok,
     ).toBe(true)
+  })
+
+  describe('pases del día', () => {
+    const now = new Date('2026-10-15T15:00:00.000Z')
+    const zeroStart: MembershipPlan = {
+      ...allAccessPlan,
+      id: 'start',
+      name: 'Zero Start Mensual',
+      allowedZoneIds: ['zone-gimnasio'],
+    }
+    const dayMuscu: MembershipPlan = {
+      ...allAccessPlan,
+      id: 'day-muscu',
+      name: 'Zona Day Musculación',
+      durationDays: 1,
+      kind: 'day_pass',
+      allowedZoneIds: ['zone-muscu'],
+    }
+    const dayFull: MembershipPlan = { ...dayMuscu, id: 'day-full', name: 'Zona Day Full', allowedZoneIds: [] }
+    const active: Membership = {
+      id: 'm1',
+      userId: 'u1',
+      planId: 'start',
+      status: 'active',
+      startsAt: '2026-10-01T05:00:00.000Z',
+      endsAt: '2026-10-31T05:00:00.000Z',
+      visitsLeft: null,
+      graceEndsAt: '2026-11-03T05:00:00.000Z',
+    }
+
+    it('el pase abre sus zonas además de las del plan', () => {
+      expect(assertMemberBookingAllowed(active, zeroStart, 'zone-muscu', [dayMuscu], now).ok).toBe(true)
+      expect(assertMemberBookingAllowed(active, zeroStart, 'zone-gimnasio', [dayMuscu], now).ok).toBe(true)
+      expect(assertMemberBookingAllowed(active, zeroStart, 'zone-hyrox', [dayMuscu], now).ok).toBe(false)
+    })
+
+    it('sin plan, el pase activo deja reservar solo en sus zonas', () => {
+      expect(assertMemberBookingAllowed(null, null, 'zone-muscu', [dayMuscu], now).ok).toBe(true)
+      const blocked = assertMemberBookingAllowed(null, null, 'zone-hyrox', [dayMuscu], now)
+      expect(blocked.ok).toBe(false)
+      if (!blocked.ok) expect(blocked.reason).toContain('Zona Day Musculación')
+    })
+
+    it('un pase con zonas vacías abre todas las áreas', () => {
+      expect(assertMemberBookingAllowed(null, null, 'zone-hyrox', [dayFull], now).ok).toBe(true)
+    })
+
+    it('al día siguiente, sin pases activos, vuelve a valer solo el plan', () => {
+      expect(assertMemberBookingAllowed(active, zeroStart, 'zone-muscu', [], now).ok).toBe(false)
+    })
+
+    it('canAccessZone une el plan vigente con los pases', () => {
+      expect(canAccessZone(zeroStart, [dayMuscu], 'zone-muscu')).toBe(true)
+      expect(canAccessZone(null, [dayMuscu], 'zone-gimnasio')).toBe(false)
+      expect(canAccessZone(zeroStart, [], 'zone-gimnasio')).toBe(true)
+    })
   })
 })

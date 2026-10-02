@@ -13,8 +13,8 @@ import {
   useRepo,
 } from '@/data/RepositoryProvider'
 import type { Session } from '@/domain/models'
-import { selectMyMembership } from '@/app/store'
-import { canBookMembership, canBookZone } from '@/domain/rules'
+import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
+import { canAccessZone, canBookMembership, canBookZone } from '@/domain/rules'
 import { getDisciplineMeta, ZONA_CERO_DISCIPLINES } from '@/domain/disciplines'
 import { formatEcuadorSessionWhen, formatEcuadorTime } from '@/lib/format'
 import { Badge, Button, Card, PageHeader, Spinner } from '@/ui/primitives'
@@ -34,10 +34,13 @@ export function ExplorePage() {
   const memberPlan = membership
     ? (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
     : undefined
+  const passPlans = user ? selectMyDayPassPlans(data, user.id) : []
+  const filtersByAccess = isMember && (!!memberPlan || passPlans.length > 0)
   const planStatus = canBookMembership(membership).status
-  const neverHadPlan = isMember && planStatus === 'none'
+  const neverHadPlan = isMember && planStatus === 'none' && passPlans.length === 0
   const needsPlan =
     isMember &&
+    passPlans.length === 0 &&
     (planStatus === 'none' ||
       planStatus === 'expired' ||
       planStatus === 'cancelled')
@@ -58,10 +61,9 @@ export function ExplorePage() {
   const [staffModalSession, setStaffModalSession] = useState<Session | null>(null)
 
   const selectedAreaBlocked =
-    isMember &&
-    !!memberPlan &&
+    filtersByAccess &&
     zoneType !== 'all' &&
-    !canBookZone(memberPlan, zoneType).allowed
+    !canAccessZone(memberPlan, passPlans, zoneType)
 
   const sessions = useMemo(() => {
     const now = new Date().toISOString()
@@ -79,7 +81,7 @@ export function ExplorePage() {
         )
       })
       .slice(0, 50)
-  }, [data, zoneType, isMember, memberPlan, selectedAreaBlocked])
+  }, [data, zoneType, selectedAreaBlocked])
 
   async function onBookSession(sessionId: string) {
     if (!user) return
@@ -105,8 +107,16 @@ export function ExplorePage() {
         return
       }
 
-      // 1. Check membership status
       const membership = selectMyMembership(data, user.id)
+      const coveringPasses = selectMyDayPassPlans(data, user.id, new Date(), session.startsAt)
+      if (coveringPasses.some((pass) => canBookZone(pass, session.zoneId).allowed)) {
+        const result = await repo.createBooking(session.id, user.id)
+        setMsg('position' in result ? `Lista de espera #${result.position}` : 'Reserva confirmada')
+        await refresh()
+        return
+      }
+
+      // 1. Check membership status
       const memCheck = canBookMembership(membership)
       if (!memCheck.allowed) {
         const gateType: BookingGateType =
@@ -242,8 +252,8 @@ export function ExplorePage() {
             const included =
               !isMember ||
               needsPlan ||
-              !memberPlan ||
-              canBookZone(memberPlan, z.id).allowed
+              !filtersByAccess ||
+              canAccessZone(memberPlan, passPlans, z.id)
             return (
               <Card
                 key={z.id}
@@ -280,10 +290,10 @@ export function ExplorePage() {
           Próximas sesiones
         </h2>
 
-        {selectedAreaBlocked && memberPlan ? (
+        {selectedAreaBlocked ? (
           <Card className="p-8 text-center text-xs text-ink-3">
-            Tu plan ({memberPlan.name}) no incluye esta área. Esas clases no se
-            pueden reservar.
+            {memberPlan ? `Tu plan (${memberPlan.name})` : 'Tu pase del día'} no incluye esta
+            área. Esas clases no se pueden reservar.
           </Card>
         ) : sessions.length === 0 ? (
           <Card className="p-8 text-center text-xs text-ink-3">
@@ -364,9 +374,8 @@ export function ExplorePage() {
                       >
                         {neverHadPlan ? 'Activar plan' : 'Renovar plan'}
                       </ButtonLink>
-                    ) : isMember &&
-                      memberPlan &&
-                      !canBookZone(memberPlan, s.zoneId).allowed ? (
+                    ) : filtersByAccess &&
+                      !canAccessZone(memberPlan, passPlans, s.zoneId) ? (
                       <ButtonLink
                         to="/membresia"
                         variant="secondary"

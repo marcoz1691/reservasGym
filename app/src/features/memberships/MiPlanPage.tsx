@@ -4,7 +4,11 @@ import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ArrowLeftRight, ArrowRight, Banknote, Check, CreditCard, ShieldAlert } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym, useRepo } from '@/data/RepositoryProvider'
-import { selectMyMembership } from '@/app/store'
+import {
+  selectMyDayPasses,
+  selectMyMembership,
+  selectMyQueuedMembership,
+} from '@/app/store'
 import type { ManualPaymentMethod } from '@/domain/models'
 import {
   MANUAL_PAYMENT_LABELS,
@@ -14,6 +18,7 @@ import { formatCurrency } from '@/lib/format'
 import { Button, PageHeader } from '@/ui/primitives'
 import { isOnlinePayEnabled } from './onlinePay'
 import {
+  DayPassNotice,
   MembershipCard,
   PaymentHistory,
   PendingPlanRequestCard,
@@ -64,6 +69,22 @@ export function MiPlanPage() {
       ) ?? null
     )
   }, [data.membershipPlans, currentMembership])
+
+  const queued = useMemo(() => {
+    const membership = selectMyQueuedMembership(data, user?.id)
+    if (!membership) return null
+    const plan = (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
+    return { membership, plan }
+  }, [data, user?.id])
+
+  const dayPasses = useMemo(
+    () =>
+      selectMyDayPasses(data, user?.id).map((membership) => ({
+        membership,
+        plan: (data.membershipPlans ?? []).find((p) => p.id === membership.planId),
+      })),
+    [data, user?.id],
+  )
 
   const myPayments = useMemo(() => {
     if (!user) return []
@@ -207,7 +228,11 @@ export function MiPlanPage() {
           memberName={user.fullName}
           memberSince={memberSince}
           onRenew={scrollToCatalog}
+          queued={queued}
+          dayPasses={dayPasses}
         />
+      ) : dayPasses.length > 0 ? (
+        <DayPassNotice passes={dayPasses} />
       ) : showEmptyHero ? (
         <div className="relative overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)]">
           <div
@@ -267,6 +292,8 @@ export function MiPlanPage() {
               ? currentMembership.planId
               : null
           }
+          queuedPlanId={queued?.membership.planId ?? null}
+          queuesChanges={currentMembership?.status === 'active'}
           zones={data.zones ?? []}
           onlinePayEnabled={onlinePayEnabled}
           onPayOnline={onlinePayEnabled ? handlePayOnline : undefined}

@@ -23,7 +23,7 @@ import {
   useRefresh,
   useRepo,
 } from '@/data/RepositoryProvider'
-import { selectMyMembership } from '@/app/store'
+import { selectMyDayPasses, selectMyMembership } from '@/app/store'
 import {
   canUseBookingNav,
   displayInitials,
@@ -100,12 +100,14 @@ export function AppLayout() {
     user && state ? selectMyMembership(state, user.id) : undefined
   const pendingRequest =
     user && state ? selectPendingPlanRequest(state.payments ?? [], user.id) : null
-  const showBookingNav = canUseBookingNav(user?.role, membership)
+  const hasDayPass = selectMyDayPasses(state, user?.id).length > 0
+  const showBookingNav = canUseBookingNav(user?.role, membership, hasDayPass)
   const showNoPlanReminder =
     !loading &&
     Boolean(state) &&
     isMember &&
     !membership &&
+    !hasDayPass &&
     !pendingRequest &&
     !noPlanReminderDismissed &&
     pathname !== '/membresia'

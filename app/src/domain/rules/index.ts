@@ -179,6 +179,7 @@ export function canRecordWeight(
 
 export * from './membership'
 export * from './membershipPlan'
+export * from './memberships'
 export * from './zoneAccess'
 export * from './anthropometrics'
 export * from './profile'

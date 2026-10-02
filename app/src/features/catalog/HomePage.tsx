@@ -20,14 +20,14 @@ import { ZONE_LABELS } from '@/domain/models'
 import type { Membership, MembershipPlan } from '@/domain/models'
 import { ecuadorTodayYmd } from '@/lib/format'
 import {
-  canBookZone,
+  canAccessZone,
   canUseBookingNav,
   displayFirstName,
   selectActiveBookings,
 } from '@/domain/rules'
 import { computeMembershipStatus, daysRemaining } from '@/domain/rules/membership'
 import { AreaThumb } from './components/AreaThumb'
-import { selectMyMembership } from '@/app/store'
+import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
 import { WelcomeNoPlanCard, PendingPlanRequestCard, isOnlinePayEnabled } from '@/features/memberships'
 import { selectPendingPlanRequest } from '@/domain/rules/planRequest'
 import { Badge, Button, Card, SkeletonCard } from '@/ui/primitives'
@@ -85,11 +85,12 @@ export function HomePage() {
   const memberPlan = membership
     ? (data.membershipPlans ?? []).find((plan) => plan.id === membership.planId)
     : undefined
+  const passPlans = selectMyDayPassPlans(data, user.id)
   const upcoming = data.sessions
     .filter((s) => new Date(s.startsAt) >= new Date())
     .filter((s) => {
-      if (user.role !== 'member' || !memberPlan) return true
-      return canBookZone(memberPlan, s.zoneId).allowed
+      if (user.role !== 'member' || (!memberPlan && passPlans.length === 0)) return true
+      return canAccessZone(memberPlan, passPlans, s.zoneId)
     })
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
     .slice(0, 4)
@@ -123,7 +124,7 @@ export function HomePage() {
   })
 
   const firstName = displayFirstName(user.fullName)
-  const canBook = canUseBookingNav(user.role, membership)
+  const canBook = canUseBookingNav(user.role, membership, passPlans.length > 0)
 
   return (
     <div className="space-y-8">
@@ -480,8 +481,8 @@ export function HomePage() {
                 {data.zones.slice(0, 6).map((zone) => {
                   const included =
                     user.role !== 'member' ||
-                    (memberPlan
-                      ? canBookZone(memberPlan, zone.id).allowed
+                    (memberPlan || passPlans.length > 0
+                      ? canAccessZone(memberPlan, passPlans, zone.id)
                       : Boolean(membership))
                   return (
                     <div

@@ -54,6 +54,15 @@ on conflict (id) do update set
   allowed_zone_ids = excluded.allowed_zone_ids,
   active = excluded.active;
 
+-- Zona Day = pase del día (requiere la columna kind de plan-rules.sql)
+update membership_plans
+set kind = 'day_pass'
+where id in (
+  'c5000000-0000-4000-8000-000000000001',
+  'c5000000-0000-4000-8000-000000000002',
+  'c5000000-0000-4000-8000-000000000003'
+);
+
 -- Desactivar catálogo de ejemplo (Gold / Silver / Plata / Dragon Fit / Pase 10).
 -- No se borran: socio.staging puede seguir ligado a Silver.
 update membership_plans
@@ -70,6 +79,6 @@ where id in (
   'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
 );
 
-select name, price_cents / 100.0 as usd, duration_days, allowed_zone_ids, active
+select name, price_cents / 100.0 as usd, duration_days, allowed_zone_ids, kind, active
 from membership_plans
 order by active desc, price_cents, duration_days, name;

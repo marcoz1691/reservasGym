@@ -1,4 +1,4 @@
-export { MembershipCard } from './MembershipCard'
+export { DayPassNotice, MembershipCard } from './MembershipCard'
 export { PlansShowcase } from './PlansShowcase'
 export { PaymentRow } from './PaymentRow'
 export { PaymentHistory } from './PaymentHistory'

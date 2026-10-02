@@ -37,10 +37,42 @@ as $$
   where session_id = p_session_id and status in ('confirmed', 'pending', 'attended');
 $$;
 
+-- Tipo de plan (plan-rules.sql también lo crea). Aquí para que este archivo corra solo.
+alter table public.membership_plans
+  add column if not exists kind text not null default 'membership';
+
+-- Membresía vigente (misma regla que currentMembership en src/domain/rules/memberships.ts):
+-- ya empezó, no está cancelada, no es pase del día y sigue activa o en gracia.
+-- Si hay varias, la que termina más tarde. El plan en espera (empieza después) no cuenta.
+create or replace function public.current_membership_id(p_user_id uuid, p_at timestamptz default now())
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select m.id
+  from memberships m
+  join membership_plans p on p.id = m.plan_id
+  where m.user_id = p_user_id
+    and m.status <> 'cancelled'
+    and p.kind <> 'day_pass'
+    and m.starts_at <= p_at
+    and p_at <= coalesce(m.grace_ends_at, m.ends_at + interval '3 days')
+  order by m.ends_at desc
+  limit 1;
+$$;
+
 -- Motivo por el que el socio no puede reservar en la zona, o null si puede.
--- Replica canBookMembership + canBookZone (src/domain/rules) con los mismos textos.
--- Staff y admin no pasan por esta validación.
-create or replace function public.member_booking_block_reason(p_user_id uuid, p_zone_id text)
+-- Replica assertMemberBookingAllowed (src/domain/rules) con los mismos textos.
+-- Acceso = plan vigente ∪ pases del día activos; un pase solo cubre clases que
+-- empiezan antes de que venza (23:59 de Guayaquil). Staff y admin no pasan por aquí.
+drop function if exists public.member_booking_block_reason(uuid, text);
+create or replace function public.member_booking_block_reason(
+  p_user_id uuid,
+  p_zone_id text,
+  p_session_starts_at timestamptz default null
+)
 returns text
 language plpgsql
 stable
@@ -52,27 +84,73 @@ declare
   v_membership memberships%rowtype;
   v_plan membership_plans%rowtype;
   v_zone text := lower(regexp_replace(p_zone_id, '[_-]', '', 'g'));
+  v_pass_names text;
+  v_current uuid;
 begin
   select role into v_role from profiles where id = p_user_id;
   if v_role is distinct from 'member' then
     return null;
   end if;
 
-  select * into v_membership
-  from memberships
-  where user_id = p_user_id
-  order by ends_at desc
-  limit 1;
-  if not found then
-    return 'No cuenta con una membresía activa.';
+  if exists (
+    select 1
+    from memberships m
+    join membership_plans p on p.id = m.plan_id
+    where m.user_id = p_user_id
+      and m.status <> 'cancelled'
+      and p.kind = 'day_pass'
+      and m.starts_at <= now() and now() <= m.ends_at
+      and (p_session_starts_at is null or p_session_starts_at <= m.ends_at)
+      and (
+        coalesce(array_length(p.allowed_zone_ids, 1), 0) = 0
+        or exists (
+          select 1 from unnest(p.allowed_zone_ids) z
+          where lower(regexp_replace(z, '[_-]', '', 'g')) = v_zone
+        )
+      )
+  ) then
+    return null;
   end if;
-  if v_membership.status = 'cancelled' then
-    return 'La membresía ha sido cancelada.';
+
+  select string_agg(p.name, ', ' order by p.name) into v_pass_names
+  from memberships m
+  join membership_plans p on p.id = m.plan_id
+  where m.user_id = p_user_id
+    and m.status <> 'cancelled'
+    and p.kind = 'day_pass'
+    and m.starts_at <= now() and now() <= m.ends_at
+    and (p_session_starts_at is null or p_session_starts_at <= m.ends_at);
+
+  v_current := public.current_membership_id(p_user_id);
+  if v_current is not null then
+    select * into v_membership from memberships where id = v_current;
+  else
+    -- Sin vigente: la última que ya empezó, para dar el motivo (vencida, cancelada…)
+    select m.* into v_membership
+    from memberships m
+    join membership_plans p on p.id = m.plan_id
+    where m.user_id = p_user_id and p.kind <> 'day_pass' and m.starts_at <= now()
+    order by m.ends_at desc
+    limit 1;
   end if;
-  if now() > coalesce(v_membership.grace_ends_at, v_membership.ends_at + interval '3 days') then
-    return 'Membresía vencida. Por favor renueva tu plan.';
-  end if;
-  if v_membership.visits_left is not null and v_membership.visits_left <= 0 then
+
+  if v_membership.id is null
+    or v_membership.status = 'cancelled'
+    or now() > coalesce(v_membership.grace_ends_at, v_membership.ends_at + interval '3 days')
+    or (v_membership.visits_left is not null and v_membership.visits_left <= 0)
+  then
+    if v_pass_names is not null then
+      return format('Tu pase (%s) no incluye acceso a esta zona.', v_pass_names);
+    end if;
+    if v_membership.id is null then
+      return 'No cuenta con una membresía activa.';
+    end if;
+    if v_membership.status = 'cancelled' then
+      return 'La membresía ha sido cancelada.';
+    end if;
+    if now() > coalesce(v_membership.grace_ends_at, v_membership.ends_at + interval '3 days') then
+      return 'Membresía vencida. Por favor renueva tu plan.';
+    end if;
     return 'No quedan visitas disponibles en la membresía.';
   end if;
 
@@ -140,7 +218,7 @@ begin
     delete from waitlist_entries where id = v_entry.id;
 
     if public.booking_overlaps(v_entry.user_id, p_session_id)
-      or public.member_booking_block_reason(v_entry.user_id, v_session.zone_id) is not null
+      or public.member_booking_block_reason(v_entry.user_id, v_session.zone_id, v_session.starts_at) is not null
     then
       update bookings set status = 'cancelled', cancelled_at = v_now
       where session_id = p_session_id and user_id = v_entry.user_id and status = 'waitlisted';
@@ -213,7 +291,7 @@ begin
   if public.booking_overlaps(v_user, p_session_id) then
     raise exception 'Se solapa con otra reserva activa';
   end if;
-  v_reason := public.member_booking_block_reason(v_user, v_session.zone_id);
+  v_reason := public.member_booking_block_reason(v_user, v_session.zone_id, v_session.starts_at);
   if v_reason is not null then
     raise exception '%', v_reason;
   end if;
@@ -345,7 +423,7 @@ begin
   ) then
     raise exception 'Se solapa con otra reserva activa';
   end if;
-  v_reason := public.member_booking_block_reason(v_old.user_id, v_new_session.zone_id);
+  v_reason := public.member_booking_block_reason(v_old.user_id, v_new_session.zone_id, v_new_session.starts_at);
   if v_reason is not null then
     raise exception '%', v_reason;
   end if;
@@ -422,7 +500,8 @@ $$;
 
 -- Todo lo de `public` queda expuesto como /rest/v1/rpc/<fn> (ver fix-function-grants.sql).
 -- Los helpers solo los llaman las funciones de arriba, que corren como su dueño.
-revoke all on function public.member_booking_block_reason(uuid, text) from public, anon, authenticated;
+revoke all on function public.member_booking_block_reason(uuid, text, timestamptz) from public, anon, authenticated;
+revoke all on function public.current_membership_id(uuid, timestamptz) from public, anon, authenticated;
 revoke all on function public.booking_overlaps(uuid, text) from public, anon, authenticated;
 revoke all on function public.promote_waitlist(text) from public, anon, authenticated;
 revoke all on function public.new_check_in_code() from public, anon, authenticated;

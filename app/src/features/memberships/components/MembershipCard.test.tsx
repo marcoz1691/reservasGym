@@ -57,6 +57,69 @@ describe('MembershipCard', () => {
     expect(screen.getByText('$45.00')).toBeInTheDocument()
   })
 
+  it('muestra el próximo plan con su fecha de inicio y los pases del día activos', () => {
+    const membership: Membership = {
+      id: 'mem_1',
+      userId: 'user_1',
+      planId: 'plan_full',
+      status: 'active',
+      startsAt: daysFromNow(-25),
+      endsAt: daysFromNow(5),
+      visitsLeft: null,
+      graceEndsAt: daysFromNow(8),
+    }
+    const plan: MembershipPlan = {
+      id: 'plan_full',
+      name: 'Zero Start Mensual',
+      priceCents: 3000,
+      durationDays: 30,
+      visitQuota: null,
+      allowedZoneIds: [],
+      active: true,
+    }
+    const nextPlan: MembershipPlan = { ...plan, id: 'plan_next', name: 'Zero Pro Mensual' }
+    const passPlan: MembershipPlan = {
+      ...plan,
+      id: 'plan_day',
+      name: 'Zona Day Full',
+      durationDays: 1,
+      kind: 'day_pass',
+    }
+
+    render(
+      <MembershipCard
+        membership={membership}
+        plan={plan}
+        zones={mockZones}
+        onRenew={() => undefined}
+        queued={{
+          membership: { ...membership, id: 'mem_2', planId: 'plan_next', startsAt: membership.endsAt },
+          plan: nextPlan,
+        }}
+        dayPasses={[
+          {
+            membership: {
+              ...membership,
+              id: 'mem_3',
+              planId: 'plan_day',
+              endsAt: '2026-10-15T23:59:59.000-05:00',
+            },
+            plan: passPlan,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText(/Próximo plan:/).parentElement).toHaveTextContent(
+      /Zero Pro Mensual, empieza el/,
+    )
+    expect(screen.getByText(/Pase del día activo:/).parentElement).toHaveTextContent(
+      'Pase del día activo: Zona Day Full, válido hasta las 23:59',
+    )
+    // Con el próximo plan ya pagado no se insiste en renovar
+    expect(screen.queryByRole('button', { name: /Renovar plan/ })).not.toBeInTheDocument()
+  })
+
   it('renders grace period status with warning notice', () => {
     const membership: Membership = {
       id: 'mem_grace',

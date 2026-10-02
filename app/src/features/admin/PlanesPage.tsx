@@ -20,9 +20,9 @@ import {
   useRefresh,
   useRepo,
 } from '@/data/RepositoryProvider'
-import type { MembershipPlan, Zone } from '@/domain/models'
+import type { MembershipPlan, MembershipPlanKind, Zone } from '@/domain/models'
 import { ZONE_LABELS } from '@/domain/models'
-import { validateMembershipPlanInput } from '@/domain/rules/membershipPlan'
+import { isDayPassPlan, validateMembershipPlanInput } from '@/domain/rules/membershipPlan'
 import { formatCurrency } from '@/lib/format'
 import { Badge, Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
 
@@ -36,6 +36,7 @@ interface PlanFormData {
   allZonesAllowed: boolean
   allowedZoneIds: string[]
   active: boolean
+  kind: MembershipPlanKind
 }
 
 const DEFAULT_FORM_DATA: PlanFormData = {
@@ -47,6 +48,7 @@ const DEFAULT_FORM_DATA: PlanFormData = {
   allZonesAllowed: true,
   allowedZoneIds: [],
   active: true,
+  kind: 'membership',
 }
 
 const DURATION_PRESETS = [
@@ -126,6 +128,7 @@ export function PlanesPage() {
       allZonesAllowed: !plan.allowedZoneIds || plan.allowedZoneIds.length === 0,
       allowedZoneIds: plan.allowedZoneIds || [],
       active: plan.active !== false,
+      kind: isDayPassPlan(plan) ? 'day_pass' : 'membership',
     })
     setFormError(null)
     setIsModalOpen(true)
@@ -222,6 +225,7 @@ export function PlanesPage() {
         visitQuota: validation.value.visitQuota ?? null,
         allowedZoneIds: finalZones,
         active: formData.active,
+        kind: formData.kind,
       })
 
       setIsModalOpen(false)
@@ -450,6 +454,25 @@ export function PlanesPage() {
                 placeholder="Ej: Plan Gold Anual, CrossFit Mensual, Pase Diario"
                 required
               />
+
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-ink-2">Tipo de plan</span>
+                <select
+                  value={formData.kind}
+                  onChange={(e) =>
+                    setFormData({ ...formData, kind: e.target.value as MembershipPlanKind })
+                  }
+                  className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink"
+                >
+                  <option value="membership">Membresía</option>
+                  <option value="day_pass">Pase del día</option>
+                </select>
+                {formData.kind === 'day_pass' ? (
+                  <span className="block text-[11px] text-ink-3">
+                    Vale solo el día de compra, hasta las 23:59. No cambia la membresía del socio.
+                  </span>
+                ) : null}
+              </label>
 
               {/* Price & Duration */}
               <div className="grid gap-4 sm:grid-cols-2">
