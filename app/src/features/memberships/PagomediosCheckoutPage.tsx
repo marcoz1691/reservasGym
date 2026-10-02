@@ -100,6 +100,18 @@ export function PagomediosCheckoutPage() {
   const [requestSent, setRequestSent] = useState<Exclude<CheckoutMethod, 'card'> | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Al volver de Pagomedios con "atrás", el navegador puede restaurar la página
+  // desde su caché (bfcache) con el estado "procesando": se rehabilita el formulario.
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setBusy(false)
+        setError(null)
+      }
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
   const [verify, setVerify] = useState<VerifyState>({ kind: 'checking' })
   const [confirmLeave, setConfirmLeave] = useState(false)
   const askToLeave = useCallback(() => setConfirmLeave(true), [])

@@ -362,6 +362,27 @@ describe('PagomediosCheckoutPage — pago único', () => {
     expect(screen.getByTestId('url')).toHaveTextContent('planId=plan_mensual')
   })
 
+  it('al volver de Pagomedios con "atrás" (página restaurada del caché) el formulario vuelve a funcionar', async () => {
+    repo.createPagomediosPayment.mockResolvedValue({ url: 'https://payurl.link/X', paymentId: 'pay_bf' })
+    renderAt('/membresia/pago?planId=plan_mensual')
+    await fillBilling()
+    await userEvent.click(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ }))
+    expect(assign).toHaveBeenCalledWith('https://payurl.link/X')
+    // mientras se abre Pagomedios el botón queda "procesando"
+    expect(screen.getByRole('button', { name: /Abriendo pago seguro/ })).toBeDisabled()
+
+    // el socio pulsa "atrás": el navegador restaura la página desde el bfcache
+    const pageshow = new Event('pageshow')
+    Object.defineProperty(pageshow, 'persisted', { value: true })
+    window.dispatchEvent(pageshow)
+
+    const pay = await screen.findByRole('button', { name: /Pagar\s*\$35\.00/ })
+    expect(pay).toBeEnabled()
+    await userEvent.click(screen.getByRole('radio', { name: /Efectivo en recepción/ }))
+    expect(screen.getByRole('radio', { name: /Efectivo en recepción/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('button', { name: /Confirmar solicitud/ })).toBeEnabled()
+  })
+
   it('muestra el resumen con subtotal, IVA 15% y total', async () => {
     renderAt('/membresia/pago?planId=plan_mensual')
     const summary = screen.getByRole('region', { name: 'Resumen del pago' })
