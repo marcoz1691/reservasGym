@@ -268,6 +268,43 @@ describe('LocalRepository memberships and billing', () => {
     expect(charged.membership.status).toBe('active')
     expect(charged.payment.membershipId).toBe(charged.membership.id)
   })
+
+  it('la solicitud guarda una referencia corta, la conserva al cambiarla y la aprobación no la pierde', async () => {
+    const memberRepo = new LocalRepository()
+    const member = await memberRepo.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+    const plan = (await memberRepo.getMembershipPlans()).find((p) => p.active)!
+
+    const request = await memberRepo.requestPlanPayment({
+      planId: plan.id,
+      manualMethod: 'deuna',
+      reference: 'ZC-4F7A2C',
+    })
+    expect(request.manualMethod).toBe('deuna')
+    expect(request.reference).toBe('ZC-4F7A2C')
+
+    const changed = await memberRepo.requestPlanPayment({ planId: plan.id, manualMethod: 'transfer' })
+    expect(changed.reference).toBe('ZC-4F7A2C')
+
+    const staff = new LocalRepository()
+    await staff.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+    const charged = await staff.registerManualPayment({
+      userId: member.id,
+      planId: plan.id,
+      amountCents: plan.priceCents,
+      manualMethod: 'transfer',
+    })
+    expect(charged.payment.id).toBe(request.id)
+    expect(charged.payment.reference).toBe('ZC-4F7A2C')
+  })
+
+  it('sin referencia del checkout la solicitud crea una ZC-XXXXXX', async () => {
+    const memberRepo = new LocalRepository()
+    await memberRepo.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+    const plan = (await memberRepo.getMembershipPlans()).find((p) => p.active)!
+
+    const request = await memberRepo.requestPlanPayment({ planId: plan.id, manualMethod: 'cash' })
+    expect(request.reference).toMatch(/^ZC-[0-9A-F]{6}$/)
+  })
 })
 
 describe('LocalRepository reglas de planes (en espera, pase del día, cambio, reembolso)', () => {

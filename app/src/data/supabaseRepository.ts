@@ -35,6 +35,7 @@ import {
 } from '@/domain/rules'
 import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
 import { assertPlanSellableInApp } from '@/domain/rules/featureFlags'
+import { resolveRequestReference } from '@/domain/rules/paymentReceipt'
 import type {
   AuthCredentials,
   GymRepository,
@@ -94,6 +95,14 @@ function mapSettings(row: {
   waitlist_enabled?: boolean | null
   measurements_enabled?: boolean | null
   day_passes_enabled?: boolean | null
+  whatsapp_payments?: string | null
+  bank_name?: string | null
+  bank_account_type?: string | null
+  bank_account_number?: string | null
+  bank_account_holder?: string | null
+  bank_account_id?: string | null
+  deuna_code?: string | null
+  deuna_qr_url?: string | null
 }): GymSettings {
   return {
     name: row.name,
@@ -107,8 +116,27 @@ function mapSettings(row: {
     waitlistEnabled: row.waitlist_enabled ?? undefined,
     measurementsEnabled: row.measurements_enabled ?? undefined,
     dayPassesEnabled: row.day_passes_enabled ?? undefined,
+    whatsappPayments: row.whatsapp_payments ?? null,
+    bankName: row.bank_name ?? null,
+    bankAccountType: row.bank_account_type ?? null,
+    bankAccountNumber: row.bank_account_number ?? null,
+    bankAccountHolder: row.bank_account_holder ?? null,
+    bankAccountId: row.bank_account_id ?? null,
+    deunaCode: row.deuna_code ?? null,
+    deunaQrUrl: row.deuna_qr_url ?? null,
   }
 }
+
+const PAYMENT_DETAIL_COLUMNS = {
+  whatsappPayments: 'whatsapp_payments',
+  bankName: 'bank_name',
+  bankAccountType: 'bank_account_type',
+  bankAccountNumber: 'bank_account_number',
+  bankAccountHolder: 'bank_account_holder',
+  bankAccountId: 'bank_account_id',
+  deunaCode: 'deuna_code',
+  deunaQrUrl: 'deuna_qr_url',
+} as const satisfies Partial<Record<keyof GymSettings, string>>
 
 function mapZone(row: {
   id: string
@@ -775,6 +803,10 @@ export class SupabaseRepository implements GymRepository {
       row.measurements_enabled = patch.measurementsEnabled
     }
     if (patch.dayPassesEnabled !== undefined) row.day_passes_enabled = patch.dayPassesEnabled
+    for (const [key, column] of Object.entries(PAYMENT_DETAIL_COLUMNS)) {
+      const value = patch[key as keyof typeof PAYMENT_DETAIL_COLUMNS]
+      if (value !== undefined) row[column] = value?.trim() || null
+    }
     const { data, error } = await this.client
       .from('gym_settings')
       .update(row)
@@ -1288,6 +1320,7 @@ export class SupabaseRepository implements GymRepository {
   async requestPlanPayment(params: {
     planId: string
     manualMethod: ManualPaymentMethod
+    reference?: string
   }): Promise<Payment> {
     const user = await this.requireUser()
     if (user.role !== 'member') {
@@ -1329,7 +1362,7 @@ export class SupabaseRepository implements GymRepository {
       status: 'pending',
       provider: 'manual',
       manual_method: params.manualMethod,
-      reference: null,
+      reference: resolveRequestReference(existing?.reference, params.reference),
     }
     const query = existing
       ? this.client.from('payments').update(payload).eq('id', existing.id)

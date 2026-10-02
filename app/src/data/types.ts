@@ -102,9 +102,11 @@ export interface GymRepository {
   getMemberPayments(userId: string): Promise<Payment[]>
   listMemberships(): Promise<Membership[]>
   listPayments(): Promise<Payment[]>
+  /** `reference`: la que el socio vio en el checkout (ZC-XXXXXX); si ya tenía una, se conserva. */
   requestPlanPayment(params: {
     planId: string
     manualMethod: ManualPaymentMethod
+    reference?: string
   }): Promise<Payment>
   registerManualPayment(params: {
     userId: string

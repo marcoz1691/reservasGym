@@ -182,6 +182,8 @@ export function formatPaymentMethod(
         return 'Transferencia'
       case 'card_pos':
         return 'Datáfono POS'
+      case 'deuna':
+        return 'Deuna'
       default:
         return 'Recepción'
     }

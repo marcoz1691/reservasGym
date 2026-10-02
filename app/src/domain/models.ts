@@ -17,7 +17,7 @@ export type ZoneType =
 export type MembershipStatus = 'active' | 'grace' | 'expired' | 'cancelled' | 'scheduled'
 export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded'
 export type PaymentProvider = 'manual' | 'datafast' | 'mercadopago' | 'pagomedios'
-export type ManualPaymentMethod = 'cash' | 'transfer' | 'card_pos'
+export type ManualPaymentMethod = 'cash' | 'transfer' | 'card_pos' | 'deuna'
 export type MembershipPlanKind = 'membership' | 'day_pass'
 
 export interface MembershipPlan {
@@ -192,6 +192,16 @@ export interface GymSettings {
   waitlistEnabled?: boolean
   measurementsEnabled?: boolean
   dayPassesEnabled?: boolean
+  /** Datos de pago que el socio ve al elegir transferencia o Deuna (manual-payments-deuna.sql). */
+  whatsappPayments?: string | null
+  bankName?: string | null
+  bankAccountType?: string | null
+  bankAccountNumber?: string | null
+  bankAccountHolder?: string | null
+  /** RUC o cédula del titular. */
+  bankAccountId?: string | null
+  deunaCode?: string | null
+  deunaQrUrl?: string | null
 }
 
 export interface GymState {

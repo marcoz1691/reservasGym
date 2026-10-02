@@ -39,7 +39,12 @@ import {
   RESCHEDULE_FULL_MESSAGE,
   seatsTaken,
 } from '../domain/rules'
-import { SESSION_FULL_MESSAGE, assertPlanSellableInApp, isFeatureEnabled } from '../domain/rules'
+import {
+  SESSION_FULL_MESSAGE,
+  assertPlanSellableInApp,
+  isFeatureEnabled,
+  resolveRequestReference,
+} from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
 import type {
   AuthCredentials,
@@ -1145,6 +1150,7 @@ export class LocalRepository implements GymRepository {
   async requestPlanPayment(params: {
     planId: string
     manualMethod: ManualPaymentMethod
+    reference?: string
   }): Promise<Payment> {
     const actor = await this.requireUser()
     if (actor.role !== 'member') {
@@ -1180,7 +1186,7 @@ export class LocalRepository implements GymRepository {
       status: 'pending',
       provider: 'manual',
       manualMethod: params.manualMethod,
-      reference: null,
+      reference: resolveRequestReference(existing?.reference, params.reference),
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       approvedAt: null,
     }

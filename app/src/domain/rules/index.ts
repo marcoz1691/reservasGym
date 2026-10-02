@@ -187,6 +187,7 @@ export * from './zoneAccess'
 export * from './anthropometrics'
 export * from './profile'
 export * from './planRequest'
+export * from './paymentReceipt'
 export * from './featureFlags'
 
 export * from './bookingTimeline'

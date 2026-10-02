@@ -35,7 +35,16 @@ create table if not exists gym_settings (
   online_payments_enabled boolean not null default false,
   waitlist_enabled boolean not null default true,
   measurements_enabled boolean not null default true,
-  day_passes_enabled boolean not null default true
+  day_passes_enabled boolean not null default true,
+  -- Datos de pago para transferencia y Deuna (manual-payments-deuna.sql)
+  whatsapp_payments text,
+  bank_name text,
+  bank_account_type text,
+  bank_account_number text,
+  bank_account_holder text,
+  bank_account_id text,
+  deuna_code text,
+  deuna_qr_url text
 );
 
 create table if not exists trainers (
@@ -195,7 +204,7 @@ create table if not exists payments (
   amount_cents int not null,
   status text not null check (status in ('pending', 'approved', 'rejected', 'refunded')),
   provider text not null check (provider in ('manual', 'datafast', 'mercadopago', 'pagomedios')),
-  manual_method text check (manual_method in ('cash', 'transfer', 'card_pos')),
+  manual_method text check (manual_method in ('cash', 'transfer', 'card_pos', 'deuna')),
   reference text,
   mp_payment_id text,
   notes text,
