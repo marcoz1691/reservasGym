@@ -114,7 +114,8 @@ export function AppLayout() {
   const desktopNav = (isMember ? memberDesktopNav : staffDesktopNav).filter(
     (item) =>
       (showBookingNav || (item.to !== '/agenda' && item.to !== '/reservas')) &&
-      (measurementsOn || item.to !== '/peso'),
+      (measurementsOn || item.to !== '/peso') &&
+      (user?.role === 'admin' || item.to !== '/admin/marca'),
   )
   const mobileTabs = (
     isMember
