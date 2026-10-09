@@ -20,6 +20,43 @@ describe('Admin Billing & Membership Plans UI', () => {
     resetRepositoryForTests(repo)
   })
 
+  describe('AdminPage — accesos rápidos en móvil', () => {
+    function renderDashboard() {
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin']}>
+            <Routes>
+              <Route path="/admin" element={<AdminPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+    }
+
+    it('el admin llega a Planes, Sesiones y Personalización desde el Dashboard', async () => {
+      await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+      renderDashboard()
+
+      expect(await screen.findByRole('link', { name: /Personalización/i })).toHaveAttribute(
+        'href',
+        '/admin/marca',
+      )
+      expect(screen.getByRole('link', { name: /^Planes$/i })).toHaveAttribute('href', '/admin/planes')
+      expect(screen.getByRole('link', { name: /^Sesiones$/i })).toHaveAttribute(
+        'href',
+        '/admin/sesiones',
+      )
+    })
+
+    it('el staff no ve Personalización', async () => {
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      renderDashboard()
+
+      expect(await screen.findByRole('link', { name: /^Planes$/i })).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Personalización/i })).not.toBeInTheDocument()
+    })
+  })
+
   describe('CobrosPage', () => {
     it('renders tabs and POS form for admin user', async () => {
       await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })

@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import {
+  CalendarClock,
+  Layers,
   QrCode,
   RotateCcw,
+  Settings,
   UserCheck,
 } from 'lucide-react'
 import {
@@ -72,6 +75,24 @@ export function AdminPage() {
           </div>
         }
       />
+
+      {/* En móvil la barra inferior solo tiene 5 pestañas: el resto del admin se abre desde aquí */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:hidden">
+        <ButtonLink to="/admin/planes" variant="secondary" className="gap-2">
+          <Layers className="h-4 w-4" />
+          Planes
+        </ButtonLink>
+        <ButtonLink to="/admin/sesiones" variant="secondary" className="gap-2">
+          <CalendarClock className="h-4 w-4" />
+          Sesiones
+        </ButtonLink>
+        {user?.role === 'admin' ? (
+          <ButtonLink to="/admin/marca" variant="secondary" className="gap-2">
+            <Settings className="h-4 w-4" />
+            Personalización
+          </ButtonLink>
+        ) : null}
+      </div>
 
       {/* Metrics Stats */}
       <div className="grid gap-3 sm:grid-cols-2">
