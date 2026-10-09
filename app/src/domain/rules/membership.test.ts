@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Membership, MembershipPlan } from '../models'
 import {
   EXPIRATION_WARNING_DAYS,
@@ -432,7 +432,13 @@ describe('domain/rules/membership', () => {
     })
 
     it('muestra agenda al socio con plan vigente', () => {
-      expect(canUseBookingNav('member', baseMembership)).toBe(true)
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-09-15T15:00:00.000Z'))
+      try {
+        expect(canUseBookingNav('member', baseMembership)).toBe(true)
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it('staff y admin siempre ven agenda', () => {

@@ -96,11 +96,12 @@ describe('domain/rules/zoneAccess', () => {
       visitsLeft: null,
       graceEndsAt: '2026-10-04T00:00:00.000Z',
     }
+    const now = new Date('2026-09-15T15:00:00.000Z')
     expect(
-      assertMemberBookingAllowed(membership, zeroActive, 'zone-hyrox').ok,
+      assertMemberBookingAllowed(membership, zeroActive, 'zone-hyrox', [], now).ok,
     ).toBe(false)
     expect(
-      assertMemberBookingAllowed(membership, zeroActive, 'zone-muscu').ok,
+      assertMemberBookingAllowed(membership, zeroActive, 'zone-muscu', [], now).ok,
     ).toBe(true)
   })
 
