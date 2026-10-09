@@ -35,7 +35,7 @@ export function PaymentHistory({ payments, plans }: PaymentHistoryProps) {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-line bg-surface/60 text-[11px] font-bold uppercase tracking-wider text-ink-3">
+                <tr className="border-b border-line bg-surface/60 text-xs font-bold uppercase tracking-wider text-ink-3">
                   <th className="py-3 px-4">Fecha</th>
                   <th className="py-3 px-4">Plan / Concepto</th>
                   <th className="py-3 px-4">Monto</th>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, AlertCircle, Clock, X, ArrowRight } from 'lucide-react'
 import { useAppData, useCurrentUser } from '@/data/RepositoryProvider'
-import { selectMyMembership } from '@/app/store'
+import { selectMyMembership, selectMyQueuedMembership } from '@/app/store'
 import {
   computeMembershipStatus,
   daysRemaining,
@@ -110,8 +110,8 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
     )
   }
 
-  // 3. Warning Banner (<= 7 days remaining)
-  if (isNearExpiration(membership, 7, now)) {
+  // 3. Warning Banner (<= 7 days remaining). Con un plan en espera no hay interrupción.
+  if (isNearExpiration(membership, 7, now) && !selectMyQueuedMembership(data, user.id, now)) {
     const days = daysRemaining(membership, now)
 
     return (

@@ -30,10 +30,12 @@ import {
   canManageGoals,
   canManageWeight,
   computeMembershipStatus,
-  extendMembership,
-  isCheckInWindow,
+  memberMembership,
+  planPurchaseOutcome,
 } from '@/domain/rules'
 import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
+import { assertPlanSellableInApp } from '@/domain/rules/featureFlags'
+import { resolveRequestReference } from '@/domain/rules/paymentReceipt'
 import type {
   AuthCredentials,
   GymRepository,
@@ -50,10 +52,6 @@ import {
   readBiometricSession,
   saveBiometricSession,
 } from '@/lib/biometrics'
-
-function uid(prefix: string): string {
-  return `${prefix}-${crypto.randomUUID().slice(0, 8)}`
-}
 
 function mapUser(row: {
   id: string
@@ -93,6 +91,18 @@ function mapSettings(row: {
   booking_window_hours: number
   cancel_window_hours: number
   check_in_window_minutes: number
+  online_payments_enabled?: boolean | null
+  waitlist_enabled?: boolean | null
+  measurements_enabled?: boolean | null
+  day_passes_enabled?: boolean | null
+  whatsapp_payments?: string | null
+  bank_name?: string | null
+  bank_account_type?: string | null
+  bank_account_number?: string | null
+  bank_account_holder?: string | null
+  bank_account_id?: string | null
+  deuna_code?: string | null
+  deuna_qr_url?: string | null
 }): GymSettings {
   return {
     name: row.name,
@@ -102,8 +112,31 @@ function mapSettings(row: {
     bookingWindowHours: row.booking_window_hours,
     cancelWindowHours: row.cancel_window_hours,
     checkInWindowMinutes: row.check_in_window_minutes,
+    onlinePaymentsEnabled: row.online_payments_enabled ?? undefined,
+    waitlistEnabled: row.waitlist_enabled ?? undefined,
+    measurementsEnabled: row.measurements_enabled ?? undefined,
+    dayPassesEnabled: row.day_passes_enabled ?? undefined,
+    whatsappPayments: row.whatsapp_payments ?? null,
+    bankName: row.bank_name ?? null,
+    bankAccountType: row.bank_account_type ?? null,
+    bankAccountNumber: row.bank_account_number ?? null,
+    bankAccountHolder: row.bank_account_holder ?? null,
+    bankAccountId: row.bank_account_id ?? null,
+    deunaCode: row.deuna_code ?? null,
+    deunaQrUrl: row.deuna_qr_url ?? null,
   }
 }
+
+const PAYMENT_DETAIL_COLUMNS = {
+  whatsappPayments: 'whatsapp_payments',
+  bankName: 'bank_name',
+  bankAccountType: 'bank_account_type',
+  bankAccountNumber: 'bank_account_number',
+  bankAccountHolder: 'bank_account_holder',
+  bankAccountId: 'bank_account_id',
+  deunaCode: 'deuna_code',
+  deunaQrUrl: 'deuna_qr_url',
+} as const satisfies Partial<Record<keyof GymSettings, string>>
 
 function mapZone(row: {
   id: string
@@ -240,7 +273,7 @@ function mapCheckIn(row: {
 function mapMeasurement(row: {
   id: string
   user_id: string
-  recorded_by: string
+  recorded_by: string | null
   weight_kg: number | string
   height_cm?: number | string | null
   bmi?: number | string | null
@@ -255,7 +288,7 @@ function mapMeasurement(row: {
   return {
     id: row.id,
     userId: row.user_id,
-    recordedBy: row.recorded_by,
+    recordedBy: row.recorded_by ?? '',
     weightKg: Number(row.weight_kg),
     heightCm: row.height_cm != null ? Number(row.height_cm) : undefined,
     bmi: row.bmi != null ? Number(row.bmi) : undefined,
@@ -297,6 +330,7 @@ function mapMembershipPlan(row: {
   visit_quota: number | null
   allowed_zone_ids: string[] | null
   active: boolean
+  kind?: string | null
   created_at?: string
 }): MembershipPlan {
   return {
@@ -307,6 +341,8 @@ function mapMembershipPlan(row: {
     visitQuota: row.visit_quota,
     allowedZoneIds: row.allowed_zone_ids ?? [],
     active: row.active,
+    // Sin columna kind (antes de plan-rules.sql) queda undefined y decide el nombre.
+    kind: row.kind === 'day_pass' || row.kind === 'membership' ? row.kind : undefined,
     createdAt: row.created_at,
   }
 }
@@ -346,6 +382,7 @@ function mapPayment(row: {
   manual_method: string | null
   reference?: string | null
   mp_payment_id?: string | null
+  notes?: string | null
   created_at: string
   approved_at: string | null
 }): Payment {
@@ -360,6 +397,7 @@ function mapPayment(row: {
     manualMethod: (row.manual_method as ManualPaymentMethod) ?? null,
     reference: row.reference,
     authorizationCode: row.provider === 'pagomedios' ? (row.mp_payment_id ?? null) : null,
+    notes: row.notes ?? null,
     createdAt: row.created_at,
     approvedAt: row.approved_at,
   }
@@ -400,12 +438,6 @@ export class SupabaseRepository implements GymRepository {
   private async requireUser(): Promise<User> {
     const user = await this.getCurrentUser()
     if (!user) throw new Error('No hay sesión activa')
-    return user
-  }
-
-  private async requireStaff(): Promise<User> {
-    const user = await this.requireUser()
-    if (user.role === 'member') throw new Error('Sin permiso')
     return user
   }
 
@@ -705,19 +737,14 @@ export class SupabaseRepository implements GymRepository {
     if (error) throw new Error(error.message)
   }
 
+  /**
+   * Borra auth.users y, en cascada, el perfil y todos sus datos (schema.sql).
+   * Los DELETE directos no sirven: RLS los ignora sin error.
+   */
   async deleteAccount(): Promise<void> {
-    const actor = await this.requireUser()
-    const userId = actor.id
-
-    // Delete personal records
-    await this.client.from('payments').delete().eq('user_id', userId)
-    await this.client.from('memberships').delete().eq('user_id', userId)
-    await this.client.from('body_measurements').delete().eq('user_id', userId)
-    await this.client.from('check_ins').delete().eq('user_id', userId)
-    await this.client.from('waitlist_entries').delete().eq('user_id', userId)
-    await this.client.from('bookings').delete().eq('user_id', userId)
-    await this.client.from('profiles').delete().eq('id', userId)
-
+    await this.requireUser()
+    const { error } = await this.client.rpc('delete_user_account')
+    if (error) throw new Error(error.message)
     await this.signOut()
   }
 
@@ -767,6 +794,18 @@ export class SupabaseRepository implements GymRepository {
     }
     if (patch.checkInWindowMinutes !== undefined) {
       row.check_in_window_minutes = patch.checkInWindowMinutes
+    }
+    if (patch.onlinePaymentsEnabled !== undefined) {
+      row.online_payments_enabled = patch.onlinePaymentsEnabled
+    }
+    if (patch.waitlistEnabled !== undefined) row.waitlist_enabled = patch.waitlistEnabled
+    if (patch.measurementsEnabled !== undefined) {
+      row.measurements_enabled = patch.measurementsEnabled
+    }
+    if (patch.dayPassesEnabled !== undefined) row.day_passes_enabled = patch.dayPassesEnabled
+    for (const [key, column] of Object.entries(PAYMENT_DETAIL_COLUMNS)) {
+      const value = patch[key as keyof typeof PAYMENT_DETAIL_COLUMNS]
+      if (value !== undefined) row[column] = value?.trim() || null
     }
     const { data, error } = await this.client
       .from('gym_settings')
@@ -931,52 +970,15 @@ export class SupabaseRepository implements GymRepository {
     return mapBooking(data as BookingRow)
   }
 
+  /** Código, estado y ventana se validan en la base (check_in_booking en booking-rpc.sql). */
   async checkIn(bookingId: string, code: string): Promise<CheckIn> {
-    const actor = await this.requireUser()
-    const state = await this.fetchState()
-    const booking = state.bookings.find((b) => b.id === bookingId)
-    if (!booking) throw new Error('Reserva no encontrada')
-    if (actor.role === 'member' && booking.userId !== actor.id) {
-      throw new Error('Sin permiso para este check-in')
-    }
-    if (booking.checkInCode !== code.trim().toUpperCase()) {
-      throw new Error('Código QR inválido')
-    }
-    if (booking.status !== 'confirmed' && booking.status !== 'pending') {
-      throw new Error('La reserva no está activa')
-    }
-    const session = state.sessions.find((s) => s.id === booking.sessionId)
-    if (!session) throw new Error('Sesión no encontrada')
-    if (
-      !isCheckInWindow(
-        session.startsAt,
-        new Date(),
-        state.settings.checkInWindowMinutes,
-        10,
-      )
-    ) {
-      throw new Error('Fuera de la ventana de check-in')
-    }
-    const checkIn: CheckIn = {
-      id: uid('ci'),
-      bookingId: booking.id,
-      sessionId: session.id,
-      userId: booking.userId,
-      checkedInAt: new Date().toISOString(),
-    }
-    const { error } = await this.client.from('check_ins').insert({
-      id: checkIn.id,
-      booking_id: checkIn.bookingId,
-      session_id: checkIn.sessionId,
-      user_id: checkIn.userId,
-      checked_in_at: checkIn.checkedInAt,
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('check_in_booking', {
+      p_booking_id: bookingId,
+      p_code: code,
     })
     if (error) throw new Error(error.message)
-    await this.client
-      .from('bookings')
-      .update({ status: 'attended' })
-      .eq('id', booking.id)
-    return checkIn
+    return mapCheckIn(data as Parameters<typeof mapCheckIn>[0])
   }
 
   async listMeasurements(userId: string): Promise<BodyMeasurement[]> {
@@ -1232,7 +1234,7 @@ export class SupabaseRepository implements GymRepository {
   async upsertMembershipPlan(
     plan: Partial<MembershipPlan> & { name: string; priceCents: number; durationDays: number },
   ): Promise<MembershipPlan> {
-    await this.requireStaff()
+    await this.requireAdmin()
     const row: Record<string, unknown> = {
       name: plan.name,
       price_cents: plan.priceCents,
@@ -1242,6 +1244,7 @@ export class SupabaseRepository implements GymRepository {
     if (plan.visitQuota !== undefined) row.visit_quota = plan.visitQuota
     if (plan.allowedZoneIds !== undefined) row.allowed_zone_ids = plan.allowedZoneIds
     if (plan.active !== undefined) row.active = plan.active
+    if (plan.kind !== undefined) row.kind = plan.kind
 
     const { data, error } = await this.client
       .from('membership_plans')
@@ -1261,25 +1264,26 @@ export class SupabaseRepository implements GymRepository {
     if (error) throw new Error(error.message)
   }
 
-  async getMemberMembership(userId: string): Promise<Membership | null> {
+  /** Membresías del socio con su plan embebido (para distinguir pases del día). */
+  private async membershipsWithPlans(
+    userId: string,
+  ): Promise<{ memberships: Membership[]; plans: MembershipPlan[] }> {
     const { data, error } = await this.client
       .from('memberships')
-      .select('*')
+      .select('*, membership_plans(*)')
       .eq('user_id', userId)
       .order('ends_at', { ascending: false })
     if (error) throw new Error(error.message)
-    if (!data || data.length === 0) return null
-    const mapped = data.map(mapMembership)
-    const active = mapped.find((m) => {
-      const s = computeMembershipStatus(m)
-      return s === 'active' || s === 'grace'
-    })
-    if (active) {
-      return { ...active, status: computeMembershipStatus(active) }
-    }
-    const latest = mapped[0]
-    if (!latest) return null
-    return { ...latest, status: computeMembershipStatus(latest) }
+    const rows = data ?? []
+    const plans = rows.flatMap((row) =>
+      row.membership_plans ? [mapMembershipPlan(row.membership_plans)] : [],
+    )
+    return { memberships: rows.map(mapMembership), plans }
+  }
+
+  async getMemberMembership(userId: string): Promise<Membership | null> {
+    const { memberships, plans } = await this.membershipsWithPlans(userId)
+    return memberMembership(memberships, plans)
   }
 
   async getMemberPayments(userId: string): Promise<Payment[]> {
@@ -1316,6 +1320,7 @@ export class SupabaseRepository implements GymRepository {
   async requestPlanPayment(params: {
     planId: string
     manualMethod: ManualPaymentMethod
+    reference?: string
   }): Promise<Payment> {
     const user = await this.requireUser()
     if (user.role !== 'member') {
@@ -1329,6 +1334,15 @@ export class SupabaseRepository implements GymRepository {
       .single()
     if (planError || !planRow) throw new Error('Plan no encontrado')
     const plan = mapMembershipPlan(planRow)
+    const { data: settingsRow } = await this.client
+      .from('gym_settings')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle()
+    assertPlanSellableInApp(plan, settingsRow ? mapSettings(settingsRow) : null)
+    const mine = await this.membershipsWithPlans(user.id)
+    const outcome = planPurchaseOutcome({ ...mine, plan })
+    if (outcome.kind === 'reject') throw new Error(outcome.reason)
 
     const { data: existing, error: existingError } = await this.client
       .from('payments')
@@ -1348,7 +1362,7 @@ export class SupabaseRepository implements GymRepository {
       status: 'pending',
       provider: 'manual',
       manual_method: params.manualMethod,
-      reference: null,
+      reference: resolveRequestReference(existing?.reference, params.reference),
     }
     const query = existing
       ? this.client.from('payments').update(payload).eq('id', existing.id)
@@ -1367,42 +1381,16 @@ export class SupabaseRepository implements GymRepository {
   }): Promise<{ payment: Payment; membership: Membership }> {
     await this.requireUser()
 
-    // 1. Get plan
-    const { data: planRow, error: planError } = await this.client
-      .from('membership_plans')
-      .select('*')
-      .eq('id', params.planId)
-      .single()
-    if (planError || !planRow) throw new Error('Plan no encontrado')
-    const plan = mapMembershipPlan(planRow)
-
-    // 2. Get current membership & compute extension
-    const currentMembership = await this.getMemberMembership(params.userId)
-    const newDates = extendMembership(currentMembership, plan, new Date())
-
-    // 3. Upsert membership
-    const membershipPayload: Record<string, unknown> = {
-      user_id: params.userId,
-      plan_id: plan.id,
-      starts_at: newDates.startsAt,
-      ends_at: newDates.endsAt,
-      grace_ends_at: newDates.graceEndsAt,
-      status: newDates.status,
-      visits_left: newDates.visitsLeft,
-    }
-    if (currentMembership) {
-      membershipPayload.id = currentMembership.id
-    }
-
-    const { data: memData, error: memError } = await this.client
-      .from('memberships')
-      .upsert(membershipPayload)
-      .select('*')
-      .single()
+    // La base decide vigente / en espera / pase del día y bloquea al socio (plan-rules.sql)
+    const { data: memData, error: memError } = await this.client.rpc('apply_plan_purchase', {
+      p_user_id: params.userId,
+      p_plan_id: params.planId,
+    })
     if (memError) throw new Error(memError.message)
-    const membership = mapMembership(memData)
+    const membershipRow = mapMembership(memData)
+    const membership = { ...membershipRow, status: computeMembershipStatus(membershipRow) }
 
-    // 4. Aprueba la solicitud pendiente o registra un cobro nuevo
+    // Aprueba la solicitud pendiente o registra un cobro nuevo
     const { data: pending, error: pendingError } = await this.client
       .from('payments')
       .select('id, created_at, reference')
@@ -1415,7 +1403,7 @@ export class SupabaseRepository implements GymRepository {
 
     const paymentPayload = {
       user_id: params.userId,
-      plan_id: plan.id,
+      plan_id: params.planId,
       membership_id: membership.id,
       amount_cents: params.amountCents,
       status: 'approved',
@@ -1435,6 +1423,37 @@ export class SupabaseRepository implements GymRepository {
     const payment = mapPayment(payData)
 
     return { payment, membership }
+  }
+
+  async changePlanNow(params: {
+    userId: string
+    planId: string
+    amountCents: number
+    manualMethod: ManualPaymentMethod
+  }): Promise<{ payment: Payment; membership: Membership }> {
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('change_plan_now', {
+      p_user_id: params.userId,
+      p_plan_id: params.planId,
+      p_amount_cents: params.amountCents,
+      p_method: params.manualMethod,
+    })
+    if (error) throw new Error(error.message)
+    const membership = mapMembership(data.membership)
+    return {
+      payment: mapPayment(data.payment),
+      membership: { ...membership, status: computeMembershipStatus(membership) },
+    }
+  }
+
+  async refundPayment(params: { paymentId: string; cancelMembership: boolean }): Promise<Payment> {
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('refund_payment', {
+      p_payment_id: params.paymentId,
+      p_cancel_membership: params.cancelMembership,
+    })
+    if (error) throw new Error(error.message)
+    return mapPayment(data)
   }
 
   async createOnlineCheckout(params: {

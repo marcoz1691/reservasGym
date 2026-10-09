@@ -38,6 +38,71 @@ function clientWithRpc(rpc: ReturnType<typeof vi.fn>): SupabaseClient {
   } as unknown as SupabaseClient
 }
 
+describe('SupabaseRepository check-in y baja de cuenta vía RPC', () => {
+  it('hace check-in con check_in_booking: la base valida código, estado y ventana', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        id: 'ci-1',
+        booking_id: 'bk_1',
+        session_id: 'sess_1',
+        user_id: 'user_member',
+        checked_in_at: '2030-05-01T09:55:00+00:00',
+      },
+      error: null,
+    })
+    const client = clientWithRpc(rpc)
+    const repo = new SupabaseRepository(client)
+
+    const result = await repo.checkIn('bk_1', 'qr-047cac92')
+
+    expect(rpc).toHaveBeenCalledWith('check_in_booking', {
+      p_booking_id: 'bk_1',
+      p_code: 'qr-047cac92',
+    })
+    expect(client.from).not.toHaveBeenCalledWith('check_ins')
+    expect(client.from).not.toHaveBeenCalledWith('bookings')
+    expect(result).toMatchObject({ id: 'ci-1', bookingId: 'bk_1', userId: 'user_member' })
+  })
+
+  it('propaga el rechazo del check-in', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message: 'Fuera de la ventana de check-in' },
+    })
+    const repo = new SupabaseRepository(clientWithRpc(rpc))
+
+    await expect(repo.checkIn('bk_1', 'QR-1')).rejects.toThrow('Fuera de la ventana de check-in')
+  })
+
+  it('elimina la cuenta con delete_user_account y cierra sesión', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null })
+    const client = clientWithRpc(rpc)
+    const signOut = vi.fn().mockResolvedValue({ error: null })
+    Object.assign(client.auth, { signOut })
+    const repo = new SupabaseRepository(client)
+
+    await repo.deleteAccount()
+
+    expect(rpc).toHaveBeenCalledWith('delete_user_account')
+    expect(client.from).not.toHaveBeenCalledWith('profiles', expect.anything())
+    expect(signOut).toHaveBeenCalled()
+  })
+
+  it('si la base no borra la cuenta, avisa en vez de decir que se borró', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: '42501', message: 'permission denied' },
+    })
+    const client = clientWithRpc(rpc)
+    const signOut = vi.fn().mockResolvedValue({ error: null })
+    Object.assign(client.auth, { signOut })
+    const repo = new SupabaseRepository(client)
+
+    await expect(repo.deleteAccount()).rejects.toThrow('permission denied')
+    expect(signOut).not.toHaveBeenCalled()
+  })
+})
+
 describe('SupabaseRepository reservas vía RPC (ZCAPP-53/54)', () => {
   it('reserva con book_session y devuelve la reserva confirmada', async () => {
     const rpc = vi.fn().mockResolvedValue({ data: { booking: bookingRow }, error: null })

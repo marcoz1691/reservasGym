@@ -13,6 +13,7 @@ import {
   Landmark,
   Loader2,
   Lock,
+  QrCode,
   Store,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -27,30 +28,53 @@ import {
   type BillingDocumentType,
   type BillingErrors,
 } from '@/domain/rules/billing'
+import { planPurchaseOutcome } from '@/domain/rules/memberships'
+import { isFeatureEnabled } from '@/domain/rules/featureFlags'
+import { isDayPassPlan } from '@/domain/rules/membershipPlan'
+import {
+  buildReceiptWhatsAppUrl,
+  generatePaymentReference,
+  isPaymentReference,
+} from '@/domain/rules/paymentReceipt'
+import {
+  isDeunaConfigured,
+  isRemotePaymentMethod,
+  selectPendingPlanRequest,
+} from '@/domain/rules/planRequest'
 import { formatCurrency, formatDateSpanish } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
 import { TermsDialog } from '@/features/legal/TermsDialog'
 import { CardBrandLogos } from './components/CardBrandLogos'
 import { LeaveCheckoutSheet } from './components/LeaveCheckoutSheet'
+import { ManualPaymentInstructions } from './components/ManualPaymentInstructions'
 import { splitTax } from '../../../supabase/functions/pagomedios-payment/tax'
 import {
   ONLINE_PAYMENT_TAX_RATE,
   isNativeApp,
   isOnlinePayEnabled,
+  isOnlinePayEnvEnabled,
   onPaymentScreenClosed,
   openPaymentPage,
   rememberPendingPayment,
   takePendingPayment,
 } from './onlinePay'
 
-/** Cómo paga el socio: tarjeta en línea (Pagomedios) o en recepción. */
-type CheckoutMethod = 'card' | 'cash' | 'transfer'
+/** Cómo paga el socio: tarjeta en línea (Pagomedios), en recepción, transferencia o Deuna. */
+type CheckoutMethod = 'card' | 'cash' | 'transfer' | 'deuna'
+type ManualCheckoutMethod = Exclude<CheckoutMethod, 'card'>
 
 const METHOD_OPTIONS: { value: CheckoutMethod; title: string; detail: string; icon: LucideIcon }[] = [
   { value: 'card', title: 'Tarjeta de crédito o débito', detail: 'En línea, procesado por Pagomedios', icon: CreditCard },
   { value: 'cash', title: 'Efectivo en recepción', detail: 'Pagas al llegar al gimnasio', icon: Banknote },
   { value: 'transfer', title: 'Transferencia bancaria', detail: 'Recepción confirma tu comprobante', icon: Landmark },
+  { value: 'deuna', title: 'Deuna (Banco Pichincha)', detail: 'Pagas con el QR o el código del gym', icon: QrCode },
 ]
+
+function onlineOffMessage(deunaAvailable: boolean): string {
+  return deunaAvailable
+    ? 'El pago en línea no está disponible en este momento. Puedes pagar en efectivo, por transferencia o con Deuna.'
+    : 'El pago en línea no está disponible en este momento. Puedes pagar en efectivo o por transferencia.'
+}
 
 const DOCUMENT_PLACEHOLDER: Record<BillingDocumentType, string> = {
   '05': 'Ej. 1712345678',
@@ -87,6 +111,17 @@ export function PagomediosCheckoutPage() {
     () => (data.membershipPlans ?? []).find((p) => p.id === planId && p.active) ?? null,
     [data.membershipPlans, planId],
   )
+  const purchase = useMemo(
+    () =>
+      plan && user
+        ? planPurchaseOutcome({
+            memberships: (data.memberships ?? []).filter((m) => m.userId === user.id),
+            plans: data.membershipPlans ?? [],
+            plan,
+          })
+        : null,
+    [data.memberships, data.membershipPlans, plan, user],
+  )
 
   const [documentType, setDocumentType] = useState<BillingDocumentType>('05')
   const [document, setDocument] = useState('')
@@ -96,10 +131,31 @@ export function PagomediosCheckoutPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [payerOpen, setPayerOpen] = useState(true)
-  const [method, setMethod] = useState<CheckoutMethod>('card')
-  const [requestSent, setRequestSent] = useState<Exclude<CheckoutMethod, 'card'> | null>(null)
+  const [chosenMethod, setMethod] = useState<CheckoutMethod>('card')
+  const [requestSent, setRequestSent] = useState<{
+    method: ManualCheckoutMethod
+    reference: string | null
+  } | null>(null)
+  const [draftReference] = useState(() => generatePaymentReference())
+  const pendingRequest = user ? selectPendingPlanRequest(data.payments ?? [], user.id) : null
+  // Si ya había una solicitud con referencia, se reutiliza: el socio quizá ya la usó al pagar.
+  const reference = isPaymentReference(pendingRequest?.reference)
+    ? pendingRequest.reference
+    : draftReference
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Al volver de Pagomedios con "atrás", el navegador puede restaurar la página
+  // desde su caché (bfcache) con el estado "procesando": se rehabilita el formulario.
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setBusy(false)
+        setError(null)
+      }
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
   const [verify, setVerify] = useState<VerifyState>({ kind: 'checking' })
   const [confirmLeave, setConfirmLeave] = useState(false)
   const askToLeave = useCallback(() => setConfirmLeave(true), [])
@@ -115,7 +171,19 @@ export function PagomediosCheckoutPage() {
   const fieldError = (field: keyof BillingErrors) =>
     touched[field] ? billingErrors[field] : undefined
 
-  const onlineOk = isOnlinePayEnabled() && typeof repo.createPagomediosPayment === 'function'
+  // El ambiente con pasarela basta para verificar un pago ya iniciado; cobrar con
+  // tarjeta además requiere el interruptor del admin.
+  const onlineOk = isOnlinePayEnvEnabled() && typeof repo.createPagomediosPayment === 'function'
+  const cardEnabled = onlineOk && isOnlinePayEnabled(data.settings)
+  const deunaEnabled = isDeunaConfigured(data.settings)
+  const methodOptions = METHOD_OPTIONS.filter(
+    (o) => (o.value !== 'card' || cardEnabled) && (o.value !== 'deuna' || deunaEnabled),
+  )
+  const method: CheckoutMethod = methodOptions.some((o) => o.value === chosenMethod)
+    ? chosenMethod
+    : 'cash'
+  const dayPassBlocked =
+    plan !== null && isDayPassPlan(plan) && !isFeatureEnabled(data.settings, 'dayPasses')
 
   const runVerify = useCallback(async () => {
     const verifyPayment = repo.verifyPagomediosPayment?.bind(repo)
@@ -177,9 +245,16 @@ export function PagomediosCheckoutPage() {
       setBusy(true)
       setError(null)
       try {
-        await repo.requestPlanPayment({ planId, manualMethod: method })
+        const request = await repo.requestPlanPayment(
+          isRemotePaymentMethod(method)
+            ? { planId, manualMethod: method, reference }
+            : { planId, manualMethod: method },
+        )
         await refresh()
-        setRequestSent(method)
+        setRequestSent({
+          method,
+          reference: isPaymentReference(request?.reference) ? request.reference : reference,
+        })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'No se pudo enviar la solicitud')
       } finally {
@@ -212,8 +287,14 @@ export function PagomediosCheckoutPage() {
       })
       if (native) setBusy(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo iniciar el pago')
+      const message = err instanceof Error ? err.message : 'No se pudo iniciar el pago'
       setBusy(false)
+      if (/Pago en línea desactivado/i.test(message)) {
+        setError(onlineOffMessage(deunaEnabled))
+        await refresh()
+      } else {
+        setError(message)
+      }
     }
   }
 
@@ -250,7 +331,7 @@ export function PagomediosCheckoutPage() {
             <button
               type="button"
               onClick={() => void runVerify()}
-              className="text-sm font-bold text-acc"
+              className="text-sm font-bold text-acc-dark"
             >
               Volver a verificar
             </button>
@@ -278,6 +359,25 @@ export function PagomediosCheckoutPage() {
     )
   }
 
+  if (dayPassBlocked) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 p-4">
+        <p className="text-sm text-ink-2">Los pases diarios se venden en recepción.</p>
+        <BackLink label="Ir a Mi Plan" />
+      </div>
+    )
+  }
+
+  const whatsappUrlFor = (manualMethod: ManualCheckoutMethod, ref: string | null) =>
+    buildReceiptWhatsAppUrl({
+      phone: data.settings?.whatsappPayments,
+      memberName: user.fullName,
+      planName: plan.name,
+      amountCents: plan.priceCents,
+      method: manualMethod,
+      reference: ref,
+    })
+
   if (requestSent) {
     return (
       <div className="mx-auto max-w-lg space-y-4 p-4">
@@ -286,16 +386,39 @@ export function PagomediosCheckoutPage() {
           role="status"
           className="space-y-3 rounded-3xl border border-line bg-surface p-5 text-sm text-ink-2 shadow-[var(--shadow-card)]"
         >
-          <p className="flex items-center gap-2 text-base font-bold text-ink">
-            <Store className="h-5 w-5 shrink-0" aria-hidden />
-            Paga en recepción
-          </p>
-          <p>
-            {requestSent === 'cash'
-              ? `Acércate a recepción y paga ${formatCurrency(plan.priceCents)} en efectivo.`
-              : `Recepción te dará los datos de la cuenta para transferir ${formatCurrency(plan.priceCents)}. Muestra tu comprobante en recepción.`}
-          </p>
-          <p>Tu plan se activa cuando recepción registre el pago.</p>
+          {isRemotePaymentMethod(requestSent.method) ? (
+            <>
+              <p className="flex items-center gap-2 text-base font-bold text-ink">
+                {requestSent.method === 'deuna' ? (
+                  <QrCode className="h-5 w-5 shrink-0" aria-hidden />
+                ) : (
+                  <Landmark className="h-5 w-5 shrink-0" aria-hidden />
+                )}
+                Completa tu pago
+              </p>
+              <p>
+                {data.settings?.whatsappPayments
+                  ? 'Paga con estos datos y envíanos el comprobante por WhatsApp.'
+                  : 'Paga con estos datos y muestra tu comprobante en recepción.'}
+              </p>
+              <ManualPaymentInstructions
+                method={requestSent.method}
+                settings={data.settings}
+                amountCents={plan.priceCents}
+                reference={requestSent.reference}
+                whatsappUrl={whatsappUrlFor(requestSent.method, requestSent.reference)}
+              />
+            </>
+          ) : (
+            <>
+              <p className="flex items-center gap-2 text-base font-bold text-ink">
+                <Store className="h-5 w-5 shrink-0" aria-hidden />
+                Paga en recepción
+              </p>
+              <p>Acércate a recepción y paga {formatCurrency(plan.priceCents)} en efectivo.</p>
+              <p>Tu plan se activa cuando recepción registre el pago.</p>
+            </>
+          )}
           <Link
             to="/membresia"
             replace
@@ -342,18 +465,31 @@ export function PagomediosCheckoutPage() {
       <PageHeader title="Pago" subtitle="Elige cómo quieres pagar tu plan" />
 
       <section className="rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-ink-3">Tu plan</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-ink-3">Tu plan</p>
         <div className="mt-1 flex items-baseline justify-between gap-3">
           <p className="font-display text-lg font-bold text-ink">{plan.name}</p>
           <p className="shrink-0 text-lg font-bold text-ink">{formatCurrency(plan.priceCents)}</p>
         </div>
-        <p className="text-sm text-ink-3">Vigencia de {plan.durationDays} días · sin cobros recurrentes</p>
+        <p className="text-sm text-ink-3">
+          {purchase?.kind === 'day_pass'
+            ? 'Válido solo hoy · sin cobros recurrentes'
+            : `Vigencia de ${plan.durationDays} días · sin cobros recurrentes`}
+        </p>
+        {purchase?.kind === 'queue' ? (
+          <p className="mt-2 text-sm font-semibold text-ink">
+            Empieza el {formatDateSpanish(purchase.startsAt)} cuando termine tu plan actual
+          </p>
+        ) : purchase?.kind === 'reject' ? (
+          <p className="mt-2 text-sm font-semibold text-danger" role="alert">
+            {purchase.reason}
+          </p>
+        ) : null}
       </section>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
         <Section title="Método de pago">
           <div role="radiogroup" aria-label="Método de pago" className="space-y-2">
-            {METHOD_OPTIONS.map((option) => {
+            {methodOptions.map((option) => {
               const selected = method === option.value
               const Icon = option.icon
               return (
@@ -378,6 +514,14 @@ export function PagomediosCheckoutPage() {
             })}
           </div>
           {payingByCard ? <CardBrandLogos /> : null}
+          {isRemotePaymentMethod(method) ? (
+            <ManualPaymentInstructions
+              method={method}
+              settings={data.settings}
+              amountCents={plan.priceCents}
+              reference={reference}
+            />
+          ) : null}
         </Section>
 
         {payingByCard ? (
@@ -509,7 +653,7 @@ export function PagomediosCheckoutPage() {
         <div className="space-y-3">
           <button
             type="submit"
-            disabled={busy || !formValid}
+            disabled={busy || !formValid || purchase?.kind === 'reject'}
             className="flex w-full items-center justify-between rounded-2xl bg-cta px-5 py-4 text-base font-semibold text-cta-contrast transition hover:bg-cta-hi disabled:cursor-not-allowed disabled:bg-cta/25"
           >
             {busy ? (
@@ -530,6 +674,10 @@ export function PagomediosCheckoutPage() {
                 <Lock className="h-3.5 w-3.5" aria-hidden />
                 Pago seguro en Pagomedios. No guardamos los datos de tu tarjeta.
               </>
+            ) : isRemotePaymentMethod(method) ? (
+              data.settings?.whatsappPayments
+                ? 'Al confirmar podrás enviar tu comprobante por WhatsApp.'
+                : 'Al confirmar, muestra tu comprobante en recepción.'
             ) : (
               'Pagas en recepción. Tu plan se activa cuando lo registren.'
             )}
@@ -595,6 +743,9 @@ function ApprovedReceipt({ receipt }: { receipt?: OnlinePaymentReceipt }) {
         ['Plan', receipt.planName ?? '—'],
         ['Monto', formatCurrency(receipt.amountCents)],
         ['Código de autorización', receipt.authorizationCode ?? '—'],
+        ...(receipt.membershipStartsAt
+          ? [['Empieza el', formatDateSpanish(receipt.membershipStartsAt)] as [string, string]]
+          : []),
         [
           'Membresía activa hasta',
           receipt.membershipEndsAt ? formatDateSpanish(receipt.membershipEndsAt) : '—',
@@ -634,7 +785,7 @@ function ApprovedReceipt({ receipt }: { receipt?: OnlinePaymentReceipt }) {
 
 function BackLink({ label = 'Volver a Mi Plan' }: { label?: string }) {
   return (
-    <Link to="/membresia" className="inline-flex items-center gap-1 text-sm font-bold text-acc">
+    <Link to="/membresia" className="inline-flex items-center gap-1 text-sm font-bold text-acc-dark">
       <ArrowLeft className="h-4 w-4" />
       {label}
     </Link>

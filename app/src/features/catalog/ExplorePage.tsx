@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   Clock,
-  Filter,
   Grid,
   Lock,
   UserCheck,
@@ -13,8 +12,8 @@ import {
   useRepo,
 } from '@/data/RepositoryProvider'
 import type { Session } from '@/domain/models'
-import { selectMyMembership } from '@/app/store'
-import { canBookMembership, canBookZone } from '@/domain/rules'
+import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
+import { canAccessZone, canBookMembership, canBookZone, isFeatureEnabled } from '@/domain/rules'
 import { getDisciplineMeta, ZONA_CERO_DISCIPLINES } from '@/domain/disciplines'
 import { formatEcuadorSessionWhen, formatEcuadorTime } from '@/lib/format'
 import { Badge, Button, Card, PageHeader, Spinner } from '@/ui/primitives'
@@ -24,6 +23,7 @@ import { StaffBookingModal } from '@/features/agenda/StaffBookingModal'
 
 export function ExplorePage() {
   const data = useAppData()
+  const waitlistOn = isFeatureEnabled(data.settings, 'waitlist')
   const user = useCurrentUser()
   const repo = useRepo()
   const refresh = useRefresh()
@@ -34,10 +34,13 @@ export function ExplorePage() {
   const memberPlan = membership
     ? (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
     : undefined
+  const passPlans = user ? selectMyDayPassPlans(data, user.id) : []
+  const filtersByAccess = isMember && (!!memberPlan || passPlans.length > 0)
   const planStatus = canBookMembership(membership).status
-  const neverHadPlan = isMember && planStatus === 'none'
+  const neverHadPlan = isMember && planStatus === 'none' && passPlans.length === 0
   const needsPlan =
     isMember &&
+    passPlans.length === 0 &&
     (planStatus === 'none' ||
       planStatus === 'expired' ||
       planStatus === 'cancelled')
@@ -58,10 +61,9 @@ export function ExplorePage() {
   const [staffModalSession, setStaffModalSession] = useState<Session | null>(null)
 
   const selectedAreaBlocked =
-    isMember &&
-    !!memberPlan &&
+    filtersByAccess &&
     zoneType !== 'all' &&
-    !canBookZone(memberPlan, zoneType).allowed
+    !canAccessZone(memberPlan, passPlans, zoneType)
 
   const sessions = useMemo(() => {
     const now = new Date().toISOString()
@@ -79,7 +81,7 @@ export function ExplorePage() {
         )
       })
       .slice(0, 50)
-  }, [data, zoneType, isMember, memberPlan, selectedAreaBlocked])
+  }, [data, zoneType, selectedAreaBlocked])
 
   async function onBookSession(sessionId: string) {
     if (!user) return
@@ -105,8 +107,16 @@ export function ExplorePage() {
         return
       }
 
-      // 1. Check membership status
       const membership = selectMyMembership(data, user.id)
+      const coveringPasses = selectMyDayPassPlans(data, user.id, new Date(), session.startsAt)
+      if (coveringPasses.some((pass) => canBookZone(pass, session.zoneId).allowed)) {
+        const result = await repo.createBooking(session.id, user.id)
+        setMsg('position' in result ? `Lista de espera #${result.position}` : 'Reserva confirmada')
+        await refresh()
+        return
+      }
+
+      // 1. Check membership status
       const memCheck = canBookMembership(membership)
       if (!memCheck.allowed) {
         const gateType: BookingGateType =
@@ -166,7 +176,7 @@ export function ExplorePage() {
     <div className="space-y-6">
       <PageHeader
         title="Explorar áreas"
-        subtitle="Disciplinas de Zona Cero. Reserva solo las incluidas en tu plan."
+        subtitle="Reserva solo las disciplinas incluidas en tu plan."
       />
 
       {msg ? (
@@ -175,19 +185,7 @@ export function ExplorePage() {
         </div>
       ) : null}
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs text-ink-3">
-          <span className="flex items-center gap-1.5 font-medium">
-            <Filter className="h-3.5 w-3.5" />
-            Disciplinas
-          </span>
-          <span className="text-[11px]">
-            {zoneType === 'all'
-              ? `${sessions.length} sesiones`
-              : `${sessions.length} en esta área`}
-          </span>
-        </div>
-
+      <div>
         <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
@@ -205,6 +203,8 @@ export function ExplorePage() {
           {Object.entries(ZONA_CERO_DISCIPLINES).map(([typeKey, meta]) => {
             const Icon = meta.icon
             const isSelected = zoneType === typeKey || zoneType === meta.defaultZoneId
+            const blocked =
+              filtersByAccess && !canAccessZone(memberPlan, passPlans, meta.defaultZoneId)
 
             return (
               <button
@@ -219,71 +219,26 @@ export function ExplorePage() {
               >
                 <Icon className="h-3.5 w-3.5 text-ink-3" />
                 <span>{meta.name}</span>
+                {blocked ? <Lock className="h-3 w-3 text-ink-3" aria-label="No incluida" /> : null}
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Disciplines Showcase Cards */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {data.zones
-          .filter(
-            (z) =>
-              zoneType === 'all' ||
-              z.type === zoneType ||
-              z.id === zoneType ||
-              z.id.replace(/[_-]/g, '').toLowerCase() ===
-                zoneType.replace(/[_-]/g, '').toLowerCase(),
-          )
-          .map((z) => {
-            const meta = getDisciplineMeta(z.type ?? z.id)
-            const Icon = meta.icon
-            const included =
-              !isMember ||
-              needsPlan ||
-              !memberPlan ||
-              canBookZone(memberPlan, z.id).allowed
-            return (
-              <Card
-                key={z.id}
-                className={`flex flex-col justify-between p-4 ${
-                  included ? '' : 'opacity-60'
-                }`}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <Icon className="h-4 w-4 shrink-0 text-ink-3" />
-                      <div className="font-semibold text-ink">{z.name}</div>
-                    </div>
-                    {included ? null : (
-                      <Badge tone="neutral">No incluida</Badge>
-                    )}
-                  </div>
-                  <p className="text-xs leading-relaxed text-ink-3">
-                    {z.description || meta.description}
-                  </p>
-                </div>
-
-                <p className="mt-3 text-[11px] text-ink-3">
-                  {z.defaultCapacity} cupos
-                </p>
-              </Card>
-            )
-          })}
-      </div>
-
       {/* Available Sessions List */}
       <div className="space-y-3">
-        <h2 className="font-display text-lg font-bold text-ink">
-          Próximas sesiones
-        </h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-display text-lg font-bold text-ink">
+            Próximas sesiones
+          </h2>
+          <span className="text-xs text-ink-3">{sessions.length} sesiones</span>
+        </div>
 
-        {selectedAreaBlocked && memberPlan ? (
+        {selectedAreaBlocked ? (
           <Card className="p-8 text-center text-xs text-ink-3">
-            Tu plan ({memberPlan.name}) no incluye esta área. Esas clases no se
-            pueden reservar.
+            {memberPlan ? `Tu plan (${memberPlan.name})` : 'Tu pase del día'} no incluye esta
+            área. Esas clases no se pueden reservar.
           </Card>
         ) : sessions.length === 0 ? (
           <Card className="p-8 text-center text-xs text-ink-3">
@@ -334,7 +289,7 @@ export function ExplorePage() {
                         <span className="text-sm font-semibold text-ink">
                           {s.title}
                         </span>
-                        <span className="text-[11px] text-ink-3">
+                        <span className="text-xs text-ink-3">
                           {meta.name}
                         </span>
                       </div>
@@ -364,9 +319,8 @@ export function ExplorePage() {
                       >
                         {neverHadPlan ? 'Activar plan' : 'Renovar plan'}
                       </ButtonLink>
-                    ) : isMember &&
-                      memberPlan &&
-                      !canBookZone(memberPlan, s.zoneId).allowed ? (
+                    ) : filtersByAccess &&
+                      !canAccessZone(memberPlan, passPlans, s.zoneId) ? (
                       <ButtonLink
                         to="/membresia"
                         variant="secondary"
@@ -381,7 +335,7 @@ export function ExplorePage() {
                         variant={
                           mineReserved || mineWaiting || full ? 'secondary' : 'primary'
                         }
-                        disabled={mineReserved || mineWaiting}
+                        disabled={mineReserved || mineWaiting || (full && !waitlistOn)}
                         isLoading={busyId === s.id}
                         onClick={() => void onBookSession(s.id)}
                         className="text-xs py-1.5 px-3"
@@ -393,7 +347,9 @@ export function ExplorePage() {
                             : mineWaiting
                               ? 'En espera'
                               : full
-                                ? 'Lista de espera'
+                                ? waitlistOn
+                                  ? 'Lista de espera'
+                                  : 'Clase llena'
                                 : 'Reservar'}
                       </Button>
                     )}

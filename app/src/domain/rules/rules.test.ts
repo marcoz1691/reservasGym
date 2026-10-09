@@ -4,12 +4,12 @@ import {
   canCancelBooking,
   canManageWeight,
   canRecordWeight,
-  confirmedCount,
   hasOverlap,
   isCheckInWindow,
   isCheckInWindowOpen,
   nextWaitlistPosition,
   pickWaitlistPromotion,
+  seatsTaken,
 } from './index'
 import type { Booking, Session } from '../models'
 
@@ -44,7 +44,18 @@ describe('rules', () => {
       bk({ id: 'b1', userId: 'u1', status: 'confirmed' }),
       bk({ id: 'b2', userId: 'u2', status: 'confirmed' }),
     ]
-    expect(confirmedCount(bookings, 's1')).toBe(2)
+    expect(seatsTaken(bookings, 's1')).toBe(2)
+    expect(canBookSession(session, bookings)).toEqual({ ok: false, reason: 'full' })
+  })
+
+  it('el check-in no libera el cupo: asistió y pendiente siguen ocupando lugar', () => {
+    const bookings = [
+      bk({ id: 'b1', userId: 'u1', status: 'attended' }),
+      bk({ id: 'b2', userId: 'u2', status: 'pending' }),
+      bk({ id: 'b3', userId: 'u3', status: 'cancelled' }),
+      bk({ id: 'b4', userId: 'u4', status: 'waitlisted' }),
+    ]
+    expect(seatsTaken(bookings, 's1')).toBe(2)
     expect(canBookSession(session, bookings)).toEqual({ ok: false, reason: 'full' })
   })
 

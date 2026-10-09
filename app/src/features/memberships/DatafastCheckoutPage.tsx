@@ -3,9 +3,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CreditCard, Loader2, ShieldCheck } from 'lucide-react'
 import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
-import { isSupabaseConfigured } from '@/data/supabaseRepository'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
+import { isOnlinePayEnabled, isOnlinePayEnvEnabled } from './onlinePay'
 
 /**
  * Checkout Datafast Dataweb (COPYandPay widget).
@@ -41,10 +41,10 @@ export function DatafastCheckoutPage() {
     shopperResultUrl: string
   } | null>(null)
 
+  // Un pago que vuelve de Datafast se verifica aunque el admin haya apagado el interruptor.
   const onlineOk =
-    import.meta.env.VITE_ONLINE_PAYMENTS === '1' &&
-    isSupabaseConfigured() &&
-    typeof repo.createOnlineCheckout === 'function'
+    typeof repo.createOnlineCheckout === 'function' &&
+    (resourcePath && paymentId ? isOnlinePayEnvEnabled() : isOnlinePayEnabled(data.settings))
 
   // Handle return from Datafast widget
   useEffect(() => {
@@ -127,7 +127,7 @@ export function DatafastCheckoutPage() {
         <p className="text-sm text-ink-2">
           El pago en línea con Datafast no está activo en este ambiente.
         </p>
-        <Link to="/membresia" className="text-sm font-bold text-acc">
+        <Link to="/membresia" className="text-sm font-bold text-acc-dark">
           Volver a Mi Plan
         </Link>
       </div>
@@ -154,7 +154,7 @@ export function DatafastCheckoutPage() {
             {error}
           </div>
         ) : null}
-        <Link to="/membresia" className="inline-flex items-center gap-1 text-sm font-bold text-acc">
+        <Link to="/membresia" className="inline-flex items-center gap-1 text-sm font-bold text-acc-dark">
           <ArrowLeft className="h-4 w-4" />
           Volver a Mi Plan
         </Link>
@@ -166,7 +166,7 @@ export function DatafastCheckoutPage() {
     return (
       <div className="mx-auto max-w-lg space-y-4 p-4">
         <p className="text-sm text-ink-2">Selecciona un plan desde Mi Plan.</p>
-        <Link to="/membresia" className="text-sm font-bold text-acc">
+        <Link to="/membresia" className="text-sm font-bold text-acc-dark">
           Ir a Mi Plan
         </Link>
       </div>
@@ -181,7 +181,7 @@ export function DatafastCheckoutPage() {
       />
 
       <div className="flex items-center gap-2 rounded-2xl border border-line bg-bg-2/80 px-3 py-2 text-xs text-ink-2">
-        <ShieldCheck className="h-4 w-4 text-acc shrink-0" />
+        <ShieldCheck className="h-4 w-4 text-acc-dark shrink-0" />
         Pago seguro PCI (widget Dataweb). No guardamos datos de tu tarjeta.
       </div>
 
@@ -261,7 +261,7 @@ export function DatafastCheckoutPage() {
         </div>
       )}
 
-      <Link to="/membresia" className="inline-flex items-center gap-1 text-sm font-bold text-acc">
+      <Link to="/membresia" className="inline-flex items-center gap-1 text-sm font-bold text-acc-dark">
         <ArrowLeft className="h-4 w-4" />
         Cancelar y volver
       </Link>

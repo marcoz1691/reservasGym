@@ -21,14 +21,29 @@ import {
   canBookSession,
   canManageGoals,
   canManageWeight,
+  activeDayPasses,
   computeMembershipStatus,
-  extendMembership,
+  currentMembership,
   hasOverlap,
+  isDayPassPlan,
+  memberMembership,
+  planChangeCredit,
+  planPurchaseDates,
+  planPurchaseOutcome,
+  queuedMembership,
+  shiftQueuedMembership,
   isCheckInWindow,
   nextWaitlistPosition,
   pickWaitlistPromotion,
   reindexWaitlist,
   RESCHEDULE_FULL_MESSAGE,
+  seatsTaken,
+} from '../domain/rules'
+import {
+  SESSION_FULL_MESSAGE,
+  assertPlanSellableInApp,
+  isFeatureEnabled,
+  resolveRequestReference,
 } from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
 import type {
@@ -487,7 +502,7 @@ export class LocalRepository implements GymRepository {
 
   async updateSettings(patch: Partial<GymSettings>): Promise<GymSettings> {
     const actor = await this.requireUser()
-    if (actor.role === 'member') throw new Error('Sin permiso')
+    if (actor.role !== 'admin') throw new Error('Solo admin')
     this.state.settings = { ...this.state.settings, ...patch }
     this.persistState()
     return { ...this.state.settings }
@@ -586,6 +601,9 @@ export class LocalRepository implements GymRepository {
     }
     const session = this.state.sessions.find((s) => s.id === sessionId)
     if (!session) throw new Error('Sesión no encontrada')
+    if (actor.role === 'member' && new Date(session.startsAt).getTime() <= Date.now()) {
+      throw new Error('Esa clase ya empezó')
+    }
 
     const already = this.state.bookings.find(
       (b) =>
@@ -601,12 +619,15 @@ export class LocalRepository implements GymRepository {
 
     const subject = this.state.users.find((u) => u.id === userId)
     if (subject?.role === 'member' || actor.role === 'member') {
-      const allowed = this.memberBookingAllowed(userId, session.zoneId)
+      const allowed = this.memberBookingAllowed(userId, session.zoneId, session.startsAt)
       if (!allowed.ok) throw new Error(allowed.reason)
     }
 
     const capacity = canBookSession(session, this.state.bookings)
     if (!capacity.ok) {
+      if (!isFeatureEnabled(this.state.settings, 'waitlist')) {
+        throw new Error(SESSION_FULL_MESSAGE)
+      }
       const entry: WaitlistEntry = {
         id: uid('wl'),
         sessionId,
@@ -639,9 +660,7 @@ export class LocalRepository implements GymRepository {
       checkInCode: uid('QR').toUpperCase(),
     }
     this.state.bookings.push(booking)
-    session.bookedCount = this.state.bookings.filter(
-      (b) => b.sessionId === sessionId && b.status === 'confirmed',
-    ).length
+    session.bookedCount = seatsTaken(this.state.bookings, sessionId)
     this.persistState()
     return { ...booking }
   }
@@ -666,20 +685,61 @@ export class LocalRepository implements GymRepository {
 
     const session = this.state.sessions.find((s) => s.id === booking.sessionId)
     if (session) {
-      session.bookedCount = this.state.bookings.filter(
-        (b) => b.sessionId === session.id && b.status === 'confirmed',
-      ).length
+      session.bookedCount = seatsTaken(this.state.bookings, session.id)
     }
     this.persistState()
     return { ...booking }
   }
 
-  private memberBookingAllowed(userId: string, zoneId: string) {
-    const membership = (this.state.memberships ?? []).find((m) => m.userId === userId)
-    const plan = membership
-      ? (this.state.membershipPlans ?? []).find((p) => p.id === membership.planId)
-      : undefined
-    return assertMemberBookingAllowed(membership, plan, zoneId)
+  /** Plan vigente + pases del día activos que cubren la clase (empieza antes de que venza el pase). */
+  private memberBookingAllowed(userId: string, zoneId: string, sessionStartsAt?: string) {
+    const now = new Date()
+    const plans = this.state.membershipPlans ?? []
+    const mine = (this.state.memberships ?? []).filter((m) => m.userId === userId)
+    const membership = memberMembership(mine, plans, now)
+    const plan = membership ? plans.find((p) => p.id === membership.planId) : undefined
+    const passPlans = activeDayPasses(mine, plans, now)
+      .filter((pass) => !sessionStartsAt || new Date(pass.endsAt) >= new Date(sessionStartsAt))
+      .flatMap((pass) => plans.filter((p) => p.id === pass.planId))
+    return assertMemberBookingAllowed(membership, plan, zoneId, passPlans, now)
+  }
+
+  /** Aplica la compra según planPurchaseOutcome y devuelve la fila resultante. */
+  private applyPlanPurchase(userId: string, plan: MembershipPlan, now: Date): Membership {
+    if (!this.state.memberships) this.state.memberships = []
+    const all = this.state.memberships
+    const plans = this.state.membershipPlans ?? []
+    const outcome = planPurchaseOutcome({
+      memberships: all.filter((m) => m.userId === userId),
+      plans,
+      plan,
+      now,
+    })
+    if (outcome.kind === 'reject') throw new Error(outcome.reason)
+    const { shiftedQueued, ...dates } = planPurchaseDates(outcome, plan, now)
+
+    if (shiftedQueued) {
+      const idx = all.findIndex((m) => m.id === shiftedQueued.id)
+      if (idx >= 0) all[idx] = { ...all[idx]!, ...shiftedQueued }
+    }
+
+    let row: Membership
+    if (outcome.kind === 'extend') {
+      const idx = all.findIndex((m) => m.id === outcome.target.id)
+      row = { ...all[idx]!, ...dates, status: 'active' }
+      all[idx] = row
+    } else {
+      row = {
+        id: uid('mem'),
+        userId,
+        planId: plan.id,
+        ...dates,
+        status: 'active',
+        createdAt: now.toISOString(),
+      }
+      all.push(row)
+    }
+    return { ...row, status: computeMembershipStatus(row, now) }
   }
 
   /**
@@ -697,7 +757,7 @@ export class LocalRepository implements GymRepository {
           return false
         }
         const subject = this.state.users.find((u) => u.id === entry.userId)
-        return subject?.role !== 'member' || this.memberBookingAllowed(entry.userId, session.zoneId).ok
+        return subject?.role !== 'member' || this.memberBookingAllowed(entry.userId, session.zoneId, session.startsAt).ok
       },
     )
 
@@ -763,7 +823,7 @@ export class LocalRepository implements GymRepository {
       throw new Error('Se solapa con otra reserva activa')
     }
     if (this.state.users.find((u) => u.id === userId)?.role === 'member') {
-      const allowed = this.memberBookingAllowed(userId, next.zoneId)
+      const allowed = this.memberBookingAllowed(userId, next.zoneId, next.startsAt)
       if (!allowed.ok) throw new Error(allowed.reason)
     }
     if (!canBookSession(next, this.state.bookings).ok) {
@@ -792,9 +852,7 @@ export class LocalRepository implements GymRepository {
     this.state.waitlist = reindexWaitlist(this.state.waitlist, old.sessionId)
     for (const session of this.state.sessions) {
       if (session.id === old.sessionId || session.id === newSessionId) {
-        session.bookedCount = this.state.bookings.filter(
-          (b) => b.sessionId === session.id && b.status === 'confirmed',
-        ).length
+        session.bookedCount = seatsTaken(this.state.bookings, session.id)
       }
     }
     this.persistState()
@@ -1011,6 +1069,7 @@ export class LocalRepository implements GymRepository {
   ): Promise<MembershipPlan> {
     const actor = await this.requireUser()
     if (actor.role === 'member') throw new Error('Sin permiso')
+    if (actor.role !== 'admin') throw new Error('Solo admin')
     if (!this.state.membershipPlans) this.state.membershipPlans = []
     const existingIdx = plan.id
       ? this.state.membershipPlans.findIndex((p) => p.id === plan.id)
@@ -1024,6 +1083,7 @@ export class LocalRepository implements GymRepository {
       visitQuota: plan.visitQuota !== undefined ? plan.visitQuota : (existing?.visitQuota ?? null),
       allowedZoneIds: plan.allowedZoneIds ?? existing?.allowedZoneIds ?? [],
       active: plan.active !== undefined ? plan.active : (existing?.active ?? true),
+      kind: plan.kind ?? existing?.kind ?? 'membership',
       createdAt: existing?.createdAt ?? new Date().toISOString(),
     }
     if (existingIdx >= 0) {
@@ -1045,20 +1105,7 @@ export class LocalRepository implements GymRepository {
   async getMemberMembership(userId: string): Promise<Membership | null> {
     await this.ensureReady()
     const userMemberships = (this.state.memberships ?? []).filter((m) => m.userId === userId)
-    if (userMemberships.length === 0) return null
-    const active = userMemberships.find((m) => {
-      const s = computeMembershipStatus(m)
-      return s === 'active' || s === 'grace'
-    })
-    if (active) {
-      return { ...active, status: computeMembershipStatus(active) }
-    }
-    const sorted = [...userMemberships].sort(
-      (a, b) => new Date(b.endsAt).getTime() - new Date(a.endsAt).getTime(),
-    )
-    const latest = sorted[0]
-    if (!latest) return null
-    return { ...latest, status: computeMembershipStatus(latest) }
+    return memberMembership(userMemberships, this.state.membershipPlans ?? [])
   }
 
   async getMemberPayments(userId: string): Promise<Payment[]> {
@@ -1103,6 +1150,7 @@ export class LocalRepository implements GymRepository {
   async requestPlanPayment(params: {
     planId: string
     manualMethod: ManualPaymentMethod
+    reference?: string
   }): Promise<Payment> {
     const actor = await this.requireUser()
     if (actor.role !== 'member') {
@@ -1112,6 +1160,13 @@ export class LocalRepository implements GymRepository {
       (p) => p.id === params.planId && p.active,
     )
     if (!plan) throw new Error('Plan no encontrado')
+    assertPlanSellableInApp(plan, this.state.settings)
+    const outcome = planPurchaseOutcome({
+      memberships: (this.state.memberships ?? []).filter((m) => m.userId === actor.id),
+      plans: this.state.membershipPlans ?? [],
+      plan,
+    })
+    if (outcome.kind === 'reject') throw new Error(outcome.reason)
     if (!this.state.payments) this.state.payments = []
 
     const existingIdx = this.state.payments.findIndex(
@@ -1131,7 +1186,7 @@ export class LocalRepository implements GymRepository {
       status: 'pending',
       provider: 'manual',
       manualMethod: params.manualMethod,
-      reference: null,
+      reference: resolveRequestReference(existing?.reference, params.reference),
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       approvedAt: null,
     }
@@ -1157,43 +1212,9 @@ export class LocalRepository implements GymRepository {
     const plan = (this.state.membershipPlans ?? []).find((p) => p.id === params.planId)
     if (!plan) throw new Error('Plan no encontrado')
 
-    const currentMembership = await this.getMemberMembership(params.userId)
-    const newDates = extendMembership(currentMembership, plan, new Date())
-
-    if (!this.state.memberships) this.state.memberships = []
+    await this.ensureReady()
+    const membership = this.applyPlanPurchase(params.userId, plan, new Date())
     if (!this.state.payments) this.state.payments = []
-
-    let membership: Membership
-    const existingIdx = currentMembership
-      ? this.state.memberships.findIndex((m) => m.id === currentMembership.id)
-      : -1
-
-    if (existingIdx >= 0) {
-      const existing = this.state.memberships[existingIdx]!
-      membership = {
-        ...existing,
-        planId: plan.id,
-        startsAt: newDates.startsAt,
-        endsAt: newDates.endsAt,
-        graceEndsAt: newDates.graceEndsAt,
-        status: newDates.status,
-        visitsLeft: newDates.visitsLeft,
-      }
-      this.state.memberships[existingIdx] = membership
-    } else {
-      membership = {
-        id: uid('mem'),
-        userId: params.userId,
-        planId: plan.id,
-        startsAt: newDates.startsAt,
-        endsAt: newDates.endsAt,
-        graceEndsAt: newDates.graceEndsAt,
-        status: newDates.status,
-        visitsLeft: newDates.visitsLeft,
-        createdAt: new Date().toISOString(),
-      }
-      this.state.memberships.push(membership)
-    }
 
     const pendingIdx = this.state.payments.findIndex(
       (p) =>
@@ -1227,6 +1248,86 @@ export class LocalRepository implements GymRepository {
       payment: { ...payment },
       membership: { ...membership },
     }
+  }
+
+  async changePlanNow(params: {
+    userId: string
+    planId: string
+    amountCents: number
+    manualMethod: ManualPaymentMethod
+  }): Promise<{ payment: Payment; membership: Membership }> {
+    const actor = await this.requireUser()
+    if (actor.role === 'member') throw new Error('Sin permiso')
+    const plans = this.state.membershipPlans ?? []
+    const plan = plans.find((p) => p.id === params.planId)
+    if (!plan) throw new Error('Plan no encontrado')
+    if (isDayPassPlan(plan)) throw new Error('Un pase del día no reemplaza al plan.')
+
+    const now = new Date()
+    const all = (this.state.memberships ??= [])
+    const mine = all.filter((m) => m.userId === params.userId)
+    const current = currentMembership(mine, plans, now)
+    if (!current) throw new Error('El socio no tiene un plan vigente para cambiar.')
+    if (current.planId === plan.id) throw new Error('El socio ya tiene ese plan. Usa Renovar.')
+    const queued = queuedMembership(mine, plans, now)
+    const currentPlan = plans.find((p) => p.id === current.planId)
+    const credit = planChangeCredit(current, currentPlan, now)
+
+    const curIdx = all.findIndex((m) => m.id === current.id)
+    all[curIdx] = { ...all[curIdx]!, endsAt: now.toISOString(), graceEndsAt: now.toISOString() }
+
+    const membership: Membership = {
+      id: uid('mem'),
+      userId: params.userId,
+      planId: plan.id,
+      ...planPurchaseDates({ kind: 'new', startsAt: now.toISOString() }, plan, now),
+      status: 'active',
+      createdAt: now.toISOString(),
+    }
+    all.push(membership)
+
+    if (queued) {
+      const qIdx = all.findIndex((m) => m.id === queued.id)
+      all[qIdx] = { ...all[qIdx]!, ...shiftQueuedMembership(queued, membership.endsAt) }
+    }
+
+    const payment: Payment = {
+      id: uid('pay'),
+      userId: params.userId,
+      planId: plan.id,
+      membershipId: membership.id,
+      amountCents: params.amountCents,
+      status: 'approved',
+      provider: 'manual',
+      manualMethod: params.manualMethod,
+      reference: null,
+      notes: `Cambio de plan: ${currentPlan?.name ?? current.planId} → ${plan.name}. Crédito por días no usados: $${(credit / 100).toFixed(2)}.`,
+      createdAt: now.toISOString(),
+      approvedAt: now.toISOString(),
+    }
+    ;(this.state.payments ??= []).push(payment)
+    this.persistState()
+    return { payment: { ...payment }, membership: { ...membership } }
+  }
+
+  async refundPayment(params: { paymentId: string; cancelMembership: boolean }): Promise<Payment> {
+    const actor = await this.requireUser()
+    if (actor.role === 'member') throw new Error('Sin permiso')
+    const payments = this.state.payments ?? []
+    const idx = payments.findIndex((p) => p.id === params.paymentId)
+    if (idx < 0) throw new Error('Pago no encontrado')
+    if (payments[idx]!.status !== 'approved') {
+      throw new Error('Solo se pueden reembolsar pagos aprobados.')
+    }
+    const payment: Payment = { ...payments[idx]!, status: 'refunded' }
+    payments[idx] = payment
+    if (params.cancelMembership && payment.membershipId) {
+      const all = this.state.memberships ?? []
+      const mIdx = all.findIndex((m) => m.id === payment.membershipId)
+      if (mIdx >= 0) all[mIdx] = { ...all[mIdx]!, status: 'cancelled' }
+    }
+    this.persistState()
+    return { ...payment }
   }
 
   async createOnlineCheckout(_params: {

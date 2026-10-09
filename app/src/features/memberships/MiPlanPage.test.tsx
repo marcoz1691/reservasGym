@@ -7,6 +7,30 @@ import { RepositoryProvider } from '@/data/RepositoryProvider'
 import { LocalRepository } from '@/data/localRepository'
 import { DEMO_PASSWORD } from '@/data/seed'
 import { resetRepositoryForTests } from '@/data/repository'
+import { PAYMENT_VALIDATION_NOTICE } from '@/domain/rules/planRequest'
+
+// El ambiente tiene pasarela; lo que decide es el interruptor del admin.
+vi.mock('./onlinePay', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./onlinePay')>()),
+  isOnlinePayEnabled: (settings?: { onlinePaymentsEnabled?: boolean }) =>
+    settings?.onlinePaymentsEnabled === true,
+}))
+
+async function adminSettings(patch: Parameters<LocalRepository['updateSettings']>[0]) {
+  const admin = new LocalRepository()
+  await admin.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+  await admin.updateSettings(patch)
+}
+
+function renderMiPlan() {
+  return render(
+    <MemoryRouter>
+      <RepositoryProvider>
+        <MiPlanPage />
+      </RepositoryProvider>
+    </MemoryRouter>,
+  )
+}
 
 describe('MiPlanPage (Member UI for Memberships)', () => {
   beforeEach(() => {
@@ -263,5 +287,82 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
 
     await user.click(screen.getByRole('button', { name: 'Cambiar' }))
     expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
+  })
+
+  describe('interruptores del admin', () => {
+    it('con el pago en línea encendido ofrece pagar desde la tarjeta del plan', async () => {
+      await adminSettings({ onlinePaymentsEnabled: true })
+      const repo = new LocalRepository()
+      await repo.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+      renderMiPlan()
+
+      expect((await screen.findAllByRole('button', { name: 'Elegir plan' })).length).toBeGreaterThan(0)
+      expect(screen.queryByRole('button', { name: 'Elegir este plan' })).not.toBeInTheDocument()
+    })
+
+    it('con el pago en línea apagado el socio elige plan y paga en recepción', async () => {
+      const user = userEvent.setup()
+      await adminSettings({ onlinePaymentsEnabled: false })
+      const repo = new LocalRepository()
+      await repo.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+      renderMiPlan()
+
+      await user.click((await screen.findAllByRole('button', { name: 'Elegir este plan' }))[0]!)
+      expect(screen.queryByRole('button', { name: 'Elegir plan' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Efectivo' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Transferencia' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Deuna' })).not.toBeInTheDocument()
+    })
+
+    it('con Deuna configurada el socio paga con Deuna y la solicitud ofrece enviar el comprobante', async () => {
+      const user = userEvent.setup()
+      await adminSettings({
+        onlinePaymentsEnabled: false,
+        deunaCode: 'ZONACERO01',
+        whatsappPayments: '0991234567',
+      })
+      const repo = new LocalRepository()
+      await repo.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+      renderMiPlan()
+
+      await user.click((await screen.findAllByRole('button', { name: 'Elegir este plan' }))[0]!)
+      await user.click(screen.getByRole('button', { name: 'Deuna' }))
+      expect(screen.getByRole('region', { name: 'Datos para pagar' })).toHaveTextContent('ZONACERO01')
+      await user.click(screen.getByRole('button', { name: 'Enviar solicitud' }))
+
+      expect(await screen.findByText('Solicitud enviada')).toBeInTheDocument()
+      const block = screen.getByRole('region', { name: 'Datos para pagar' })
+      expect(block).toHaveTextContent(PAYMENT_VALIDATION_NOTICE)
+      const reference = within(block).getByText(/^ZC-[0-9A-F]{6}$/).textContent!
+      const link = screen.getByRole('link', { name: 'Enviar comprobante por WhatsApp' })
+      expect(link.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/593991234567\?text=/)
+      expect(decodeURIComponent(link.getAttribute('href')!)).toContain(reference)
+      const saved = new LocalRepository()
+      await saved.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+      const [pending] = (await saved.getMemberPayments('user_member_2')).filter(
+        (p) => p.status === 'pending',
+      )
+      expect(pending).toMatchObject({ manualMethod: 'deuna', reference })
+    })
+
+    it('con los pases diarios apagados no aparecen en el catálogo', async () => {
+      const admin = new LocalRepository()
+      await admin.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+      await admin.upsertMembershipPlan({
+        id: 'plan-zona-day',
+        name: 'Zona Day',
+        priceCents: 500,
+        durationDays: 1,
+        kind: 'day_pass',
+        active: true,
+      })
+      await admin.updateSettings({ dayPassesEnabled: false })
+      const repo = new LocalRepository()
+      await repo.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+      renderMiPlan()
+
+      expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
+      expect(screen.queryByText('Zona Day')).not.toBeInTheDocument()
+    })
   })
 })

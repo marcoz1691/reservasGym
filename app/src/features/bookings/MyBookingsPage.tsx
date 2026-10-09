@@ -104,7 +104,7 @@ export function MyBookingsPage() {
         title="Tus clases"
         subtitle="QR, cancelar o cambiar hora. Para una clase nueva, ve a Reservar."
       />
-      {msg ? <p className="mb-3 text-sm text-acc">{msg}</p> : null}
+      {msg ? <p className="mb-3 text-sm text-acc-dark">{msg}</p> : null}
 
       {loading && mine.length === 0 ? (
         <SkeletonCard />

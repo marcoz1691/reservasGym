@@ -185,7 +185,7 @@ export function Input({
             onMouseDown={(e) => e.preventDefault()}
             aria-label={revealed ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             aria-pressed={revealed}
-            className="focus-ring absolute right-1.5 top-1/2 -translate-y-1/2 rounded-xl p-2 text-ink-3 transition-colors hover:text-ink"
+            className="focus-ring absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-ink-3 transition-colors hover:text-ink"
           >
             {revealed ? (
               <EyeOff className="h-4 w-4" />
@@ -325,7 +325,7 @@ export function Badge({
     ok: 'bg-success-soft text-success',
     warn: 'bg-warn-soft text-warn',
     danger: 'bg-danger-soft text-danger',
-    accent: 'bg-acc-soft text-acc',
+    accent: 'bg-acc-soft text-acc-dark',
   }
   return (
     <span
@@ -446,11 +446,11 @@ export function EmptyState({
       <div className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 h-36 w-36 rounded-full bg-acc/10 blur-2xl" />
       <div className="relative z-10 flex flex-col items-center">
         {icon ? (
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-line bg-surface-elevated text-acc shadow-inner">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-line bg-surface-elevated text-acc-dark shadow-inner">
             {icon}
           </div>
         ) : null}
-        <h3 className="font-display text-lg font-bold text-ink">{title}</h3>
+        <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
         {description ? (
           <p className="mt-2 max-w-md text-sm text-ink-3 leading-relaxed">
             {description}

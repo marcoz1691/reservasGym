@@ -13,10 +13,12 @@ export type ZoneType =
   | 'crossfit'
   | 'dragon_fit'
 
-export type MembershipStatus = 'active' | 'grace' | 'expired' | 'cancelled'
+/** 'scheduled' solo se calcula (plan en espera que aún no empieza); nunca se guarda. */
+export type MembershipStatus = 'active' | 'grace' | 'expired' | 'cancelled' | 'scheduled'
 export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded'
 export type PaymentProvider = 'manual' | 'datafast' | 'mercadopago' | 'pagomedios'
-export type ManualPaymentMethod = 'cash' | 'transfer' | 'card_pos'
+export type ManualPaymentMethod = 'cash' | 'transfer' | 'card_pos' | 'deuna'
+export type MembershipPlanKind = 'membership' | 'day_pass'
 
 export interface MembershipPlan {
   id: string
@@ -26,6 +28,8 @@ export interface MembershipPlan {
   visitQuota: number | null
   allowedZoneIds: string[]
   active: boolean
+  /** Sin valor cuenta como 'membership' (datos previos a plan-rules.sql). */
+  kind?: MembershipPlanKind
   createdAt?: string
 }
 
@@ -53,6 +57,8 @@ export interface Payment {
   reference?: string | null
   /** Código de autorización del banco en pagos en línea (Pagomedios). */
   authorizationCode?: string | null
+  /** Detalle que deja recepción, p. ej. el crédito aplicado en un cambio de plan. */
+  notes?: string | null
   createdAt: string
   approvedAt: string | null
 }
@@ -181,6 +187,21 @@ export interface GymSettings {
   bookingWindowHours: number
   cancelWindowHours: number
   checkInWindowMinutes: number
+  /** Interruptores del admin (feature-flags.sql). Leerlos con isFeatureEnabled(). */
+  onlinePaymentsEnabled?: boolean
+  waitlistEnabled?: boolean
+  measurementsEnabled?: boolean
+  dayPassesEnabled?: boolean
+  /** Datos de pago que el socio ve al elegir transferencia o Deuna (manual-payments-deuna.sql). */
+  whatsappPayments?: string | null
+  bankName?: string | null
+  bankAccountType?: string | null
+  bankAccountNumber?: string | null
+  bankAccountHolder?: string | null
+  /** RUC o cédula del titular. */
+  bankAccountId?: string | null
+  deunaCode?: string | null
+  deunaQrUrl?: string | null
 }
 
 export interface GymState {

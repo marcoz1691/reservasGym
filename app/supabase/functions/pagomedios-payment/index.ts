@@ -10,6 +10,9 @@
 // Acciones:
 //   POST { action: "create", planId, document, documentType, phone, address, native? } (JWT)
 //     → crea payments(pending) + solicitud Pagomedios y devuelve { url, paymentId }
+//     → 503 si el admin apagó el pago en línea (gym_settings.online_payments_enabled);
+//       403 si apagó los pases diarios en la app y el plan es uno
+//       (verify y notify no revisan los interruptores: un pago ya iniciado se registra igual)
 //   POST { action: "verify", paymentId } (JWT)
 //     → consulta Pagomedios y, si está autorizado, activa/extiende la membresía
 //   POST|GET ?action=notify&paymentId=  (Pagomedios, sin JWT)
@@ -18,11 +21,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2"
 import { splitTax } from "./tax.ts"
+import { dayPassBlock, onlinePaymentsBlock, type FlagSettings } from "./flags.ts"
 
 const PAGOMEDIOS_API = (
   Deno.env.get("PAGOMEDIOS_API_URL") ?? "https://api.abitmedia.cloud/pagomedios/v2"
 ).replace(/\/$/, "")
-const GRACE_PERIOD_DAYS = 3
 const DOCUMENT_TYPES = ["04", "05", "06", "08"] as const
 
 const corsHeaders: Record<string, string> = {
@@ -131,6 +134,16 @@ async function handleCreate(
   const address = String(body.address ?? "").trim() || "Quito"
   const native = body.native === true
 
+  const { admin } = env
+  const { data: settings } = await admin
+    .from("gym_settings")
+    .select("*")
+    .eq("id", 1)
+    .maybeSingle()
+  const flags = (settings ?? null) as FlagSettings
+  const disabled = onlinePaymentsBlock(flags)
+  if (disabled) return json({ error: disabled.error }, disabled.status)
+
   if (!planId) return json({ error: "planId requerido" }, 400)
   if (!DOCUMENT_TYPES.includes(documentType as typeof DOCUMENT_TYPES[number])) {
     return json({ error: "Tipo de identificación inválido" }, 400)
@@ -146,18 +159,26 @@ async function handleCreate(
     return json({ error: "Teléfono inválido (mín. 9 dígitos)" }, 400)
   }
 
-  const { admin } = env
   const { data: plan, error: planError } = await admin
     .from("membership_plans")
-    .select("id, name, price_cents, active")
+    .select("*")
     .eq("id", planId)
     .single()
   if (planError || !plan || !plan.active) {
     return json({ error: "Plan no encontrado o inactivo" }, 404)
   }
+  const dayPassOff = dayPassBlock(flags, plan)
+  if (dayPassOff) return json({ error: dayPassOff.error }, dayPassOff.status)
   if (!plan.price_cents || plan.price_cents < 100) {
     return json({ error: "Monto mínimo $1.00" }, 400)
   }
+  // Un solo plan en espera: no se cobra un segundo plan distinto (plan-rules.sql)
+  const { data: blockReason, error: blockError } = await admin.rpc(
+    "plan_purchase_block_reason",
+    { p_user_id: user.id, p_plan_id: plan.id },
+  )
+  if (blockError) return json({ error: blockError.message }, 500)
+  if (blockReason) return json({ error: blockReason, code: "PLAN_QUEUE_LIMIT" }, 409)
 
   const { data: profile } = await admin
     .from("profiles")
@@ -261,11 +282,12 @@ async function handleNotify(req: Request, url: URL, env: Env) {
   return redirectToApp(env.appUrl, paymentId)
 }
 
-/** Comprobante que ve el socio al volver: qué pagó y hasta cuándo queda activo. */
+/** Comprobante que ve el socio al volver: qué compró, desde cuándo y hasta cuándo. */
 type Receipt = {
   planName: string | null
   amountCents: number
   authorizationCode: string | null
+  membershipStartsAt: string | null
   membershipEndsAt: string | null
 }
 
@@ -285,6 +307,10 @@ async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult>
   }
   if (payment.status === "approved") {
     return { ok: true, status: "approved", receipt: await receiptFor(payment.id, admin) }
+  }
+  // Recepción lo marcó reembolsado: un notify tardío no lo vuelve a aprobar
+  if (payment.status === "refunded") {
+    return { ok: false, status: "rejected", description: "El pago fue reembolsado." }
   }
   if (!payment.reference) {
     return { ok: false, status: "rejected", description: "Pago sin solicitud Pagomedios" }
@@ -341,14 +367,23 @@ async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult>
       mp_payment_id: authCode || null,
     })
     .eq("id", payment.id)
-    .neq("status", "approved")
+    .in("status", ["pending", "rejected"])
     .select("id")
   if (!claimed || claimed.length === 0) {
     return { ok: true, status: "approved", receipt: await receiptFor(payment.id, admin) }
   }
 
   try {
-    const membershipId = await extendMembershipFor(payment, paidAt, admin)
+    const membershipId = await applyPlanPurchase(payment, paidAt, admin)
+    if (!membershipId) {
+      // Carrera: entró otro plan en espera entre el cobro y la aprobación. El dinero
+      // ya se cobró: el pago queda aprobado sin membresía para que recepción lo revise.
+      await admin
+        .from("payments")
+        .update({ notes: "Requiere revisión: ya había otro plan en espera al aprobar el pago." })
+        .eq("id", payment.id)
+      return { ok: true, status: "approved", receipt: await receiptFor(payment.id, admin) }
+    }
     await admin
       .from("payments")
       .update({ membership_id: membershipId })
@@ -380,115 +415,50 @@ async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult>
 async function receiptFor(paymentId: string, admin: SupabaseClient): Promise<Receipt | undefined> {
   const { data: payment } = await admin
     .from("payments")
-    .select("user_id, plan_id, amount_cents, mp_payment_id")
+    .select("plan_id, membership_id, amount_cents, mp_payment_id")
     .eq("id", paymentId)
     .maybeSingle()
   if (!payment) return undefined
   const [{ data: plan }, { data: membership }] = await Promise.all([
     admin.from("membership_plans").select("name").eq("id", payment.plan_id).maybeSingle(),
-    admin
-      .from("memberships")
-      .select("ends_at")
-      .eq("user_id", payment.user_id)
-      .order("ends_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    payment.membership_id
+      ? admin
+        .from("memberships")
+        .select("starts_at, ends_at")
+        .eq("id", payment.membership_id)
+        .maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
   return {
     planName: plan?.name ?? null,
     amountCents: payment.amount_cents,
     authorizationCode: payment.mp_payment_id ?? null,
+    membershipStartsAt: membership?.starts_at ?? null,
     membershipEndsAt: membership?.ends_at ?? null,
   }
 }
 
-async function extendMembershipFor(
+/**
+ * Misma regla que recepción: apply_plan_purchase (plan-rules.sql) decide si suma
+ * días, deja el plan en espera o crea un pase del día. Devuelve null si la base
+ * lo rechaza porque ya hay otro plan en espera.
+ */
+async function applyPlanPurchase(
   payment: { user_id: string; plan_id: string },
   paidAt: Date,
   admin: SupabaseClient,
-): Promise<string> {
-  const { data: plan, error: planError } = await admin
-    .from("membership_plans")
-    .select("id, duration_days, visit_quota")
-    .eq("id", payment.plan_id)
-    .single()
-  if (planError || !plan) throw new Error("Plan no encontrado")
-
-  const { data: memberships } = await admin
-    .from("memberships")
-    .select("*")
-    .eq("user_id", payment.user_id)
-    .order("ends_at", { ascending: false })
-    .limit(5)
-  const current =
-    (memberships ?? []).find((m) => m.status === "active" || m.status === "grace") ??
-    (memberships ?? [])[0] ??
-    null
-
-  const dates = extendMembership(current, plan, paidAt)
-  const membershipPayload: Record<string, unknown> = {
-    user_id: payment.user_id,
-    plan_id: plan.id,
-    starts_at: dates.startsAt,
-    ends_at: dates.endsAt,
-    grace_ends_at: dates.graceEndsAt,
-    status: dates.status,
-    visits_left: dates.visitsLeft,
+): Promise<string | null> {
+  const { data, error } = await admin.rpc("apply_plan_purchase", {
+    p_user_id: payment.user_id,
+    p_plan_id: payment.plan_id,
+    p_paid_at: paidAt.toISOString(),
+  })
+  if (error) {
+    if (/plan en espera/i.test(error.message)) return null
+    throw new Error(error.message)
   }
-  if (current?.id) membershipPayload.id = current.id
-
-  const { data: mem, error: memError } = await admin
-    .from("memberships")
-    .upsert(membershipPayload)
-    .select("id")
-    .single()
-  if (memError || !mem) throw new Error(memError?.message ?? "No se pudo activar la membresía")
-  return mem.id as string
-}
-
-function extendMembership(
-  current: {
-    ends_at: string
-    status: string
-    visits_left: number | null
-  } | null,
-  plan: { duration_days: number; visit_quota: number | null },
-  paidAt: Date,
-) {
-  const paidMs = paidAt.getTime()
-  const isCurrentActive =
-    Boolean(current) &&
-    current!.status !== "cancelled" &&
-    new Date(current!.ends_at).getTime() > paidMs
-
-  const baseDate = isCurrentActive ? new Date(current!.ends_at) : paidAt
-  const endDate = new Date(
-    baseDate.getTime() + plan.duration_days * 24 * 60 * 60 * 1000,
-  )
-  const graceEndDate = new Date(
-    endDate.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000,
-  )
-
-  let visitsLeft: number | null = null
-  if (plan.visit_quota !== null && plan.visit_quota !== undefined) {
-    if (
-      isCurrentActive &&
-      current?.visits_left !== null &&
-      current?.visits_left !== undefined
-    ) {
-      visitsLeft = current.visits_left + plan.visit_quota
-    } else {
-      visitsLeft = plan.visit_quota
-    }
-  }
-
-  return {
-    startsAt: baseDate.toISOString(),
-    endsAt: endDate.toISOString(),
-    graceEndsAt: graceEndDate.toISOString(),
-    status: "active" as const,
-    visitsLeft,
-  }
+  if (!data?.id) throw new Error("No se pudo activar la membresía")
+  return data.id as string
 }
 
 function redirectToApp(appUrl: string, paymentId: string | null) {

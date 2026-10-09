@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -20,11 +19,12 @@ import {
   useRefresh,
   useRepo,
 } from '@/data/RepositoryProvider'
-import type { MembershipPlan, Zone } from '@/domain/models'
+import type { MembershipPlan, MembershipPlanKind, Zone } from '@/domain/models'
 import { ZONE_LABELS } from '@/domain/models'
-import { validateMembershipPlanInput } from '@/domain/rules/membershipPlan'
+import { isDayPassPlan, validateMembershipPlanInput } from '@/domain/rules/membershipPlan'
 import { formatCurrency } from '@/lib/format'
 import { Badge, Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 
 interface PlanFormData {
   id?: string
@@ -36,6 +36,7 @@ interface PlanFormData {
   allZonesAllowed: boolean
   allowedZoneIds: string[]
   active: boolean
+  kind: MembershipPlanKind
 }
 
 const DEFAULT_FORM_DATA: PlanFormData = {
@@ -47,6 +48,7 @@ const DEFAULT_FORM_DATA: PlanFormData = {
   allZonesAllowed: true,
   allowedZoneIds: [],
   active: true,
+  kind: 'membership',
 }
 
 const DURATION_PRESETS = [
@@ -126,6 +128,7 @@ export function PlanesPage() {
       allZonesAllowed: !plan.allowedZoneIds || plan.allowedZoneIds.length === 0,
       allowedZoneIds: plan.allowedZoneIds || [],
       active: plan.active !== false,
+      kind: isDayPassPlan(plan) ? 'day_pass' : 'membership',
     })
     setFormError(null)
     setIsModalOpen(true)
@@ -222,6 +225,7 @@ export function PlanesPage() {
         visitQuota: validation.value.visitQuota ?? null,
         allowedZoneIds: finalZones,
         active: formData.active,
+        kind: formData.kind,
       })
 
       setIsModalOpen(false)
@@ -242,9 +246,7 @@ export function PlanesPage() {
           title="Acceso exclusivo para Administradores"
           description="La configuración de planes de membresía y tarifas está reservada para usuarios con rol de Administrador."
           action={
-            <Link to="/admin">
-              <Button>Volver al panel principal</Button>
-            </Link>
+            <ButtonLink to="/admin">Volver al panel principal</ButtonLink>
           }
         />
       </div>
@@ -254,16 +256,13 @@ export function PlanesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Gestión de Planes de Membresía"
-        subtitle="Configuración de planes, tarifas en USD, duraciones y control de acceso a zonas"
+        title="Planes"
         action={
           <div className="flex items-center gap-2">
-            <Link to="/admin">
-              <Button variant="ghost" className="gap-2">
+            <ButtonLink to="/admin" variant="ghost" className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 Panel Admin
-              </Button>
-            </Link>
+              </ButtonLink>
             <Button
               variant="primary"
               onClick={handleOpenCreate}
@@ -306,9 +305,9 @@ export function PlanesPage() {
                 <div className="space-y-3">
                   {/* Header: Name + Status Badge */}
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-extrabold text-ink text-base">
+                    <h2 className="font-extrabold text-ink text-base">
                       {plan.name}
-                    </h3>
+                    </h2>
                     <Badge tone={plan.active ? 'ok' : 'neutral'}>
                       {plan.active ? 'Activo' : 'Inactivo'}
                     </Badge>
@@ -316,7 +315,7 @@ export function PlanesPage() {
 
                   {/* Price & Duration */}
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-black text-acc">
+                    <span className="text-2xl font-black text-acc-dark">
                       {formatCurrency(plan.priceCents)}
                     </span>
                     <span className="text-xs text-ink-3">
@@ -328,7 +327,7 @@ export function PlanesPage() {
                   <div className="space-y-2 rounded-2xl bg-bg p-3 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-ink-3 flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-acc" />
+                        <Clock className="h-3.5 w-3.5 text-acc-dark" />
                         Duración:
                       </span>
                       <span className="font-bold text-ink">
@@ -338,7 +337,7 @@ export function PlanesPage() {
 
                     <div className="flex items-center justify-between">
                       <span className="text-ink-3 flex items-center gap-1.5">
-                        <Tag className="h-3.5 w-3.5 text-acc" />
+                        <Tag className="h-3.5 w-3.5 text-acc-dark" />
                         Cupo de visitas:
                       </span>
                       <span className="font-bold text-ink">
@@ -353,7 +352,7 @@ export function PlanesPage() {
                         Áreas y Zonas Permitidas:
                       </span>
                       {isAllZones ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-acc/10 px-2.5 py-0.5 text-[11px] font-bold text-acc">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-acc/10 px-2.5 py-0.5 text-xs font-bold text-acc-dark">
                           <Check className="h-3 w-3" />
                           Acceso Total a Todas las Áreas
                         </span>
@@ -365,7 +364,7 @@ export function PlanesPage() {
                             return (
                               <span
                                 key={zoneId}
-                                className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-ink-2"
+                                className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink-2"
                               >
                                 {label}
                               </span>
@@ -383,7 +382,7 @@ export function PlanesPage() {
                     type="button"
                     onClick={() => handleToggleActive(plan)}
                     className={`text-xs font-bold transition hover:underline ${
-                      plan.active ? 'text-warn' : 'text-acc'
+                      plan.active ? 'text-warn' : 'text-acc-dark'
                     }`}
                   >
                     {plan.active ? 'Desactivar' : 'Activar'}
@@ -393,7 +392,7 @@ export function PlanesPage() {
                     <Button
                       variant="secondary"
                       onClick={() => handleOpenEdit(plan)}
-                      className="text-xs py-1 px-2.5 h-8 gap-1"
+                      className="text-xs py-1 px-3 h-10 gap-1"
                     >
                       <Edit2 className="h-3.5 w-3.5" />
                       Editar
@@ -402,7 +401,8 @@ export function PlanesPage() {
                     <Button
                       variant="danger"
                       onClick={() => setPlanToDelete(plan)}
-                      className="text-xs py-1 px-2.5 h-8 gap-1"
+                      aria-label={`Eliminar ${plan.name}`}
+                      className="text-xs h-10 w-10 justify-center p-0"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -428,7 +428,7 @@ export function PlanesPage() {
             </button>
 
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/10 text-acc">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/10 text-acc-dark">
                 <Layers className="h-5 w-5" />
               </div>
               <div>
@@ -450,6 +450,25 @@ export function PlanesPage() {
                 placeholder="Ej: Plan Gold Anual, CrossFit Mensual, Pase Diario"
                 required
               />
+
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-ink-2">Tipo de plan</span>
+                <select
+                  value={formData.kind}
+                  onChange={(e) =>
+                    setFormData({ ...formData, kind: e.target.value as MembershipPlanKind })
+                  }
+                  className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink"
+                >
+                  <option value="membership">Membresía</option>
+                  <option value="day_pass">Pase del día</option>
+                </select>
+                {formData.kind === 'day_pass' ? (
+                  <span className="block text-xs text-ink-3">
+                    Vale solo el día de compra, hasta las 23:59. No cambia la membresía del socio.
+                  </span>
+                ) : null}
+              </label>
 
               {/* Price & Duration */}
               <div className="grid gap-4 sm:grid-cols-2">
@@ -488,7 +507,7 @@ export function PlanesPage() {
                             durationDays: String(preset.days),
                           })
                         }
-                        className={`rounded-lg px-2 py-0.5 text-[10px] font-bold transition ${
+                        className={`rounded-lg px-2 py-0.5 text-[11px] font-bold transition ${
                           formData.durationDays === String(preset.days)
                             ? 'bg-cta text-cta-contrast font-bold'
                             : 'bg-surface text-ink-3 hover:text-ink'

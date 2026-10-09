@@ -1,4 +1,4 @@
-/* Las fuentes se cargan una sola vez desde index.html (<link> con preconnect). */
+/* Las fuentes vienen empaquetadas (@fontsource) y se importan en main.tsx. */
 @import 'tailwindcss';
 
 /*
@@ -23,7 +23,7 @@
   /* Jerarquía de texto */
   --color-ink: #1C1917;
   --color-ink-2: #6B6560;
-  --color-ink-3: #9C9690;
+  --color-ink-3: #736D67;
 
   /* Acento naranja de marca + rampa.
      En claro el hover oscurece: aclarar sobre blanco pierde presencia. */
@@ -42,11 +42,11 @@
   --color-cta-contrast: #FFFFFF;
 
   /* Semánticos — pares fondo tenue + texto oscuro, como en las maquetas */
-  --color-success: #1E8E5A;
+  --color-success: #1A7A4D;
   --color-success-soft: #E8F6EE;
-  --color-warn: #B7791F;
+  --color-warn: #946116;
   --color-warn-soft: #FDF2DC;
-  --color-danger: #D64545;
+  --color-danger: #C03A3A;
   --color-danger-soft: #FBEAEA;
 
   --color-brand: #231F20;

@@ -224,7 +224,7 @@ export function FichaTecnicaModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line bg-surface p-5 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/20 text-acc">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/20 text-acc-dark">
               <Activity className="h-5 w-5" />
             </div>
             <div>
@@ -260,7 +260,7 @@ export function FichaTecnicaModal({
             onClick={() => setStep(1)}
             className={`flex items-center justify-center gap-2 py-3 transition-colors ${
               step === 1
-                ? 'border-b-2 border-acc text-acc'
+                ? 'border-b-2 border-acc text-acc-dark'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
@@ -273,7 +273,7 @@ export function FichaTecnicaModal({
             onClick={() => setStep(2)}
             className={`flex items-center justify-center gap-2 py-3 transition-colors ${
               step === 2
-                ? 'border-b-2 border-acc text-acc'
+                ? 'border-b-2 border-acc text-acc-dark'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
@@ -286,7 +286,7 @@ export function FichaTecnicaModal({
             onClick={() => setStep(3)}
             className={`flex items-center justify-center gap-2 py-3 transition-colors ${
               step === 3
-                ? 'border-b-2 border-acc text-acc'
+                ? 'border-b-2 border-acc text-acc-dark'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
@@ -300,7 +300,7 @@ export function FichaTecnicaModal({
             onClick={() => setStep(4)}
             className={`flex items-center justify-center gap-2 py-3 transition-colors ${
               step === 4
-                ? 'border-b-2 border-acc text-acc'
+                ? 'border-b-2 border-acc text-acc-dark'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
@@ -335,7 +335,7 @@ export function FichaTecnicaModal({
               {step === 3 && (
                 <div className="space-y-6">
                   <div className="rounded-2xl border border-acc/20 bg-acc/5 p-4 text-xs text-ink-2">
-                    <p className="font-semibold text-acc">
+                    <p className="font-semibold text-acc-dark">
                       Evaluación inicial de composición corporal
                     </p>
                     <p className="mt-1 text-ink-3">
@@ -380,7 +380,7 @@ export function FichaTecnicaModal({
                           value={weightKg}
                           onChange={(e) => setWeightKg(e.target.value)}
                           placeholder="Ej. 75.5"
-                          className="pl-9 font-mono text-base font-bold text-acc"
+                          className="pl-9 font-mono text-base font-bold text-acc-dark"
                         />
                         <Scale className="absolute left-3 top-3 h-4 w-4 text-ink-3" />
                       </div>
@@ -427,13 +427,13 @@ export function FichaTecnicaModal({
                       <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
                         Medidas de Circunferencia (cm) — Opcionales
                       </span>
-                      <Badge tone="neutral" className="text-[10px]">
+                      <Badge tone="neutral" className="text-[11px]">
                         Detalle corporal
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                       <div>
-                        <label htmlFor={waistId} className="text-[11px] text-ink-3">Cintura</label>
+                        <label htmlFor={waistId} className="text-xs text-ink-3">Cintura</label>
                         <Input
                           id={waistId}
                           type="number"
@@ -445,7 +445,7 @@ export function FichaTecnicaModal({
                         />
                       </div>
                       <div>
-                        <label htmlFor={hipId} className="text-[11px] text-ink-3">Cadera</label>
+                        <label htmlFor={hipId} className="text-xs text-ink-3">Cadera</label>
                         <Input
                           id={hipId}
                           type="number"
@@ -457,7 +457,7 @@ export function FichaTecnicaModal({
                         />
                       </div>
                       <div>
-                        <label htmlFor={chestId} className="text-[11px] text-ink-3">Pecho</label>
+                        <label htmlFor={chestId} className="text-xs text-ink-3">Pecho</label>
                         <Input
                           id={chestId}
                           type="number"
@@ -469,7 +469,7 @@ export function FichaTecnicaModal({
                         />
                       </div>
                       <div>
-                        <label htmlFor={armId} className="text-[11px] text-ink-3">Brazo</label>
+                        <label htmlFor={armId} className="text-xs text-ink-3">Brazo</label>
                         <Input
                           id={armId}
                           type="number"
@@ -481,7 +481,7 @@ export function FichaTecnicaModal({
                         />
                       </div>
                       <div>
-                        <label htmlFor={thighId} className="text-[11px] text-ink-3">Muslo</label>
+                        <label htmlFor={thighId} className="text-xs text-ink-3">Muslo</label>
                         <Input
                           id={thighId}
                           type="number"
@@ -517,7 +517,7 @@ export function FichaTecnicaModal({
                         <Calendar className="absolute left-3 top-3 h-4 w-4 text-ink-3" />
                       </div>
                       {age !== null && !isNaN(age) && (
-                        <p className="mt-1 text-xs text-acc">
+                        <p className="mt-1 text-xs text-acc-dark">
                           Edad calculada: <strong>{age} años</strong>
                         </p>
                       )}
@@ -569,7 +569,7 @@ export function FichaTecnicaModal({
                             onClick={() => toggleGoal(goal)}
                             className={`flex items-center gap-2 rounded-xl border p-3 text-left text-xs font-semibold transition-all ${
                               selected
-                                ? 'border-acc bg-acc/15 text-acc'
+                                ? 'border-acc bg-acc/15 text-acc-dark'
                                 : 'border-line bg-surface text-ink-2 hover:border-line-strong hover:text-ink'
                             }`}
                           >
@@ -609,7 +609,7 @@ export function FichaTecnicaModal({
                       placeholder="Ej. Lesión previa de rodilla derecha, molestia lumbar en sentadilla, ninguna, etc."
                       className="w-full rounded-2xl border border-line bg-surface-elevated p-3 text-xs text-ink placeholder:text-ink-4 focus-visible:border-acc focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acc/20"
                     />
-                    <p className="mt-1 text-[11px] text-ink-4">
+                    <p className="mt-1 text-xs text-ink-4">
                       Esta información permite a los entrenadores adaptar las cargas y
                       ejercicios en tus clases.
                     </p>
@@ -621,7 +621,7 @@ export function FichaTecnicaModal({
               {biometricAccess && step === 4 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-4 rounded-2xl border border-acc/30 bg-acc/10 p-5">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-acc/20 text-acc">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-acc/20 text-acc-dark">
                       <Fingerprint className="h-8 w-8" />
                     </div>
                     <div>

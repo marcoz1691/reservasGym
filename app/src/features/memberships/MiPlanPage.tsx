@@ -2,36 +2,55 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ArrowLeftRight, ArrowRight, Banknote, Check, CreditCard, ShieldAlert } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  Banknote,
+  Check,
+  CreditCard,
+  QrCode,
+  ShieldAlert,
+} from 'lucide-react'
 import { useAppData, useCurrentUser, useGym, useRepo } from '@/data/RepositoryProvider'
-import { selectMyMembership } from '@/app/store'
+import {
+  selectMyDayPasses,
+  selectMyMembership,
+  selectMyQueuedMembership,
+} from '@/app/store'
 import type { ManualPaymentMethod } from '@/domain/models'
 import {
   MANUAL_PAYMENT_LABELS,
+  isDeunaConfigured,
+  isRemotePaymentMethod,
   selectPendingPlanRequest,
 } from '@/domain/rules/planRequest'
+import { plansForAppSale } from '@/domain/rules/featureFlags'
 import { formatCurrency } from '@/lib/format'
 import { Button, PageHeader } from '@/ui/primitives'
 import { isOnlinePayEnabled } from './onlinePay'
 import {
+  DayPassNotice,
+  ManualPaymentInstructions,
   MembershipCard,
   PaymentHistory,
   PendingPlanRequestCard,
   PlansShowcase,
 } from './components'
 
-const PAYMENT_METHODS: ManualPaymentMethod[] = ['cash', 'transfer', 'card_pos']
+const PAYMENT_METHODS: ManualPaymentMethod[] = ['cash', 'transfer', 'card_pos', 'deuna']
 
 const PAYMENT_ICONS = {
   cash: Banknote,
   transfer: ArrowLeftRight,
   card_pos: CreditCard,
+  deuna: QrCode,
 } as const
 
 const PAYMENT_HINTS: Record<ManualPaymentMethod, string> = {
   cash: 'En caja del counter',
   transfer: 'Bancos locales',
   card_pos: 'Datáfono en recepción',
+  deuna: 'QR o código del gym',
 }
 
 export function MiPlanPage() {
@@ -49,7 +68,10 @@ export function MiPlanPage() {
   const [requestError, setRequestError] = useState('')
   const paymentStepRef = useRef<HTMLDivElement>(null)
 
-  const onlinePayEnabled = isOnlinePayEnabled()
+  const onlinePayEnabled = isOnlinePayEnabled(data.settings)
+  const paymentMethods = isDeunaConfigured(data.settings)
+    ? PAYMENT_METHODS
+    : PAYMENT_METHODS.filter((method) => method !== 'deuna')
 
   const currentMembership = useMemo(
     () => selectMyMembership(data, user?.id),
@@ -64,6 +86,22 @@ export function MiPlanPage() {
       ) ?? null
     )
   }, [data.membershipPlans, currentMembership])
+
+  const queued = useMemo(() => {
+    const membership = selectMyQueuedMembership(data, user?.id)
+    if (!membership) return null
+    const plan = (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
+    return { membership, plan }
+  }, [data, user?.id])
+
+  const dayPasses = useMemo(
+    () =>
+      selectMyDayPasses(data, user?.id).map((membership) => ({
+        membership,
+        plan: (data.membershipPlans ?? []).find((p) => p.id === membership.planId),
+      })),
+    [data, user?.id],
+  )
 
   const myPayments = useMemo(() => {
     if (!user) return []
@@ -188,11 +226,13 @@ export function MiPlanPage() {
           <PendingPlanRequestCard
             payment={pendingRequest}
             planName={pendingPlanName}
+            settings={data.settings}
+            memberName={user.fullName}
           />
           <button
             type="button"
             onClick={handleChangePlan}
-            className="text-sm font-bold text-acc"
+            className="text-sm font-bold text-acc-dark"
           >
             Cambiar
           </button>
@@ -207,7 +247,11 @@ export function MiPlanPage() {
           memberName={user.fullName}
           memberSince={memberSince}
           onRenew={scrollToCatalog}
+          queued={queued}
+          dayPasses={dayPasses}
         />
+      ) : dayPasses.length > 0 ? (
+        <DayPassNotice passes={dayPasses} />
       ) : showEmptyHero ? (
         <div className="relative overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)]">
           <div
@@ -261,12 +305,14 @@ export function MiPlanPage() {
 
       {showCatalog ? (
         <PlansShowcase
-          plans={data.membershipPlans ?? []}
+          plans={plansForAppSale(data.membershipPlans ?? [], data.settings)}
           currentPlanId={
             currentMembership?.status === 'active' || currentMembership?.status === 'grace'
               ? currentMembership.planId
               : null
           }
+          queuedPlanId={queued?.membership.planId ?? null}
+          queuesChanges={currentMembership?.status === 'active'}
           zones={data.zones ?? []}
           onlinePayEnabled={onlinePayEnabled}
           onPayOnline={onlinePayEnabled ? handlePayOnline : undefined}
@@ -286,7 +332,7 @@ export function MiPlanPage() {
                 <Check className="h-4 w-4" />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
                   {currentMembership ? 'Plan a activar' : 'Plan elegido'}
                 </p>
                 <p className="truncate text-sm font-bold text-ink">{chosenPlan.name}</p>
@@ -298,7 +344,7 @@ export function MiPlanPage() {
             <button
               type="button"
               onClick={handleChangePlan}
-              className="focus-ring shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-acc hover:text-acc-hi"
+              className="focus-ring shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-acc-dark hover:text-acc-hi"
             >
               Cambiar
             </button>
@@ -309,10 +355,12 @@ export function MiPlanPage() {
               ¿Cómo vas a pagar?
             </h3>
             <p className="mt-1 text-sm leading-relaxed text-ink-2">
-              El pago se completa en recepción. Tu acceso se activa cuando lo registren.
+              Recepción registra o valida tu pago. Tu acceso se activa cuando lo hagan.
             </p>
-            <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
-              {PAYMENT_METHODS.map((method) => {
+            <div
+              className={`mt-4 grid gap-2.5 ${paymentMethods.length > 3 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}
+            >
+              {paymentMethods.map((method) => {
                 const selected = chosenMethod === method
                 const Icon = PAYMENT_ICONS[method]
                 return (
@@ -333,7 +381,7 @@ export function MiPlanPage() {
                       aria-hidden
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
                         selected
-                          ? 'border-acc/30 bg-surface text-acc'
+                          ? 'border-acc/30 bg-surface text-acc-dark'
                           : 'border-line bg-surface-elevated text-ink-3'
                       }`}
                     >
@@ -343,7 +391,7 @@ export function MiPlanPage() {
                       <span className="block text-sm font-bold text-ink">
                         {MANUAL_PAYMENT_LABELS[method]}
                       </span>
-                      <span className="block text-[11px] text-ink-3">
+                      <span className="block text-xs text-ink-3">
                         {PAYMENT_HINTS[method]}
                       </span>
                     </span>
@@ -351,6 +399,15 @@ export function MiPlanPage() {
                 )
               })}
             </div>
+            {isRemotePaymentMethod(chosenMethod) ? (
+              <div className="mt-4">
+                <ManualPaymentInstructions
+                  method={chosenMethod}
+                  settings={data.settings}
+                  amountCents={chosenPlan.priceCents}
+                />
+              </div>
+            ) : null}
             <button
               type="button"
               disabled={!chosenMethod || requesting}

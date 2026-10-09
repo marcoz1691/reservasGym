@@ -133,7 +133,7 @@ export function MeasurementModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/15 text-acc">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/15 text-acc-dark">
               <Scale className="h-5 w-5" />
             </div>
             <div>
@@ -163,7 +163,7 @@ export function MeasurementModal({
             onClick={() => setActiveTab('basic')}
             className={`flex-1 rounded-xl py-2 text-xs font-bold transition ${
               activeTab === 'basic'
-                ? 'bg-surface-elevated text-acc shadow'
+                ? 'bg-surface-elevated text-acc-dark shadow'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
@@ -174,7 +174,7 @@ export function MeasurementModal({
             onClick={() => setActiveTab('circumferences')}
             className={`flex-1 rounded-xl py-2 text-xs font-bold transition ${
               activeTab === 'circumferences'
-                ? 'bg-surface-elevated text-acc shadow'
+                ? 'bg-surface-elevated text-acc-dark shadow'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
@@ -186,7 +186,7 @@ export function MeasurementModal({
         {liveBmi != null && liveCategory != null && (
           <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-bg/90 px-4 py-2.5 text-xs">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-acc" />
+              <Sparkles className="h-4 w-4 text-acc-dark" />
               <span className="text-ink-3">IMC estimado:</span>
               <span className="font-extrabold text-ink">{liveBmi.toFixed(1)}</span>
             </div>

@@ -9,7 +9,7 @@ export function OnlineCheckoutPage() {
     searchParams.get('provider') === 'pagomedios' ? 'pagomedios' : getOnlinePayProvider()
   // Pantalla completa, sin menú: la única salida es "volver"/"cerrar", que piden confirmación.
   return (
-    <div
+    <main
       className="h-dvh overflow-y-auto overscroll-y-contain bg-bg text-ink"
       style={{
         paddingTop: 'max(env(safe-area-inset-top), 0.5rem)',
@@ -17,6 +17,6 @@ export function OnlineCheckoutPage() {
       }}
     >
       {provider === 'pagomedios' ? <PagomediosCheckoutPage /> : <DatafastCheckoutPage />}
-    </div>
+    </main>
   )
 }

@@ -418,5 +418,70 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
       expect(await screen.findByText('POS-HIST-77')).toBeInTheDocument()
       expect(screen.getAllByText(/\$120\.00/).length).toBeGreaterThan(0)
     })
+
+    it('[ZC17-17] Una solicitud de Deuna muestra su etiqueta y su referencia, y el cobro la conserva', async () => {
+      const user = userEvent.setup()
+      const member = new LocalRepository()
+      await member.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+      await member.requestPlanPayment({
+        planId: 'plan-mensual-full',
+        manualMethod: 'deuna',
+        reference: 'ZC-4F7A2C',
+      })
+
+      const repo = new LocalRepository()
+      resetRepositoryForTests(repo)
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      renderCobros()
+
+      const request = (await screen.findByRole('heading', { name: 'Solicitudes de socios' }))
+        .closest('div')!
+        .querySelector('button')!
+      expect(request).toHaveTextContent('Luis Pérez')
+      expect(request).toHaveTextContent('Plan Mensual Ilimitado · Deuna')
+      expect(request).toHaveTextContent('Ref. ZC-4F7A2C')
+
+      await user.click(request)
+      expect(screen.getByRole('button', { name: /^Deuna/ })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByLabelText(/Referencia \/ # Voucher/i)).toHaveValue('ZC-4F7A2C')
+      await user.click(
+        screen.getByRole('button', { name: /Confirmar Cobro y Activar Membresía/i }),
+      )
+
+      expect(
+        await screen.findByText(/¡Cobro Registrado y Membresía Activada!/i),
+      ).toBeInTheDocument()
+      const [payment] = (await repo.listPayments()).filter((p) => p.userId === 'user_member_2')
+      expect(payment).toMatchObject({
+        status: 'approved',
+        manualMethod: 'deuna',
+        reference: 'ZC-4F7A2C',
+      })
+    })
+
+    it('[ZC17-18] El historial suma Deuna aparte y la filtra', async () => {
+      const user = userEvent.setup()
+      const repo = new LocalRepository()
+      resetRepositoryForTests(repo)
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-trimestral',
+        amountCents: 12000,
+        manualMethod: 'deuna',
+        reference: 'ZC-ABC123',
+      })
+
+      renderCobros()
+      await user.click(await screen.findByText(/Historial General de Cobros/i))
+
+      const deunaMetric = (await screen.findByText('QR o código Deuna')).parentElement!
+      expect(deunaMetric).toHaveTextContent('$120.00 USD')
+
+      await user.click(screen.getByRole('button', { name: 'Deuna' }))
+      expect(screen.getByRole('button', { name: 'Deuna' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByText('ZC-ABC123')).toBeInTheDocument()
+      expect(screen.queryByText('TRANSF-00129')).toBeNull()
+    })
   })
 })

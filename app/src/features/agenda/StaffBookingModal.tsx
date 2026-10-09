@@ -15,8 +15,8 @@ import {
 } from 'lucide-react'
 import type { Booking, Session, User, WaitlistEntry } from '@/domain/models'
 import { useAppData, useRefresh, useRepo } from '@/data/RepositoryProvider'
-import { selectMyMembership } from '@/app/store'
-import { canBookMembership, canBookZone } from '@/domain/rules'
+import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
+import { canBookMembership, canBookZone, isFeatureEnabled } from '@/domain/rules'
 import { getDisciplineMeta } from '@/domain/disciplines'
 import { formatEcuadorSessionWhen, formatEcuadorTime } from '@/lib/format'
 import { Badge, Button, Card, Input } from '@/ui/primitives'
@@ -35,6 +35,7 @@ export function StaffBookingModal({
   onSuccess,
 }: StaffBookingModalProps) {
   const data = useAppData()
+  const waitlistOn = isFeatureEnabled(data.settings, 'waitlist')
   const repo = useRepo()
   const refresh = useRefresh()
 
@@ -72,14 +73,16 @@ export function StaffBookingModal({
       ? (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
       : null
     const zoneCheck = canBookZone(plan, session.zoneId)
+    const passOpens = selectMyDayPassPlans(data, selectedMember.id, new Date(), session.startsAt)
+      .some((pass) => canBookZone(pass, session.zoneId).allowed)
 
-    const isExpired = memCheck.status === 'expired'
-    const isGrace = memCheck.status === 'grace'
-    const isNoMembership = memCheck.status === 'none'
-    const isZoneRestricted = !zoneCheck.allowed
+    const isExpired = !passOpens && memCheck.status === 'expired'
+    const isGrace = !passOpens && memCheck.status === 'grace'
+    const isNoMembership = !passOpens && memCheck.status === 'none'
+    const isZoneRestricted = !passOpens && !zoneCheck.allowed
 
     const hasWarning =
-      !memCheck.allowed || isGrace || isExpired || isNoMembership || isZoneRestricted
+      (!passOpens && !memCheck.allowed) || isGrace || isExpired || isNoMembership || isZoneRestricted
 
     let warningMessage = ''
     if (isNoMembership) {
@@ -100,8 +103,9 @@ export function StaffBookingModal({
       zoneCheck,
       hasWarning,
       warningMessage,
-      statusLabel:
-        memCheck.status === 'active'
+      statusLabel: passOpens && !memCheck.allowed
+        ? 'Pase del día activo'
+        : memCheck.status === 'active'
           ? 'Membresía Activa'
           : memCheck.status === 'grace'
             ? 'En Período de Gracia'
@@ -109,7 +113,7 @@ export function StaffBookingModal({
               ? 'Membresía Vencida'
               : 'Sin Membresía',
       tone:
-        memCheck.status === 'active' && zoneCheck.allowed
+        passOpens || (memCheck.status === 'active' && zoneCheck.allowed)
           ? ('ok' as const)
           : memCheck.status === 'grace'
             ? ('warn' as const)
@@ -121,6 +125,7 @@ export function StaffBookingModal({
 
   const zone = data.zones.find((z) => z.id === session.zoneId)
   const meta = getDisciplineMeta(zone?.type ?? session.zoneId)
+  const sessionFull = session.bookedCount >= session.capacity
   const IconComponent = meta.icon
 
   const handleSelectMember = (member: User) => {
@@ -181,7 +186,7 @@ export function StaffBookingModal({
 
         {/* Modal Header */}
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-acc/15 text-acc">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-acc/15 text-acc-dark">
             <UserCheck className="h-6 w-6" />
           </div>
           <div>
@@ -213,15 +218,15 @@ export function StaffBookingModal({
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-3">
             <span className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5 text-acc" />
+              <Calendar className="h-3.5 w-3.5 text-acc-dark" />
               {formatEcuadorSessionWhen(session.startsAt)}
             </span>
             <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-acc" />
+              <Clock className="h-3.5 w-3.5 text-acc-dark" />
               {formatEcuadorTime(session.startsAt)} - {formatEcuadorTime(session.endsAt)}
             </span>
             <span className="flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5 text-acc" />
+              <MapPin className="h-3.5 w-3.5 text-acc-dark" />
               {zone?.name ?? 'Zona Cero'}
             </span>
           </div>
@@ -230,7 +235,7 @@ export function StaffBookingModal({
         {/* SUCCESS CONFIRMATION VIEW */}
         {bookingResult ? (
           <div className="space-y-4 text-center py-2">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-acc/20 text-acc">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-acc/20 text-acc-dark">
               <CheckCircle2 className="h-8 w-8" />
             </div>
 
@@ -249,7 +254,7 @@ export function StaffBookingModal({
             {/* Check-In Code Card (if confirmed) */}
             {'checkInCode' in bookingResult.booking && (
               <Card className="border border-acc/40 bg-gradient-to-br from-bg-2 to-surface p-4 text-center space-y-3">
-                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-acc">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-acc-dark">
                   <QrCode className="h-4 w-4" />
                   Código de Check-in para el Socio
                 </div>
@@ -269,7 +274,7 @@ export function StaffBookingModal({
                   >
                     {copied ? (
                       <>
-                        <Check className="h-3.5 w-3.5 text-acc" />
+                        <Check className="h-3.5 w-3.5 text-acc-dark" />
                         Copiado
                       </>
                     ) : (
@@ -281,7 +286,7 @@ export function StaffBookingModal({
                   </Button>
                 </div>
 
-                <p className="text-[11px] text-ink-3">
+                <p className="text-xs text-ink-3">
                   Proporciona este código o el QR al socio para validar su ingreso
                   en el escáner de recepción.
                 </p>
@@ -313,7 +318,7 @@ export function StaffBookingModal({
                 </div>
 
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-ink-3 px-1">
+                  <div className="text-xs font-bold uppercase tracking-wider text-ink-3 px-1">
                     Selecciona un socio ({members.length})
                   </div>
 
@@ -336,7 +341,7 @@ export function StaffBookingModal({
                             <div className="text-xs font-bold text-ink">
                               {member.fullName}
                             </div>
-                            <div className="text-[11px] text-ink-3">
+                            <div className="text-xs text-ink-3">
                               {member.email}
                               {member.residence ? ` · ${member.residence}` : ''}
                             </div>
@@ -367,7 +372,7 @@ export function StaffBookingModal({
               <div className="space-y-4">
                 <div className="flex items-start justify-between rounded-2xl border border-line bg-surface p-3">
                   <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-ink-3">
+                    <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
                       Socio Seleccionado
                     </span>
                     <h4 className="text-sm font-bold text-ink">
@@ -378,7 +383,7 @@ export function StaffBookingModal({
                   <Button
                     variant="ghost"
                     onClick={() => setSelectedMember(null)}
-                    className="text-xs py-1 px-2.5 h-7 text-acc"
+                    className="text-xs py-1 px-2.5 h-7 text-acc-dark"
                   >
                     Cambiar
                   </Button>
@@ -458,6 +463,7 @@ export function StaffBookingModal({
                     onClick={handleConfirmBooking}
                     disabled={
                       submitting ||
+                      (sessionFull && !waitlistOn) ||
                       (memberAssessment?.hasWarning && !overrideWarningConfirmed)
                     }
                     className="gap-2"
@@ -465,8 +471,10 @@ export function StaffBookingModal({
                     <CheckCircle2 className="h-4 w-4" />
                     {submitting
                       ? 'Confirmando...'
-                      : session.bookedCount >= session.capacity
-                        ? 'Registrar en Lista de Espera'
+                      : sessionFull
+                        ? waitlistOn
+                          ? 'Registrar en Lista de Espera'
+                          : 'Clase llena'
                         : 'Confirmar Reserva en Recepción'}
                   </Button>
                 </div>

@@ -109,7 +109,7 @@ export function GoalModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/15 text-acc">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/15 text-acc-dark">
               <Target className="h-5 w-5" />
             </div>
             <div>
@@ -141,7 +141,7 @@ export function GoalModal({
               ) : diffInfo.isGain ? (
                 <TrendingUp className="h-4 w-4 text-warn" />
               ) : (
-                <Sparkles className="h-4 w-4 text-acc" />
+                <Sparkles className="h-4 w-4 text-acc-dark" />
               )}
               <span className="text-ink-2">
                 {diffInfo.isLoss
@@ -153,7 +153,7 @@ export function GoalModal({
             </div>
             {targetBmi != null && targetCategory && (
               <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
                 style={{
                   backgroundColor: `${targetCategory.color}20`,
                   color: targetCategory.color,

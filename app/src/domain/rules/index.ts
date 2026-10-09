@@ -1,8 +1,11 @@
-import type { Booking, Session, WaitlistEntry } from '../models'
+import type { Booking, BookingStatus, Session, WaitlistEntry } from '../models'
 
-export function confirmedCount(bookings: Booking[], sessionId: string): number {
+/** Igual que session_seats_taken() en booking-rpc.sql: el check-in no libera el cupo. */
+export const SEAT_STATUSES: readonly BookingStatus[] = ['confirmed', 'pending', 'attended']
+
+export function seatsTaken(bookings: Booking[], sessionId: string): number {
   return bookings.filter(
-    (b) => b.sessionId === sessionId && b.status === 'confirmed',
+    (b) => b.sessionId === sessionId && SEAT_STATUSES.includes(b.status),
   ).length
 }
 
@@ -18,7 +21,7 @@ export function canBookSession(
   session: Session,
   bookings: Booking[],
 ): { ok: true } | { ok: false; reason: 'full' } {
-  if (confirmedCount(bookings, session.id) >= session.capacity) {
+  if (seatsTaken(bookings, session.id) >= session.capacity) {
     return { ok: false, reason: 'full' }
   }
   return { ok: true }
@@ -76,6 +79,9 @@ export function nextWaitlistPosition(
 /** Mismo texto que `reschedule_booking` en booking-rpc.sql. */
 export const RESCHEDULE_FULL_MESSAGE =
   'La clase nueva está llena. Tu reserva actual no cambió.'
+
+/** Mismo texto que `book_session` cuando la clase está llena y la lista de espera apagada. */
+export const SESSION_FULL_MESSAGE = 'La clase está llena'
 
 /**
  * Primer socio de la cola que puede pasar a confirmado. Los que ya no son
@@ -176,9 +182,12 @@ export function canRecordWeight(
 
 export * from './membership'
 export * from './membershipPlan'
+export * from './memberships'
 export * from './zoneAccess'
 export * from './anthropometrics'
 export * from './profile'
 export * from './planRequest'
+export * from './paymentReceipt'
+export * from './featureFlags'
 
 export * from './bookingTimeline'

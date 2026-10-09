@@ -102,9 +102,11 @@ export interface GymRepository {
   getMemberPayments(userId: string): Promise<Payment[]>
   listMemberships(): Promise<Membership[]>
   listPayments(): Promise<Payment[]>
+  /** `reference`: la que el socio vio en el checkout (ZC-XXXXXX); si ya tenía una, se conserva. */
   requestPlanPayment(params: {
     planId: string
     manualMethod: ManualPaymentMethod
+    reference?: string
   }): Promise<Payment>
   registerManualPayment(params: {
     userId: string
@@ -113,6 +115,18 @@ export interface GymRepository {
     manualMethod: ManualPaymentMethod
     reference?: string
   }): Promise<{ payment: Payment; membership: Membership }>
+  /**
+   * Recepción: cierra hoy el plan vigente y abre `planId` con período completo desde ahora.
+   * El cobro descuenta el crédito por días no usados (queda en las notas del pago).
+   */
+  changePlanNow?(params: {
+    userId: string
+    planId: string
+    amountCents: number
+    manualMethod: ManualPaymentMethod
+  }): Promise<{ payment: Payment; membership: Membership }>
+  /** Recepción: marca un pago aprobado como reembolsado y, si se pide, cancela su membresía. */
+  refundPayment?(params: { paymentId: string; cancelMembership: boolean }): Promise<Payment>
   /**
    * Inicia checkout online (Datafast Dataweb / COPYandPay).
    * Solo disponible con Supabase + Edge Function configurada.
@@ -155,6 +169,8 @@ export interface OnlinePaymentReceipt {
   planName: string | null
   amountCents: number
   authorizationCode: string | null
+  /** Inicio de la fila comprada (futuro si quedó en espera). */
+  membershipStartsAt?: string | null
   membershipEndsAt: string | null
 }
 

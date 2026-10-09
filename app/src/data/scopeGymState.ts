@@ -24,6 +24,9 @@ export function scopeGymState(state: GymState, actor: User | null): GymState {
   if (actor.role === 'staff' || actor.role === 'admin') {
     return next
   }
+  const memberships = (next.memberships ?? []).filter((m) => m.userId === actor.id)
+  // A discontinued plan still defines the zones of the memberships that hold it.
+  const heldPlanIds = new Set(memberships.map((m) => m.planId))
   return {
     ...next,
     users: next.users.filter((u) => u.id === actor.id),
@@ -32,8 +35,10 @@ export function scopeGymState(state: GymState, actor: User | null): GymState {
     checkIns: next.checkIns.filter((c) => c.userId === actor.id),
     measurements: next.measurements.filter((m) => m.userId === actor.id),
     bodyGoals: (next.bodyGoals ?? []).filter((g) => g.userId === actor.id),
-    membershipPlans: (next.membershipPlans ?? []).filter((p) => p.active),
-    memberships: (next.memberships ?? []).filter((m) => m.userId === actor.id),
+    membershipPlans: (next.membershipPlans ?? []).filter(
+      (p) => p.active || heldPlanIds.has(p.id),
+    ),
+    memberships,
     payments: (next.payments ?? []).filter((p) => p.userId === actor.id),
   }
 }

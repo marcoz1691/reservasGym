@@ -104,13 +104,47 @@ describe('PlansShowcase', () => {
 
     expect(screen.getByRole('button', { name: /Renovar plan/ })).toBeInTheDocument()
     // Start Mensual (actual) + Trimestral, Semestral y Anual de la misma familia
-    expect(screen.getAllByRole('button', { name: /Renovar plan|Mejorar plan|Elegir plan/ })).toHaveLength(4)
+    expect(screen.getAllByRole('button', { name: /Renovar plan|Programar cambio/ })).toHaveLength(4)
     expect(screen.getAllByText('Tarjeta, efectivo o transferencia')).toHaveLength(4)
 
-    await user.click(screen.getAllByRole('button', { name: /Elegir plan/ })[0]!)
+    await user.click(screen.getAllByRole('button', { name: /Programar cambio/ })[0]!)
     expect(paid).toEqual(['s90'])
 
     await user.click(screen.getByRole('tab', { name: 'Zero Elite' }))
-    expect(screen.getByRole('button', { name: /Mejorar plan|Elegir plan/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Programar cambio/ })).toBeInTheDocument()
+  })
+
+  it('con un plan en espera bloquea otros planes salvo el pase del día, el actual y el que espera', async () => {
+    const user = userEvent.setup()
+    const withPass = [
+      ...catalog,
+      plan({
+        id: 'day',
+        name: 'Zona Day Full',
+        priceCents: 1000,
+        durationDays: 1,
+        kind: 'day_pass',
+      }),
+    ]
+    render(
+      <PlansShowcase
+        plans={withPass}
+        zones={[]}
+        currentPlanId="s30"
+        queuedPlanId="s90"
+        onlinePayEnabled
+        onPayOnline={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: /Renovar plan/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /Extender plan en espera/ })).toBeEnabled()
+    for (const button of screen.getAllByRole('button', { name: /Programar cambio/ })) {
+      expect(button).toBeDisabled()
+    }
+    expect(screen.getAllByText(/Ya tienes un plan en espera/).length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('tab', { name: 'Pases diarios' }))
+    expect(screen.getByRole('button', { name: /Comprar pase del día/ })).toBeEnabled()
   })
 })

@@ -3,11 +3,11 @@ import {
   canBookSession,
   canCancelFree,
   canManageWeight,
-  confirmedCount,
   hasOverlap,
   isCheckInWindow,
   nextWaitlistPosition,
   pickWaitlistPromotion,
+  seatsTaken,
 } from './rules'
 import type { Booking, Session, WaitlistEntry } from './models'
 
@@ -36,9 +36,9 @@ function booking(
 }
 
 describe('domain rules', () => {
-  it('counts confirmed bookings', () => {
+  it('counts seats taken', () => {
     expect(
-      confirmedCount(
+      seatsTaken(
         [
           booking({ id: 'b1', sessionId: 's1', userId: 'u1', status: 'confirmed' }),
           booking({ id: 'b2', sessionId: 's1', userId: 'u2', status: 'cancelled' }),
