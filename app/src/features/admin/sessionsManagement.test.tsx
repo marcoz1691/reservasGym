@@ -155,7 +155,7 @@ describe('Admin Sessions Management — SessionsPage', () => {
     )
 
     expect(
-      await screen.findByText(/Gestión de Sesiones y Clases/i),
+      await screen.findByRole('heading', { name: 'Sesiones' }),
     ).toBeInTheDocument()
     expect(screen.getByText('Hyrox Race Prep')).toBeInTheDocument()
     expect(screen.getByText('Diego Coach')).toBeInTheDocument()

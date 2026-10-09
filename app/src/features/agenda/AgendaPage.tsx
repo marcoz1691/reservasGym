@@ -293,7 +293,7 @@ export function AgendaPage() {
                       : 'text-ink-3'
                 }`}
               >
-                <span className="text-[10px] font-bold uppercase">
+                <span className="text-[11px] font-bold uppercase">
                   {today ? 'Hoy' : weekday}
                 </span>
                 <span className="text-sm font-extrabold leading-none">
@@ -428,7 +428,7 @@ export function AgendaPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-ink">{session.title}</p>
-                  <p className="truncate text-[11px] text-ink-3">
+                  <p className="truncate text-xs text-ink-3">
                     {session.bookedCount}/{session.capacity}
                     {trainer ? ` · ${trainer.fullName}` : ''}
                     {meta.shortName ? ` · ${meta.shortName}` : ''}

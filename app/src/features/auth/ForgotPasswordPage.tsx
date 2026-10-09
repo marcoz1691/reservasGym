@@ -193,7 +193,7 @@ export function ForgotPasswordPage() {
                   className={`flex-1 rounded-full ${strength === 'fuerte' ? 'bg-acc' : 'bg-line'}`}
                 />
               </div>
-              <span className="text-[11px] font-semibold capitalize text-ink-3">
+              <span className="text-xs font-semibold capitalize text-ink-3">
                 {strength}
               </span>
             </div>
@@ -235,7 +235,7 @@ export function ForgotPasswordPage() {
       <form onSubmit={handleCode} className="mt-5 space-y-4">
         <p className="text-xs leading-relaxed text-ink-2">
           Enviamos un código de {RECOVERY_CODE_LENGTH} dígitos a{' '}
-          <span className="font-semibold text-acc">{email.trim()}</span>. Si no
+          <span className="font-semibold text-acc-dark">{email.trim()}</span>. Si no
           lo ves, revisa el correo no deseado.
         </p>
         {demoCode ? (
@@ -266,7 +266,7 @@ export function ForgotPasswordPage() {
             type="button"
             onClick={() => void handleResend()}
             disabled={busy || cooldown > 0}
-            className="text-acc hover:underline disabled:text-ink-3 disabled:no-underline"
+            className="text-acc-dark hover:underline disabled:text-ink-3 disabled:no-underline"
           >
             {cooldown > 0 ? `Reenviar código (${cooldown} s)` : 'Reenviar código'}
           </button>
@@ -287,7 +287,7 @@ export function ForgotPasswordPage() {
     body = (
       <div className="mt-5 space-y-4">
         <div className="flex items-start gap-3 rounded-2xl border border-acc/30 bg-acc/10 p-4">
-          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-acc" />
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-acc-dark" />
           <p className="text-xs leading-relaxed text-ink-2">
             Tu contraseña se cambió correctamente. Ahora inicia sesión con la
             contraseña nueva.
@@ -303,10 +303,10 @@ export function ForgotPasswordPage() {
   const Icon = step === 'done' ? CheckCircle2 : step === 'code' ? MailCheck : KeyRound
 
   return (
-    <div className="flex min-h-dvh items-center justify-center p-4">
+    <main className="flex min-h-dvh items-center justify-center p-4">
       <div className="w-full max-w-md rounded-3xl border border-line bg-surface p-6 shadow-2xl sm:p-8">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-acc/15 text-acc">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-acc/15 text-acc-dark">
             <Icon className="h-5 w-5" />
           </div>
           <div>
@@ -326,6 +326,6 @@ export function ForgotPasswordPage() {
           </Link>
         ) : null}
       </div>
-    </div>
+    </main>
   )
 }

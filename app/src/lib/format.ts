@@ -208,4 +208,10 @@ export function applyBrandColors(primary: string, accent: string) {
   const root = document.documentElement
   root.style.setProperty('--color-brand', primary)
   root.style.setProperty('--color-acc', accent)
+  root.style.setProperty('--color-acc-dark', accentTextColor(accent))
+}
+
+/** Acento oscurecido para texto: el acento puro no llega a 4.5:1 sobre el fondo claro. */
+export function accentTextColor(accent: string) {
+  return `color-mix(in srgb, ${accent} 68%, #000)`
 }

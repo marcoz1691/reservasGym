@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import {
   useAppData,
   useCurrentUser,
@@ -10,6 +9,7 @@ import type { GymSettings } from '@/domain/models'
 import { isFeatureEnabled, normalizeWhatsAppPhone, type AppFeature } from '@/domain/rules'
 import { applyBrandColors } from '@/lib/format'
 import { Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 
 const FEATURE_SWITCHES: {
   feature: AppFeature
@@ -169,9 +169,7 @@ export function BrandingPage() {
           title="Acceso restringido"
           description="La marca y las funciones del gym solo las puede cambiar un administrador."
           action={
-            <Link to="/">
-              <Button>Volver al inicio</Button>
-            </Link>
+            <ButtonLink to="/">Volver al inicio</ButtonLink>
           }
         />
       </div>
@@ -181,15 +179,13 @@ export function BrandingPage() {
   return (
     <div>
       <PageHeader
-        title="Marca del gym"
-        subtitle="Nombre, logo y color de acento"
+        title="Personalización"
+        subtitle="Marca, funciones de la app y datos de pago"
         action={
-          <Link to="/admin">
-            <Button variant="ghost">Volver al admin</Button>
-          </Link>
+          <ButtonLink to="/admin" variant="ghost">Volver al admin</ButtonLink>
         }
       />
-      {msg ? <p className="mb-3 text-sm text-acc">{msg}</p> : null}
+      {msg ? <p className="mb-3 text-sm text-acc-dark">{msg}</p> : null}
 
       <Card className="max-w-lg space-y-4">
         <form
@@ -232,11 +228,13 @@ export function BrandingPage() {
               <input
                 type="color"
                 value={accentColor || '#F26D17'}
+                aria-label="Selector de color de acento"
                 onChange={(e) => setAccentColor(e.target.value)}
                 className="h-11 w-14 cursor-pointer rounded-xl border border-line bg-surface-elevated"
               />
               <Input
                 value={accentColor}
+                aria-label="Color de acento en hexadecimal"
                 onChange={(e) => setAccentColor(e.target.value)}
                 className="font-mono"
               />
@@ -340,7 +338,7 @@ export function BrandingPage() {
           {paymentMsg ? (
             <p
               role={paymentMsg.tone === 'error' ? 'alert' : 'status'}
-              className={`text-sm ${paymentMsg.tone === 'error' ? 'text-danger' : 'text-acc'}`}
+              className={`text-sm ${paymentMsg.tone === 'error' ? 'text-danger' : 'text-acc-dark'}`}
             >
               {paymentMsg.text}
             </p>

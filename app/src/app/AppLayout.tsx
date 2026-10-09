@@ -37,6 +37,7 @@ import {
   wasNoPlanReminderDismissed,
 } from '@/features/memberships/noPlanReminder'
 import { Button } from '@/ui/primitives'
+import { accentTextColor } from '@/lib/format'
 
 const memberDesktopNav = [
   { to: '/', label: 'Inicio', icon: Home, end: true },
@@ -49,15 +50,13 @@ const memberDesktopNav = [
 ]
 
 const staffDesktopNav = [
-  { to: '/admin', label: 'Dashboard Admin', icon: LayoutDashboard, end: true },
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/cobros', label: 'Cobros POS', icon: CreditCard },
   { to: '/admin/planes', label: 'Planes', icon: Layers },
   { to: '/admin/sesiones', label: 'Sesiones', icon: CalendarClock },
   { to: '/check-in', label: 'Escanear Check-In', icon: QrCode },
   { to: '/agenda', label: 'Reservar clases', icon: CalendarDays },
-  { to: '/explorar', label: 'Sesiones & Áreas', icon: Dumbbell },
-  { to: '/peso', label: 'Medidas corporales', icon: TrendingUp },
-  { to: '/admin/marca', label: 'Marca & Config', icon: Settings },
+  { to: '/admin/marca', label: 'Personalización', icon: Settings },
   { to: '/perfil', label: 'Mi Perfil', icon: User },
 ]
 
@@ -137,7 +136,10 @@ export function AppLayout() {
   return (
     <div
       className="mx-auto flex h-dvh min-h-0 max-w-7xl flex-col overflow-hidden bg-bg text-ink lg:flex-row"
-      style={{ ['--color-acc' as string]: accent }}
+      style={{
+        ['--color-acc' as string]: accent,
+        ['--color-acc-dark' as string]: accentTextColor(accent),
+      }}
     >
       {/* Desktop & Tablet Sidebar */}
       <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-line bg-surface p-5 lg:flex lg:max-h-dvh lg:flex-col lg:justify-between">
@@ -150,13 +152,17 @@ export function AppLayout() {
             {settings.logoUrl ? (
               <img
                 src={settings.logoUrl}
-                alt={settings.name}
+                width={40}
+                height={40}
+                alt=""
                 className="h-10 w-10 rounded-xl object-cover shadow-md"
               />
             ) : (
               <img
-                src={`${import.meta.env.BASE_URL}brand/mark-color.png`}
-                alt={settings.name || 'Zona Cero'}
+                src={`${import.meta.env.BASE_URL}brand/mark-color.webp`}
+                width={182}
+                height={100}
+                alt=""
                 className="h-6 w-auto shrink-0"
               />
             )}
@@ -165,7 +171,7 @@ export function AppLayout() {
                 {settings.name || 'Zona Cero'}
               </div>
               {!(settings.name || '').toLowerCase().includes('performance center') ? (
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-acc">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-acc-dark">
                   <Sparkles className="h-3 w-3" />
                   <span>Performance Center</span>
                 </div>
@@ -183,7 +189,7 @@ export function AppLayout() {
                 className={({ isActive }) =>
                   `group flex items-center justify-between rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
                     isActive
-                      ? 'bg-acc/15 text-acc border-l-3 border-acc font-bold shadow-sm'
+                      ? 'bg-acc/15 text-acc-dark border-l-3 border-acc font-bold shadow-sm'
                       : 'text-ink-2 hover:bg-surface-elevated hover:text-ink'
                   }`
                 }
@@ -193,7 +199,7 @@ export function AppLayout() {
                   <span>{label}</span>
                 </div>
                 {to === '/reservas' && activeBookingsCount > 0 ? (
-                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-acc px-1.5 text-[10px] font-extrabold text-[var(--color-acc-contrast)]">
+                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-acc px-1.5 text-[11px] font-extrabold text-[var(--color-acc-contrast)]">
                     {activeBookingsCount}
                   </span>
                 ) : null}
@@ -208,14 +214,14 @@ export function AppLayout() {
             to="/perfil"
             className="flex items-center gap-3 rounded-2xl p-2.5 transition hover:bg-surface-elevated"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-elevated border border-line text-xs font-black text-acc">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-elevated border border-line text-xs font-black text-acc-dark">
               {userInitials}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-bold text-ink">
                 {user?.fullName || 'Usuario'}
               </p>
-              <p className="text-[11px] font-medium text-ink-3 capitalize">
+              <p className="text-xs font-medium text-ink-3 capitalize">
                 {user?.role === 'member'
                   ? 'Socio Activo'
                   : user?.role === 'staff'
@@ -256,13 +262,17 @@ export function AppLayout() {
             {settings.logoUrl ? (
               <img
                 src={settings.logoUrl}
-                alt={settings.name}
+                width={32}
+                height={32}
+                alt=""
                 className="h-8 w-8 rounded-lg object-cover"
               />
             ) : (
               <img
-                src={`${import.meta.env.BASE_URL}brand/mark-color.png`}
-                alt={settings.name || 'Zona Cero'}
+                src={`${import.meta.env.BASE_URL}brand/mark-color.webp`}
+                width={182}
+                height={100}
+                alt=""
                 className="h-5 w-auto shrink-0"
               />
             )}
@@ -271,7 +281,7 @@ export function AppLayout() {
                 {settings.name || 'Zona Cero'}
               </span>
               {!(settings.name || '').toLowerCase().includes('performance center') ? (
-                <span className="block text-[10px] font-bold text-acc leading-none">
+                <span className="block text-[11px] font-bold text-acc-dark leading-none">
                   Performance Center
                 </span>
               ) : null}
@@ -281,15 +291,16 @@ export function AppLayout() {
           <div className="flex items-center gap-2">
             <Link
               to="/perfil"
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-surface-elevated text-xs font-bold text-acc transition active:scale-95"
-              aria-label="Mi Perfil"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-elevated text-xs font-bold text-acc-dark transition active:scale-95"
+              aria-label={`${userInitials} · Mi perfil`}
             >
               {userInitials}
             </Link>
             <Button
               variant="ghost"
               size="sm"
-              className="px-2 py-1 text-xs text-ink-3"
+              aria-label="Cerrar sesión"
+              className="h-10 w-10 justify-center p-0 text-xs text-ink-3"
               onClick={() => {
                 void (async () => {
                   await repo.signOut()
@@ -329,8 +340,8 @@ export function AppLayout() {
                 to={to}
                 end={end !== undefined ? end : (to === '/' || to === '/admin')}
                 className={({ isActive }) =>
-                  `relative flex flex-1 flex-col items-center gap-1 rounded-xl py-1 text-[11px] font-bold transition-all duration-200 active:scale-95 ${
-                    isActive ? 'text-acc' : 'text-ink-3 hover:text-ink-2'
+                  `relative flex flex-1 flex-col items-center gap-1 rounded-xl py-1 text-xs font-bold transition-all duration-200 active:scale-95 ${
+                    isActive ? 'text-acc-dark' : 'text-ink-3 hover:text-ink-2'
                   }`
                 }
               >
@@ -343,7 +354,7 @@ export function AppLayout() {
                         }`}
                       />
                       {to === '/reservas' && activeBookingsCount > 0 ? (
-                        <span className="absolute -top-1 -right-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-acc px-1 text-[9px] font-extrabold text-[var(--color-acc-contrast)]">
+                        <span className="absolute -top-1 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-acc px-1 text-[11px] font-extrabold text-[var(--color-acc-contrast)]">
                           {activeBookingsCount}
                         </span>
                       ) : null}

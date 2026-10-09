@@ -252,7 +252,7 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByText('No incluida')).toBeInTheDocument()
+    expect((await screen.findAllByLabelText('No incluida')).length).toBeGreaterThan(0)
     const blocked = await screen.findByRole('link', {
       name: /No incluido en tu plan: CrossFit WOD/i,
     })

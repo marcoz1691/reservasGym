@@ -50,7 +50,8 @@ import {
   formatPaymentMethod,
   formatPaymentStatus,
 } from '@/lib/format'
-import { Badge, Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
+import { Badge, Button, Card, EmptyState, Input, PageHeader, SkeletonCard } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 
 type TabType = 'pos' | 'vencimientos' | 'historial'
 
@@ -94,6 +95,9 @@ export function CobrosPage() {
   const [plans, setPlans] = useState<MembershipPlan[]>([])
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
+  // Hasta la primera carga se muestra un esqueleto: evita que el formulario salte
+  // cuando aparecen las solicitudes pendientes.
+  const [loaded, setLoaded] = useState(false)
 
   // POS Form State
   const [selectedMemberId, setSelectedMemberId] = useState<string>('')
@@ -130,6 +134,8 @@ export function CobrosPage() {
       setPayments(pays)
     } catch (err) {
       console.error('Error loading cobros data:', err)
+    } finally {
+      setLoaded(true)
     }
   }
 
@@ -454,9 +460,7 @@ export function CobrosPage() {
           title="Acceso restringido"
           description="Este módulo es exclusivo para el equipo de staff y administradores de Zona Cero."
           action={
-            <Link to="/">
-              <Button>Volver al inicio</Button>
-            </Link>
+            <ButtonLink to="/">Volver al inicio</ButtonLink>
           }
         />
       </div>
@@ -466,23 +470,18 @@ export function CobrosPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Panel de Cobros & POS"
-        subtitle="Cobros presenciales en caja, gestión de renovaciones y control de caja"
+        title="Cobros"
         action={
           <div className="flex items-center gap-2">
-            <Link to="/admin">
-              <Button variant="ghost" className="gap-2">
+            <ButtonLink to="/admin" variant="ghost" className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 Panel Admin
-              </Button>
-            </Link>
+              </ButtonLink>
             {user?.role === 'admin' ? (
-              <Link to="/admin/planes">
-                <Button variant="secondary" className="gap-2">
+              <ButtonLink to="/admin/planes" variant="secondary" className="gap-2">
                   <PlusCircle className="h-4 w-4" />
                   Gestionar Planes
-                </Button>
-              </Link>
+                </ButtonLink>
             ) : null}
           </div>
         }
@@ -548,7 +547,8 @@ export function CobrosPage() {
       </div>
 
       {/* TAB 1: REGISTRAR COBRO (POS) */}
-      {activeTab === 'pos' && (
+      {activeTab === 'pos' && !loaded ? <SkeletonCard /> : null}
+      {activeTab === 'pos' && loaded && (
         <div className="space-y-6">
           {payments.some((p) => p.status === 'pending' && p.provider === 'manual') ? (
             <Card className="space-y-3 p-5">
@@ -592,7 +592,7 @@ export function CobrosPage() {
                             </span>
                           ) : null}
                         </span>
-                        <span className="text-sm font-bold text-acc">Cobrar</span>
+                        <span className="text-sm font-bold text-acc-dark">Cobrar</span>
                       </button>
                     )
                   })}
@@ -605,7 +605,7 @@ export function CobrosPage() {
             {receipt ? (
               /* Success Receipt / Confirmation Banner */
               <Card className="border-acc/40 bg-acc/5 p-6 space-y-5">
-                <div className="flex items-center gap-3 text-acc">
+                <div className="flex items-center gap-3 text-acc-dark">
                   <CheckCircle2 className="h-7 w-7 shrink-0" />
                   <div>
                     <h2 className="text-xl font-extrabold text-ink">
@@ -623,7 +623,7 @@ export function CobrosPage() {
                       <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
                         Comprobante de Pago
                       </span>
-                      <div className="text-sm font-mono font-bold text-acc">
+                      <div className="text-sm font-mono font-bold text-acc-dark">
                         ID: {receipt.payment.id}
                       </div>
                     </div>
@@ -647,7 +647,7 @@ export function CobrosPage() {
 
                     <div>
                       <span className="text-xs text-ink-3">Monto Cobrado:</span>
-                      <div className="text-xl font-black text-acc">
+                      <div className="text-xl font-black text-acc-dark">
                         {formatCurrency(receipt.payment.amountCents)} USD
                       </div>
                     </div>
@@ -717,7 +717,7 @@ export function CobrosPage() {
                 <Card className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-base font-bold text-ink flex items-center gap-2">
-                      <UserCheck className="h-5 w-5 text-acc" />
+                      <UserCheck className="h-5 w-5 text-acc-dark" />
                       1. Seleccionar Socio
                     </h3>
                     {selectedMember ? (
@@ -727,7 +727,7 @@ export function CobrosPage() {
                           setSelectedMemberId('')
                           setMemberSearchQuery('')
                         }}
-                        className="text-xs font-bold text-acc hover:underline"
+                        className="text-xs font-bold text-acc-dark hover:underline"
                       >
                         Cambiar socio
                       </button>
@@ -853,14 +853,14 @@ export function CobrosPage() {
                 {/* 2. Seleccionar Plan */}
                 <Card className="space-y-4">
                   <h3 className="text-base font-bold text-ink flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-acc" />
+                    <ShieldCheck className="h-5 w-5 text-acc-dark" />
                     2. Seleccionar Plan de Membresía
                   </h3>
 
                   {activePlans.length === 0 ? (
                     <div className="text-xs text-ink-3 p-4 text-center">
                       No hay planes activos configurados.{' '}
-                      <Link to="/admin/planes" className="text-acc underline font-bold">
+                      <Link to="/admin/planes" className="text-acc-dark underline font-bold">
                         Crear un plan
                       </Link>
                     </div>
@@ -880,14 +880,14 @@ export function CobrosPage() {
                           >
                             <div className="flex justify-between items-start">
                               <div className="font-bold text-ink text-sm">{plan.name}</div>
-                              <div className="text-base font-extrabold text-acc">
+                              <div className="text-base font-extrabold text-acc-dark">
                                 {formatCurrency(plan.priceCents)}
                               </div>
                             </div>
 
                             <div className="mt-2 flex flex-wrap gap-2 text-xs text-ink-3">
                               <span className="flex items-center gap-1">
-                                <Clock className="h-3.5 w-3.5 text-acc" />
+                                <Clock className="h-3.5 w-3.5 text-acc-dark" />
                                 {plan.durationDays} días
                               </span>
                               <span>•</span>
@@ -898,7 +898,7 @@ export function CobrosPage() {
                               </span>
                             </div>
 
-                            <div className="mt-2 text-[11px] text-ink-3">
+                            <div className="mt-2 text-xs text-ink-3">
                               {!plan.allowedZoneIds || plan.allowedZoneIds.length === 0
                                 ? '✓ Acceso total a todas las áreas'
                                 : `✓ ${plan.allowedZoneIds.length} áreas específicas permitidas`}
@@ -946,7 +946,7 @@ export function CobrosPage() {
                 {/* 3. Método de Pago y Monto */}
                 <Card className="space-y-4">
                   <h3 className="text-base font-bold text-ink flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-acc" />
+                    <DollarSign className="h-5 w-5 text-acc-dark" />
                     3. Método de Pago y Monto (USD)
                   </h3>
 
@@ -964,13 +964,13 @@ export function CobrosPage() {
                           onClick={() => setPaymentMethod(value)}
                           className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-center transition ${
                             paymentMethod === value
-                              ? 'border-acc bg-acc/10 text-acc font-bold'
+                              ? 'border-acc bg-acc/10 text-acc-dark font-bold'
                               : 'border-line bg-bg text-ink-2 hover:bg-surface'
                           }`}
                         >
-                          <Icon className="h-5 w-5 mb-1 text-acc" />
+                          <Icon className="h-5 w-5 mb-1 text-acc-dark" />
                           <span className="text-xs">{title}</span>
-                          <span className="text-[10px] text-ink-3">{detail}</span>
+                          <span className="text-[11px] text-ink-3">{detail}</span>
                         </button>
                       ))}
                     </div>
@@ -1060,7 +1060,7 @@ export function CobrosPage() {
 
                 <div className="flex justify-between py-2 text-sm">
                   <span className="font-bold text-ink">Total a cobrar:</span>
-                  <span className="font-extrabold text-acc text-base">
+                  <span className="font-extrabold text-acc-dark text-base">
                     ${amountUsd ? parseFloat(amountUsd || '0').toFixed(2) : '0.00'} USD
                   </span>
                 </div>
@@ -1072,13 +1072,13 @@ export function CobrosPage() {
               <h4 className="text-xs font-bold uppercase text-ink-3">Caja Hoy</h4>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="rounded-2xl bg-bg p-2.5">
-                  <div className="text-[10px] text-ink-3">Total Recaudado</div>
-                  <div className="text-lg font-black text-acc">
+                  <div className="text-[11px] text-ink-3">Total Recaudado</div>
+                  <div className="text-lg font-black text-acc-dark">
                     ${metrics.totalUsd.toFixed(2)}
                   </div>
                 </div>
                 <div className="rounded-2xl bg-bg p-2.5">
-                  <div className="text-[10px] text-ink-3">Cobros Registrados</div>
+                  <div className="text-[11px] text-ink-3">Cobros Registrados</div>
                   <div className="text-lg font-black text-ink">
                     {metrics.totalTransactions}
                   </div>
@@ -1111,7 +1111,7 @@ export function CobrosPage() {
                 onClick={() => setExpirationFilter('warning')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'warning'
-                    ? 'bg-warn text-ink'
+                    ? 'bg-warn text-white'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1122,7 +1122,7 @@ export function CobrosPage() {
                 onClick={() => setExpirationFilter('grace')}
                 className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'grace'
-                    ? 'bg-warn text-ink'
+                    ? 'bg-warn text-white'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1234,53 +1234,53 @@ export function CobrosPage() {
           {/* Metrics summary cards */}
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <Card>
-              <div className="text-[11px] font-bold uppercase text-ink-3">Total Recaudado</div>
-              <div className="mt-1 text-2xl font-black text-acc">
+              <div className="text-xs font-bold uppercase text-ink-3">Total Recaudado</div>
+              <div className="mt-1 text-2xl font-black text-acc-dark">
                 ${metrics.totalUsd.toFixed(2)} USD
               </div>
-              <div className="text-[11px] text-ink-3 mt-1">
+              <div className="text-xs text-ink-3 mt-1">
                 {metrics.totalTransactions} cobros aprobados
               </div>
             </Card>
 
             <Card>
-              <div className="text-[11px] font-bold uppercase text-ink-3">Datáfono POS</div>
+              <div className="text-xs font-bold uppercase text-ink-3">Datáfono POS</div>
               <div className="mt-1 text-2xl font-black text-ink">
                 ${metrics.cardPosUsd.toFixed(2)} USD
               </div>
-              <div className="text-[11px] text-ink-3 mt-1">Tarjetas Datafast</div>
+              <div className="text-xs text-ink-3 mt-1">Tarjetas Datafast</div>
             </Card>
 
             <Card>
-              <div className="text-[11px] font-bold uppercase text-ink-3">Efectivo</div>
+              <div className="text-xs font-bold uppercase text-ink-3">Efectivo</div>
               <div className="mt-1 text-2xl font-black text-ink">
                 ${metrics.cashUsd.toFixed(2)} USD
               </div>
-              <div className="text-[11px] text-ink-3 mt-1">Caja física</div>
+              <div className="text-xs text-ink-3 mt-1">Caja física</div>
             </Card>
 
             <Card>
-              <div className="text-[11px] font-bold uppercase text-ink-3">Transferencias</div>
+              <div className="text-xs font-bold uppercase text-ink-3">Transferencias</div>
               <div className="mt-1 text-2xl font-black text-ink">
                 ${metrics.transferUsd.toFixed(2)} USD
               </div>
-              <div className="text-[11px] text-ink-3 mt-1">Bancos acreditados</div>
+              <div className="text-xs text-ink-3 mt-1">Bancos acreditados</div>
             </Card>
 
             <Card>
-              <div className="text-[11px] font-bold uppercase text-ink-3">Deuna</div>
+              <div className="text-xs font-bold uppercase text-ink-3">Deuna</div>
               <div className="mt-1 text-2xl font-black text-ink">
                 ${metrics.deunaUsd.toFixed(2)} USD
               </div>
-              <div className="text-[11px] text-ink-3 mt-1">QR o código Deuna</div>
+              <div className="text-xs text-ink-3 mt-1">QR o código Deuna</div>
             </Card>
 
             <Card>
-              <div className="text-[11px] font-bold uppercase text-ink-3">En línea</div>
+              <div className="text-xs font-bold uppercase text-ink-3">En línea</div>
               <div className="mt-1 text-2xl font-black text-ink">
                 ${metrics.onlineUsd.toFixed(2)} USD
               </div>
-              <div className="text-[11px] text-ink-3 mt-1">Pagomedios</div>
+              <div className="text-xs text-ink-3 mt-1">Pagomedios</div>
             </Card>
           </div>
 
@@ -1324,7 +1324,7 @@ export function CobrosPage() {
           ) : (
             <div className="overflow-x-auto rounded-3xl border border-line bg-bg-2">
               <table className="w-full text-left text-xs">
-                <thead className="border-b border-line bg-surface/50 text-[11px] uppercase tracking-wider text-ink-3 font-bold">
+                <thead className="border-b border-line bg-surface/50 text-xs uppercase tracking-wider text-ink-3 font-bold">
                   <tr>
                     <th className="p-3.5">Fecha</th>
                     <th className="p-3.5">Socio</th>
@@ -1351,14 +1351,14 @@ export function CobrosPage() {
                           <div className="font-bold text-ink">
                             {member ? member.fullName : pay.userId}
                           </div>
-                          <div className="text-[10px] text-ink-3">
+                          <div className="text-[11px] text-ink-3">
                             {member?.email}
                           </div>
                         </td>
                         <td className="p-3.5 font-medium text-ink">
                           {plan ? plan.name : pay.planId}
                         </td>
-                        <td className="p-3.5 font-bold text-acc whitespace-nowrap text-sm">
+                        <td className="p-3.5 font-bold text-acc-dark whitespace-nowrap text-sm">
                           {formatCurrency(pay.amountCents)}
                         </td>
                         <td className="p-3.5">
@@ -1385,7 +1385,7 @@ export function CobrosPage() {
                             {formatPaymentStatus(pay.status)}
                           </Badge>
                           {pay.notes ? (
-                            <div className="mt-1 max-w-[220px] text-[10px] text-ink-3">{pay.notes}</div>
+                            <div className="mt-1 max-w-[220px] text-[11px] text-ink-3">{pay.notes}</div>
                           ) : null}
                         </td>
                         <td className="p-3.5">
@@ -1393,7 +1393,7 @@ export function CobrosPage() {
                             <button
                               type="button"
                               onClick={() => void handleRefund(pay)}
-                              className="whitespace-nowrap text-[11px] font-bold text-danger hover:underline"
+                              className="whitespace-nowrap text-xs font-bold text-danger hover:underline"
                             >
                               Marcar reembolsado
                             </button>

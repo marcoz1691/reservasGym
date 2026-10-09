@@ -18,7 +18,7 @@ export function WelcomeNoPlanCard({
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-acc/50 via-acc/10 to-transparent"
       />
       <div className="relative p-5 sm:p-6">
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-acc/25 bg-acc-soft px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-acc">
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-acc/25 bg-acc-soft px-2.5 py-1 font-mono text-xs font-bold uppercase tracking-[0.14em] text-acc-dark">
           <Sparkles className="h-3 w-3" />
           Primer paso
         </div>
@@ -38,7 +38,7 @@ export function WelcomeNoPlanCard({
           </ButtonLink>
           <Link
             to="/explorar"
-            className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
+            className="focus-ring rounded-lg text-xs font-bold text-acc-dark hover:text-acc-hi"
           >
             Explorar áreas
           </Link>

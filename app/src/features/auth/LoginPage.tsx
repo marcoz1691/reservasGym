@@ -212,12 +212,14 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-bg p-4 py-10">
+    <main className="flex min-h-dvh items-center justify-center bg-bg p-4 py-10">
       <Card className="w-full max-w-lg space-y-6 p-6 sm:p-8">
         {/* Brand header — imagotipo centrado, como en la maqueta del login */}
         <div className="text-center">
           <img
-            src={settings.logoUrl || `${import.meta.env.BASE_URL}brand/logo-color.png`}
+            src={settings.logoUrl || `${import.meta.env.BASE_URL}brand/logo-color.webp`}
+            width={530}
+            height={168}
             alt={settings.name || 'Zona Cero'}
             className="mx-auto h-14 w-auto"
           />
@@ -315,7 +317,7 @@ export function LoginPage() {
                   onClick={() =>
                     navigate('/recuperar', { state: { email: loginEmail } })
                   }
-                  className="text-xs text-acc hover:underline font-semibold"
+                  className="text-xs text-acc-dark hover:underline font-semibold"
                 >
                   ¿Olvidaste tu contraseña?
                 </button>
@@ -348,7 +350,7 @@ export function LoginPage() {
             <div className="mt-6 rounded-2xl border border-line bg-bg p-3.5 text-xs text-ink-3 space-y-2">
               <p className="font-bold text-ink-2 flex items-center justify-between">
                 <span>Acceso rápido demo (desarrollo):</span>
-                <span className="text-[10px] text-acc font-mono">{DEMO_PASSWORD}</span>
+                <span className="text-[11px] text-acc-dark font-mono">{DEMO_PASSWORD}</span>
               </p>
               <div className="grid grid-cols-3 gap-1.5 pt-1">
                 <button
@@ -357,7 +359,7 @@ export function LoginPage() {
                     setLoginEmail(DEMO_ACCOUNTS.socio)
                     setLoginPassword(DEMO_PASSWORD)
                   }}
-                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-[11px] font-semibold text-ink hover:border-acc/40 transition"
+                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:border-acc/40 transition"
                 >
                   Socio
                 </button>
@@ -367,7 +369,7 @@ export function LoginPage() {
                     setLoginEmail(DEMO_ACCOUNTS.staff)
                     setLoginPassword(DEMO_PASSWORD)
                   }}
-                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-[11px] font-semibold text-ink hover:border-acc/40 transition"
+                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:border-acc/40 transition"
                 >
                   Staff
                 </button>
@@ -377,7 +379,7 @@ export function LoginPage() {
                     setLoginEmail(DEMO_ACCOUNTS.admin)
                     setLoginPassword(DEMO_PASSWORD)
                   }}
-                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-[11px] font-semibold text-ink hover:border-acc/40 transition"
+                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:border-acc/40 transition"
                 >
                   Admin
                 </button>
@@ -389,7 +391,7 @@ export function LoginPage() {
           /* STREAMLINED REGISTRATION FORM */
           <form className="space-y-4" onSubmit={handleRegister}>
             <div className="rounded-2xl border border-acc/20 bg-acc/5 p-4 text-xs text-ink-2">
-              <div className="flex items-center gap-2 font-bold text-acc">
+              <div className="flex items-center gap-2 font-bold text-acc-dark">
                 <Sparkles className="h-4 w-4" />
                 <span>Crea tu cuenta de socio</span>
               </div>
@@ -450,6 +452,6 @@ export function LoginPage() {
           </form>
         )}
       </Card>
-    </div>
+    </main>
   )
 }

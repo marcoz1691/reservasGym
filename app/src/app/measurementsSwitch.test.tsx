@@ -94,7 +94,7 @@ describe('Interruptor de medidas corporales', () => {
   it('apagado, el staff tampoco ve Medidas y /peso lo lleva al panel', async () => {
     renderApp(staff, '/peso', false)
 
-    await screen.findByText('Panel de Administración', undefined, lazy)
+    await screen.findByRole('heading', { name: 'Dashboard' }, lazy)
     expect(screen.queryByText('Control Antropométrico & Progreso')).toBeNull()
     expect(screen.queryByRole('link', { name: /Medidas/ })).toBeNull()
   })

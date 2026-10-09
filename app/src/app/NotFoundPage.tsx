@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom'
 import { Compass } from 'lucide-react'
-import { Button, EmptyState } from '@/ui/primitives'
+import { EmptyState } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 
 export function NotFoundPage() {
   return (
@@ -10,9 +10,7 @@ export function NotFoundPage() {
         title="Página no encontrada"
         description="La ruta que intentaste abrir no existe o cambió de lugar."
         action={
-          <Link to="/">
-            <Button variant="primary">Ir al inicio</Button>
-          </Link>
+          <ButtonLink to="/" variant="primary">Ir al inicio</ButtonLink>
         }
       />
     </div>

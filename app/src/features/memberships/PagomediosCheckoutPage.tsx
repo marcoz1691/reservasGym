@@ -331,7 +331,7 @@ export function PagomediosCheckoutPage() {
             <button
               type="button"
               onClick={() => void runVerify()}
-              className="text-sm font-bold text-acc"
+              className="text-sm font-bold text-acc-dark"
             >
               Volver a verificar
             </button>
@@ -465,7 +465,7 @@ export function PagomediosCheckoutPage() {
       <PageHeader title="Pago" subtitle="Elige cómo quieres pagar tu plan" />
 
       <section className="rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-ink-3">Tu plan</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-ink-3">Tu plan</p>
         <div className="mt-1 flex items-baseline justify-between gap-3">
           <p className="font-display text-lg font-bold text-ink">{plan.name}</p>
           <p className="shrink-0 text-lg font-bold text-ink">{formatCurrency(plan.priceCents)}</p>
@@ -785,7 +785,7 @@ function ApprovedReceipt({ receipt }: { receipt?: OnlinePaymentReceipt }) {
 
 function BackLink({ label = 'Volver a Mi Plan' }: { label?: string }) {
   return (
-    <Link to="/membresia" className="inline-flex items-center gap-1 text-sm font-bold text-acc">
+    <Link to="/membresia" className="inline-flex items-center gap-1 text-sm font-bold text-acc-dark">
       <ArrowLeft className="h-4 w-4" />
       {label}
     </Link>

@@ -34,7 +34,7 @@ describe('Admin Billing & Membership Plans UI', () => {
         </RepositoryProvider>,
       )
 
-      expect(await screen.findByText(/Panel de Cobros & POS/i)).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'Cobros' })).toBeInTheDocument()
       expect(screen.getByText(/Registrar Cobro \(POS\)/i)).toBeInTheDocument()
       expect(screen.getByText(/Socios por Vencer y Vencidos/i)).toBeInTheDocument()
       expect(screen.getByText(/Historial General de Cobros/i)).toBeInTheDocument()
@@ -171,7 +171,7 @@ describe('Admin Billing & Membership Plans UI', () => {
       )
 
       expect(
-        await screen.findByText(/Gestión de Planes de Membresía/i),
+        await screen.findByRole('heading', { name: 'Planes' }),
       ).toBeInTheDocument()
 
       // Verify existing seeded plans exist
@@ -308,7 +308,7 @@ describe('Admin Billing & Membership Plans UI', () => {
       )
 
       expect(await screen.findByText(/Acceso restringido/i)).toBeInTheDocument()
-      expect(screen.queryByText('Marca del gym')).not.toBeInTheDocument()
+      expect(screen.queryByText('Personalización')).not.toBeInTheDocument()
     })
 
     it('deja entrar a staff al panel de administración', async () => {
@@ -324,7 +324,7 @@ describe('Admin Billing & Membership Plans UI', () => {
         </RepositoryProvider>,
       )
 
-      expect(await screen.findByText('Panel de Administración')).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
     })
   })
 })

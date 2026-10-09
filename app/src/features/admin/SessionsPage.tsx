@@ -1,5 +1,4 @@
 import { useState, useMemo, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
   Calendar,
@@ -32,6 +31,7 @@ import {
 import { createId } from '@/lib/id'
 import { resolveSessionTemplateId } from '@/domain/rules/sessionTemplate'
 import { Badge, Button, Card, EmptyState, Input, PageHeader, Select } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 import { StaffBookingModal } from '@/features/agenda/StaffBookingModal'
 
 interface SessionFormData {
@@ -249,9 +249,7 @@ export function SessionsPage() {
           title="Acceso exclusivo para Staff y Administradores"
           description="La gestión de clases y programación de sesiones está reservada para el equipo de administración y recepción."
           action={
-            <Link to="/agenda">
-              <Button>Ver Agenda de Clases</Button>
-            </Link>
+            <ButtonLink to="/agenda">Ver Agenda de Clases</ButtonLink>
           }
         />
       </div>
@@ -261,16 +259,13 @@ export function SessionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Gestión de Sesiones y Clases"
-        subtitle="Programa horarios, instructores, cupos y disciplinas en Zona Cero sin tocar código"
+        title="Sesiones"
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Link to="/admin">
-              <Button variant="ghost" className="gap-2">
+            <ButtonLink to="/admin" variant="ghost" className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 Panel Admin
-              </Button>
-            </Link>
+              </ButtonLink>
             <Button
               variant="primary"
               onClick={handleOpenCreate}
@@ -333,7 +328,7 @@ export function SessionsPage() {
               setZoneFilter('all')
               setSelectedDateFilter('')
             }}
-            className="text-acc font-bold hover:underline"
+            className="text-acc-dark font-bold hover:underline"
           >
             Limpiar filtros
           </button>
@@ -378,10 +373,10 @@ export function SessionsPage() {
                         <Icon className="h-4 w-4" />
                       </div>
                       <div>
-                        <h3 className="font-black text-ink text-sm">
+                        <h2 className="font-black text-ink text-sm">
                           {session.title}
-                        </h3>
-                        <span className="text-[11px] text-ink-3">
+                        </h2>
+                        <span className="text-xs text-ink-3">
                           {zone?.name ?? meta.name}
                         </span>
                       </div>
@@ -393,7 +388,7 @@ export function SessionsPage() {
                   <div className="space-y-1.5 rounded-2xl bg-bg p-3 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-ink-3 flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-acc" />
+                        <Calendar className="h-3.5 w-3.5 text-acc-dark" />
                         Fecha:
                       </span>
                       <span className="font-bold text-ink">
@@ -403,7 +398,7 @@ export function SessionsPage() {
 
                     <div className="flex items-center justify-between">
                       <span className="text-ink-3 flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-acc" />
+                        <Clock className="h-3.5 w-3.5 text-acc-dark" />
                         Horario:
                       </span>
                       <span className="font-bold text-ink">
@@ -414,7 +409,7 @@ export function SessionsPage() {
 
                     <div className="flex items-center justify-between">
                       <span className="text-ink-3 flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5 text-acc" />
+                        <Users className="h-3.5 w-3.5 text-acc-dark" />
                         Instructor:
                       </span>
                       <span className="font-bold text-ink">
@@ -435,7 +430,7 @@ export function SessionsPage() {
                 <div className="border-t border-line pt-2.5 flex flex-wrap items-center justify-between gap-2">
                   <Button
                     variant="secondary"
-                    className="text-xs py-1 px-2.5 h-7 gap-1 text-acc border-acc/30 hover:bg-acc/10"
+                    className="text-xs py-1 px-2.5 h-7 gap-1 text-acc-dark border-acc/30 hover:bg-acc/10"
                     onClick={() => setStaffBookingSession(session)}
                     title="Reservar en nombre de un socio"
                   >
@@ -482,7 +477,7 @@ export function SessionsPage() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/10 text-acc">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/10 text-acc-dark">
                 <Calendar className="h-5 w-5" />
               </div>
               <div>

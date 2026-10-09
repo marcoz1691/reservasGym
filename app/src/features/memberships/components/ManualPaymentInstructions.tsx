@@ -86,7 +86,7 @@ export function ManualPaymentInstructions({
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 font-semibold text-white transition hover:brightness-95"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 font-semibold text-[#06361F] transition hover:brightness-95"
         >
           <MessageCircle className="h-4 w-4" aria-hidden />
           Enviar comprobante por WhatsApp
@@ -114,9 +114,9 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <dt className="text-ink-3">{label}</dt>
+      <dt className="min-w-0 text-ink-3">{label}</dt>
       <dd className={`flex items-center gap-2 text-right ${strong ? 'font-bold text-ink' : 'font-semibold text-ink'}`}>
-        <span className="break-all">{value}</span>
+        <span className={copyable ? 'whitespace-nowrap' : 'break-all'}>{value}</span>
         {copyable ? <CopyButton label={label} value={value} /> : null}
       </dd>
     </div>
@@ -141,7 +141,7 @@ function CopyButton({ label, value }: { label: string; value: string }) {
       type="button"
       onClick={() => void copy()}
       aria-label={`Copiar ${label.toLowerCase()}`}
-      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line px-2 py-1 text-xs font-semibold text-acc transition hover:border-acc"
+      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line px-2.5 py-2 text-xs font-semibold text-acc-dark transition hover:border-acc"
     >
       {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
       {copied ? 'Copiado' : 'Copiar'}

@@ -232,7 +232,7 @@ export function MiPlanPage() {
           <button
             type="button"
             onClick={handleChangePlan}
-            className="text-sm font-bold text-acc"
+            className="text-sm font-bold text-acc-dark"
           >
             Cambiar
           </button>
@@ -332,7 +332,7 @@ export function MiPlanPage() {
                 <Check className="h-4 w-4" />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
                   {currentMembership ? 'Plan a activar' : 'Plan elegido'}
                 </p>
                 <p className="truncate text-sm font-bold text-ink">{chosenPlan.name}</p>
@@ -344,7 +344,7 @@ export function MiPlanPage() {
             <button
               type="button"
               onClick={handleChangePlan}
-              className="focus-ring shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-acc hover:text-acc-hi"
+              className="focus-ring shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-acc-dark hover:text-acc-hi"
             >
               Cambiar
             </button>
@@ -381,7 +381,7 @@ export function MiPlanPage() {
                       aria-hidden
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
                         selected
-                          ? 'border-acc/30 bg-surface text-acc'
+                          ? 'border-acc/30 bg-surface text-acc-dark'
                           : 'border-line bg-surface-elevated text-ink-3'
                       }`}
                     >
@@ -391,7 +391,7 @@ export function MiPlanPage() {
                       <span className="block text-sm font-bold text-ink">
                         {MANUAL_PAYMENT_LABELS[method]}
                       </span>
-                      <span className="block text-[11px] text-ink-3">
+                      <span className="block text-xs text-ink-3">
                         {PAYMENT_HINTS[method]}
                       </span>
                     </span>

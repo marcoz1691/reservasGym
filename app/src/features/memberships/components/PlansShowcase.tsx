@@ -63,11 +63,11 @@ function OfferBadge({ badge }: { badge: string }) {
     return (
       <span aria-label={badge} className={CHIP_CLASSES}>
         <ChipSheen />
-        <span className="font-display text-xs font-extrabold tabular-nums tracking-tight text-acc">
+        <span className="font-display text-xs font-extrabold tabular-nums tracking-tight text-acc-dark">
           −{percent}%
         </span>
         <span aria-hidden className="h-2.5 w-px bg-white/20" />
-        <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-white/70">
+        <span className="text-xs font-medium uppercase tracking-[0.1em] text-white/70">
           {period.trim()}
         </span>
       </span>
@@ -79,7 +79,7 @@ function OfferBadge({ badge }: { badge: string }) {
       <ChipSheen />
       {/* Punto sólido en vez de pictograma: a 12px cualquier icono se ve garabato */}
       <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-acc" />
-      <span className="text-[11px] font-semibold tracking-wide text-white">{badge}</span>
+      <span className="text-xs font-semibold tracking-wide text-white">{badge}</span>
     </span>
   )
 }
@@ -194,12 +194,12 @@ export function PlansShowcase({
           <div className="flex items-start gap-3">
             <span
               aria-hidden
-              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-acc-soft text-acc"
+              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-acc-soft text-acc-dark"
             >
               <ArrowUpRight className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">
                 {currentPlan ? 'Mejorar plan' : 'Plan superior'}
               </p>
               <p className="mt-0.5 font-display text-lg font-bold tracking-tight text-ink">
@@ -284,25 +284,25 @@ export function PlansShowcase({
               {/* Fila de etiquetas: altura fija para que los precios se alineen */}
               <div className="flex min-h-[28px] flex-wrap items-center gap-1.5">
                 {isUpgrade ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-acc/35 bg-acc-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-acc">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-acc/35 bg-acc-soft px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-acc-dark">
                     <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-acc" />
                     <span>{currentPlan ? 'Mejorar' : 'Recomendado'}</span>
                   </span>
                 ) : null}
                 {isCurrent ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white">
                     <Check className="h-3 w-3" />
                     <span>Tu plan actual</span>
                   </span>
                 ) : null}
                 {isQueued ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-ink/25 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-ink-2">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-ink/25 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-ink-2">
                     <span>En espera</span>
                   </span>
                 ) : null}
                 {offer.badge ? <OfferBadge badge={offer.badge} /> : null}
                 {offer.featured ? (
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-ink-3">
                     Más ahorro
                   </span>
                 ) : null}
@@ -339,7 +339,7 @@ export function PlansShowcase({
                   </p>
                 ) : null}
                 {savingsCents ? (
-                  <p className="inline-flex items-center rounded-lg border border-acc/25 bg-acc-soft px-2 py-0.5 text-[13px] font-semibold tabular-nums text-acc">
+                  <p className="inline-flex items-center rounded-lg border border-acc/25 bg-acc-soft px-2 py-0.5 text-[13px] font-semibold tabular-nums text-acc-dark">
                     Ahorras {formatCurrency(savingsCents)}
                   </p>
                 ) : null}
@@ -440,7 +440,7 @@ export function PlansShowcase({
                           return (
                             <span
                               key={zid}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface-elevated px-2 py-0.5 text-[11px] font-medium text-ink-2"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface-elevated px-2 py-0.5 text-xs font-medium text-ink-2"
                             >
                               <span
                                 aria-hidden

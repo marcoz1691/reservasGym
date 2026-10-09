@@ -31,7 +31,8 @@ import { AreaThumb } from './components/AreaThumb'
 import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
 import { WelcomeNoPlanCard, PendingPlanRequestCard, isOnlinePayEnabled } from '@/features/memberships'
 import { selectPendingPlanRequest } from '@/domain/rules/planRequest'
-import { Badge, Button, Card, SkeletonCard } from '@/ui/primitives'
+import { Badge, Card, SkeletonCard } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -139,7 +140,7 @@ export function HomePage() {
           </p>
           <h1 className="mt-1.5 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">
             {greeting(now.getHours())},{' '}
-            <span className="text-acc">{firstName}</span>
+            <span className="text-acc-dark">{firstName}</span>
           </h1>
         </div>
         {membership && memberPlan ? (
@@ -162,7 +163,7 @@ export function HomePage() {
             aria-hidden
           />
           <div className="relative p-5 sm:p-6">
-            <div className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-acc">
+            <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-acc-dark">
               <Sparkles className="h-3.5 w-3.5" />
               Tu próxima clase
             </div>
@@ -182,12 +183,10 @@ export function HomePage() {
               </span>
             </p>
             {canBook ? (
-              <Link to="/reservas" className="mt-4 inline-block">
-                <Button variant="primary" size="sm">
+              <ButtonLink to="/reservas" className="mt-4" variant="primary" size="sm">
                   Ver mis clases
                   <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+                </ButtonLink>
             ) : null}
           </div>
         </Card>
@@ -205,7 +204,7 @@ export function HomePage() {
           <div className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-acc/70" aria-hidden />
           <div className="relative flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
             <div>
-              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-ink-3">
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-ink-3">
                 Agenda libre
               </p>
               <p className="mt-2 font-display text-2xl font-bold tracking-tight text-ink">
@@ -215,12 +214,10 @@ export function HomePage() {
                 Aparta tu próxima sesión en Reservar.
               </p>
             </div>
-            <Link to={canBook ? '/agenda' : '/explorar'}>
-              <Button variant="primary" size="lg">
+            <ButtonLink to={canBook ? '/agenda' : '/explorar'} variant="primary" size="lg">
                 {canBook ? 'Reservar clase' : 'Explorar áreas'}
                 <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+              </ButtonLink>
           </div>
         </div>
       )}
@@ -304,14 +301,14 @@ export function HomePage() {
             {canBook ? (
               <Link
                 to="/agenda"
-                className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
+                className="focus-ring rounded-lg text-xs font-bold text-acc-dark hover:text-acc-hi"
               >
                 Ver agenda
               </Link>
             ) : (
               <Link
                 to="/explorar"
-                className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
+                className="focus-ring rounded-lg text-xs font-bold text-acc-dark hover:text-acc-hi"
               >
                 Explorar áreas
               </Link>
@@ -346,7 +343,7 @@ export function HomePage() {
                         <div className="flex min-w-0 gap-3">
                           <AreaThumb zone={zone} zoneId={s.zoneId} />
                           <div className="min-w-0">
-                            <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-ink-3">
+                            <p className="font-mono text-xs font-bold uppercase tracking-wider text-ink-3">
                               {zone ? ZONE_LABELS[zone.type] : 'Área'}
                             </p>
                             <p className="mt-0.5 truncate font-bold text-ink">
@@ -376,7 +373,7 @@ export function HomePage() {
                           }}
                         />
                       </div>
-                      <p className="mt-2 text-[11px] font-medium text-ink-3">
+                      <p className="mt-2 text-xs font-medium text-ink-3">
                         {full
                           ? waitlistOn
                             ? 'Cupo completo · entra a lista de espera'
@@ -403,9 +400,9 @@ export function HomePage() {
                   <div key={day.key} className="flex flex-1 flex-col items-center gap-1.5">
                     <span
                       aria-hidden
-                      className={`flex h-9 w-full items-center justify-center rounded-xl border text-[11px] font-bold tabular-nums transition ${
+                      className={`flex h-9 w-full items-center justify-center rounded-xl border text-xs font-bold tabular-nums transition ${
                         day.attended
-                          ? 'border-acc/30 bg-acc-soft text-acc'
+                          ? 'border-acc/30 bg-acc-soft text-acc-dark'
                           : day.isToday
                             ? 'border-line-strong bg-surface-elevated text-ink-2'
                             : 'border-line bg-surface-elevated/60 text-ink-3'
@@ -413,7 +410,7 @@ export function HomePage() {
                     >
                       {format(day.date, 'd')}
                     </span>
-                    <span className="text-[10px] font-medium uppercase text-ink-3">
+                    <span className="text-[11px] font-medium uppercase text-ink-3">
                       {format(day.date, 'EEEEE', { locale: es })}
                     </span>
                   </div>
@@ -435,7 +432,7 @@ export function HomePage() {
                 </h2>
                 <Link
                   to="/peso"
-                  className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
+                  className="focus-ring rounded-lg text-xs font-bold text-acc-dark hover:text-acc-hi"
                 >
                   Ver detalle
                 </Link>
@@ -445,7 +442,7 @@ export function HomePage() {
                   <>
                     {/* El peso exacto vive en el panel de arriba; aquí manda la tendencia. */}
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-ink-3">
+                      <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-ink-3">
                         Tendencia
                       </p>
                       <DeltaPill delta={weightDelta} />
@@ -470,7 +467,7 @@ export function HomePage() {
                     </p>
                     <Link
                       to="/peso"
-                      className="focus-ring inline-flex items-center gap-1.5 rounded-lg text-sm font-bold text-acc hover:text-acc-hi"
+                      className="focus-ring inline-flex items-center gap-1.5 rounded-lg text-sm font-bold text-acc-dark hover:text-acc-hi"
                     >
                       Registrar peso
                       <ArrowRight className="h-3.5 w-3.5" />
@@ -489,7 +486,7 @@ export function HomePage() {
                 </h2>
                 <Link
                   to="/explorar"
-                  className="focus-ring rounded-lg text-xs font-bold text-acc hover:text-acc-hi"
+                  className="focus-ring rounded-lg text-xs font-bold text-acc-dark hover:text-acc-hi"
                 >
                   Ver todas
                 </Link>
@@ -519,7 +516,7 @@ export function HomePage() {
                         {zone.name}
                       </span>
                       {included ? (
-                        <span className="shrink-0 text-[11px] font-semibold text-success">
+                        <span className="shrink-0 text-xs font-semibold text-success">
                           Incluida
                         </span>
                       ) : (
@@ -601,7 +598,7 @@ function MembershipStrip({
       <Card className="hover:border-line-strong">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-ink-3">
+            <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-ink-3">
               Tu membresía
             </p>
             <p className="mt-1 truncate font-display text-lg font-bold tracking-tight text-ink">
@@ -641,7 +638,7 @@ function MembershipStrip({
 function DeltaPill({ delta }: { delta: number | null }) {
   if (delta === null) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-elevated px-2.5 py-1 text-[11px] font-semibold text-ink-3">
+      <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-elevated px-2.5 py-1 text-xs font-semibold text-ink-3">
         Primer registro
       </span>
     )
@@ -650,7 +647,7 @@ function DeltaPill({ delta }: { delta: number | null }) {
   const Icon = flat ? Minus : delta < 0 ? TrendingDown : TrendingUp
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
         flat ? 'bg-surface-elevated text-ink-3' : 'bg-success-soft text-success'
       }`}
     >
@@ -697,7 +694,7 @@ function PulseLink({
       to={to}
       className="focus-ring group block px-4 py-5 transition-colors hover:bg-surface-elevated/70 sm:px-5 sm:py-6"
     >
-      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-ink-3">
+      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-ink-3">
         {label}
       </p>
       <p className="mt-2 flex items-baseline gap-1.5 font-display text-3xl font-bold tabular-nums tracking-tight text-ink sm:text-4xl">

@@ -208,14 +208,14 @@ export function ProgressChart({
       {/* Header controls: Modes & Ranges */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/80 pb-3.5">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-acc/15 text-acc">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-acc/15 text-acc-dark">
             <TrendingUp className="h-4 w-4" />
           </div>
           <div>
             <h3 className="text-sm font-extrabold text-ink">
               Evolución en el Tiempo
             </h3>
-            <p className="text-[11px] text-ink-3">
+            <p className="text-xs text-ink-3">
               Curva de progreso interactiva
             </p>
           </div>
@@ -267,9 +267,9 @@ export function ProgressChart({
                 key={r}
                 type="button"
                 onClick={() => setRange(r)}
-                className={`rounded-lg px-2 py-0.5 text-[10px] font-bold transition ${
+                className={`rounded-lg px-2 py-0.5 text-[11px] font-bold transition ${
                   range === r
-                    ? 'bg-surface-elevated text-acc'
+                    ? 'bg-surface-elevated text-acc-dark'
                     : 'text-ink-3 hover:text-ink'
                 }`}
               >
@@ -471,7 +471,7 @@ export function ProgressChart({
               }}
             >
               <div className="rounded-xl border border-line bg-bg/95 px-3 py-2 text-xs shadow-xl backdrop-blur-md">
-                <div className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                <div className="flex items-center gap-1.5 text-xs text-ink-3">
                   <Calendar className="h-3 w-3" />
                   <span>{hoveredPoint.date}</span>
                 </div>
@@ -481,13 +481,13 @@ export function ProgressChart({
                     {mode === 'bmi' ? 'kg/m²' : mode === 'weight' ? 'kg' : 'cm'}
                   </span>
                   {hoveredPoint.deltaText && (
-                    <span className="text-[10px] font-bold text-acc">
+                    <span className="text-[11px] font-bold text-acc-dark">
                       ({hoveredPoint.deltaText})
                     </span>
                   )}
                 </div>
                 {hoveredPoint.notes && (
-                  <p className="mt-1 text-[10px] text-ink-2 max-w-[140px] truncate">
+                  <p className="mt-1 text-[11px] text-ink-2 max-w-[140px] truncate">
                     {hoveredPoint.notes}
                   </p>
                 )}

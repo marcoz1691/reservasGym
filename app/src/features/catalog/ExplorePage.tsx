@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   Clock,
-  Filter,
   Grid,
   Lock,
   UserCheck,
@@ -177,7 +176,7 @@ export function ExplorePage() {
     <div className="space-y-6">
       <PageHeader
         title="Explorar áreas"
-        subtitle="Disciplinas de Zona Cero. Reserva solo las incluidas en tu plan."
+        subtitle="Reserva solo las disciplinas incluidas en tu plan."
       />
 
       {msg ? (
@@ -186,19 +185,7 @@ export function ExplorePage() {
         </div>
       ) : null}
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs text-ink-3">
-          <span className="flex items-center gap-1.5 font-medium">
-            <Filter className="h-3.5 w-3.5" />
-            Disciplinas
-          </span>
-          <span className="text-[11px]">
-            {zoneType === 'all'
-              ? `${sessions.length} sesiones`
-              : `${sessions.length} en esta área`}
-          </span>
-        </div>
-
+      <div>
         <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
@@ -216,6 +203,8 @@ export function ExplorePage() {
           {Object.entries(ZONA_CERO_DISCIPLINES).map(([typeKey, meta]) => {
             const Icon = meta.icon
             const isSelected = zoneType === typeKey || zoneType === meta.defaultZoneId
+            const blocked =
+              filtersByAccess && !canAccessZone(memberPlan, passPlans, meta.defaultZoneId)
 
             return (
               <button
@@ -230,66 +219,21 @@ export function ExplorePage() {
               >
                 <Icon className="h-3.5 w-3.5 text-ink-3" />
                 <span>{meta.name}</span>
+                {blocked ? <Lock className="h-3 w-3 text-ink-3" aria-label="No incluida" /> : null}
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Disciplines Showcase Cards */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {data.zones
-          .filter(
-            (z) =>
-              zoneType === 'all' ||
-              z.type === zoneType ||
-              z.id === zoneType ||
-              z.id.replace(/[_-]/g, '').toLowerCase() ===
-                zoneType.replace(/[_-]/g, '').toLowerCase(),
-          )
-          .map((z) => {
-            const meta = getDisciplineMeta(z.type ?? z.id)
-            const Icon = meta.icon
-            const included =
-              !isMember ||
-              needsPlan ||
-              !filtersByAccess ||
-              canAccessZone(memberPlan, passPlans, z.id)
-            return (
-              <Card
-                key={z.id}
-                className={`flex flex-col justify-between p-4 ${
-                  included ? '' : 'opacity-60'
-                }`}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <Icon className="h-4 w-4 shrink-0 text-ink-3" />
-                      <div className="font-semibold text-ink">{z.name}</div>
-                    </div>
-                    {included ? null : (
-                      <Badge tone="neutral">No incluida</Badge>
-                    )}
-                  </div>
-                  <p className="text-xs leading-relaxed text-ink-3">
-                    {z.description || meta.description}
-                  </p>
-                </div>
-
-                <p className="mt-3 text-[11px] text-ink-3">
-                  {z.defaultCapacity} cupos
-                </p>
-              </Card>
-            )
-          })}
-      </div>
-
       {/* Available Sessions List */}
       <div className="space-y-3">
-        <h2 className="font-display text-lg font-bold text-ink">
-          Próximas sesiones
-        </h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-display text-lg font-bold text-ink">
+            Próximas sesiones
+          </h2>
+          <span className="text-xs text-ink-3">{sessions.length} sesiones</span>
+        </div>
 
         {selectedAreaBlocked ? (
           <Card className="p-8 text-center text-xs text-ink-3">
@@ -345,7 +289,7 @@ export function ExplorePage() {
                         <span className="text-sm font-semibold text-ink">
                           {s.title}
                         </span>
-                        <span className="text-[11px] text-ink-3">
+                        <span className="text-xs text-ink-3">
                           {meta.name}
                         </span>
                       </div>

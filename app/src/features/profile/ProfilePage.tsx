@@ -143,7 +143,7 @@ export function ProfilePage() {
               onClick={() => setFichaModalOpen(true)}
               className="flex items-center gap-1.5 text-xs font-bold"
             >
-              <FileSpreadsheet className="h-4 w-4 text-acc" />
+              <FileSpreadsheet className="h-4 w-4 text-acc-dark" />
               <span>Ficha Técnica Completa</span>
             </Button>
             {!isEditing ? (
@@ -168,7 +168,7 @@ export function ProfilePage() {
 
       {successMsg ? (
         <div className="flex items-center gap-2 rounded-2xl border border-acc/40 bg-acc/10 p-3.5 text-xs text-ink font-semibold">
-          <Check className="h-4 w-4 text-acc" />
+          <Check className="h-4 w-4 text-acc-dark" />
           <span>{successMsg}</span>
         </div>
       ) : null}
@@ -203,7 +203,7 @@ export function ProfilePage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-ink-3">
-            <Ruler className="h-4 w-4 text-acc" />
+            <Ruler className="h-4 w-4 text-acc-dark" />
             <span>Estatura</span>
           </div>
           <div className="text-2xl font-extrabold text-ink">
@@ -213,7 +213,7 @@ export function ProfilePage() {
 
         <Card className="p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-ink-3">
-            <Scale className="h-4 w-4 text-acc" />
+            <Scale className="h-4 w-4 text-acc-dark" />
             <span>Peso inicial</span>
           </div>
           <div className="text-2xl font-extrabold text-ink">
@@ -223,7 +223,7 @@ export function ProfilePage() {
 
         <Card className="p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-ink-3">
-            <Activity className="h-4 w-4 text-acc" />
+            <Activity className="h-4 w-4 text-acc-dark" />
             <span>IMC inicial</span>
           </div>
           <div className="text-2xl font-extrabold text-ink">
@@ -233,7 +233,7 @@ export function ProfilePage() {
 
         <Card className="p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-ink-3">
-            <Calendar className="h-4 w-4 text-acc" />
+            <Calendar className="h-4 w-4 text-acc-dark" />
             <span>Nacimiento</span>
           </div>
           <div className="text-sm font-extrabold text-ink truncate mt-1">
@@ -246,7 +246,7 @@ export function ProfilePage() {
       <Card className="p-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-acc/15 text-acc">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-acc/15 text-acc-dark">
               <Fingerprint className="h-6 w-6" />
             </div>
             <div>
@@ -357,7 +357,7 @@ export function ProfilePage() {
         <div className="grid sm:grid-cols-2 gap-4">
           <Card className="p-5 space-y-3.5">
             <h3 className="text-xs font-bold uppercase tracking-wider text-ink-3 flex items-center gap-2">
-              <UserIcon className="h-4 w-4 text-acc" />
+              <UserIcon className="h-4 w-4 text-acc-dark" />
               Datos personales
             </h3>
             <div className="space-y-2.5 text-sm">
@@ -388,7 +388,7 @@ export function ProfilePage() {
 
           <Card className="p-5 space-y-3.5">
             <h3 className="text-xs font-bold uppercase tracking-wider text-ink-3 flex items-center gap-2">
-              <HeartPulse className="h-4 w-4 text-acc" />
+              <HeartPulse className="h-4 w-4 text-acc-dark" />
               Ficha de salud y metas
             </h3>
             <div className="space-y-2.5 text-sm">

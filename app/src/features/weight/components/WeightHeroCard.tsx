@@ -67,7 +67,7 @@ export function WeightHeroCard({
       {/* Header row with actions */}
       <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line/80 pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-acc/15 text-acc border border-acc/20">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-acc/15 text-acc-dark border border-acc/20">
             <Scale className="h-5 w-5" />
           </div>
           <div>
@@ -88,7 +88,7 @@ export function WeightHeroCard({
             onClick={onOpenGoalModal}
             className="focus-ring inline-flex items-center gap-1.5 rounded-2xl border border-line bg-surface-elevated/80 px-3.5 py-2 text-xs font-bold text-ink-2 transition hover:border-acc/40 hover:text-ink hover:bg-surface-elevated"
           >
-            <Target className="h-4 w-4 text-acc" />
+            <Target className="h-4 w-4 text-acc-dark" />
             {goal ? 'Ajustar meta' : 'Definir meta'}
           </button>
           <button
@@ -109,7 +109,7 @@ export function WeightHeroCard({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {/* Current Weight */}
             <div className="col-span-2 sm:col-span-1 rounded-2xl border border-line bg-bg/80 p-4 transition hover:border-acc/30">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
                 Peso Actual
               </span>
               <div className="mt-1.5 flex items-baseline gap-1.5">
@@ -119,7 +119,7 @@ export function WeightHeroCard({
                 <span className="text-xs font-bold text-ink-3">kg</span>
               </div>
               {effectiveHeight ? (
-                <div className="mt-2 flex items-center gap-1 text-[11px] text-ink-3">
+                <div className="mt-2 flex items-center gap-1 text-xs text-ink-3">
                   <Ruler className="h-3 w-3" />
                   <span>Estatura: {effectiveHeight} cm</span>
                 </div>
@@ -128,7 +128,7 @@ export function WeightHeroCard({
 
             {/* Initial Weight & Change */}
             <div className="rounded-2xl border border-line bg-bg/80 p-4 transition hover:border-line">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
                 Peso Inicial
               </span>
               <div className="mt-1.5 flex items-baseline gap-1.5">
@@ -139,7 +139,7 @@ export function WeightHeroCard({
               </div>
               {totalDelta ? (
                 <div
-                  className={`mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
+                  className={`mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-bold ${
                     totalDelta.isLoss
                       ? 'bg-success-soft text-success'
                       : totalDelta.isGain
@@ -161,25 +161,25 @@ export function WeightHeroCard({
 
             {/* Goal Weight */}
             <div className="rounded-2xl border border-line bg-bg/80 p-4 transition hover:border-line">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
                 Meta
               </span>
               <div className="mt-1.5 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold tracking-tight text-acc">
+                <span className="text-2xl font-bold tracking-tight text-acc-dark">
                   {goal?.targetWeightKg != null ? goal.targetWeightKg.toFixed(1) : '—'}
                 </span>
                 <span className="text-xs text-ink-3">kg</span>
               </div>
               {goal ? (
-                <div className="mt-2 flex items-center gap-1 text-[11px] text-ink-3">
-                  <Calendar className="h-3 w-3 text-acc/70" />
+                <div className="mt-2 flex items-center gap-1 text-xs text-ink-3">
+                  <Calendar className="h-3 w-3 text-acc-dark/70" />
                   <span>{formatDateShort(goal.targetDate)}</span>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={onOpenGoalModal}
-                  className="mt-2 text-[11px] font-bold text-acc hover:underline"
+                  className="mt-2 text-xs font-bold text-acc-dark hover:underline"
                 >
                   + Fijar meta
                 </button>
@@ -192,10 +192,10 @@ export function WeightHeroCard({
             <div className="rounded-2xl border border-line bg-bg/80 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                 <span className="font-bold text-ink-2 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-acc" />
+                  <Sparkles className="h-3.5 w-3.5 text-acc-dark" />
                   Progreso hacia la meta ({goal.targetWeightKg} kg)
                 </span>
-                <span className="font-extrabold text-acc">
+                <span className="font-extrabold text-acc-dark">
                   {goalProgress.isAchieved
                     ? '¡Meta alcanzada! 🎉'
                     : `${goalProgress.progressPercent}% completado`}
@@ -210,7 +210,7 @@ export function WeightHeroCard({
                 />
               </div>
 
-              <div className="mt-2 flex justify-between text-[11px] text-ink-3">
+              <div className="mt-2 flex justify-between text-xs text-ink-3">
                 <span>
                   {goalProgress.isAchieved
                     ? 'Objetivo logrado con éxito'
