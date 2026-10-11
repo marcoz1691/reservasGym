@@ -56,9 +56,16 @@ describe('isFeatureEnabled', () => {
     expect(isFeatureEnabled({ ...base, onlinePaymentsEnabled: true }, 'onlinePayments')).toBe(true)
   })
 
-  it('sin settings: solo onlinePayments queda apagado', () => {
+  it('recurringPayments también cobra dinero: necesita true explícito', () => {
+    expect(isFeatureEnabled(base, 'recurringPayments')).toBe(false)
+    expect(isFeatureEnabled({ ...base, recurringPaymentsEnabled: false }, 'recurringPayments')).toBe(false)
+    expect(isFeatureEnabled({ ...base, recurringPaymentsEnabled: true }, 'recurringPayments')).toBe(true)
+  })
+
+  it('sin settings: los cobros (en línea y recurrente) quedan apagados', () => {
     expect(isFeatureEnabled(null, 'waitlist')).toBe(true)
     expect(isFeatureEnabled(undefined, 'onlinePayments')).toBe(false)
+    expect(isFeatureEnabled(undefined, 'recurringPayments')).toBe(false)
   })
 })
 

@@ -3,10 +3,12 @@
 
 export const ONLINE_PAYMENTS_DISABLED = "Pago en línea desactivado"
 export const DAY_PASSES_DISABLED = "Los pases diarios se venden en recepción"
+export const RECURRING_PAYMENTS_DISABLED = "Pago recurrente desactivado"
 
 export type FlagSettings = {
   online_payments_enabled?: boolean | null
   day_passes_enabled?: boolean | null
+  recurring_payments_enabled?: boolean | null
 } | null
 
 export type PlanForFlags = { name: string; kind?: string | null }
@@ -30,4 +32,11 @@ export function dayPassBlock(settings: FlagSettings, plan: PlanForFlags): Create
   return settings?.day_passes_enabled === false && isDayPassPlan(plan)
     ? { status: 403, error: DAY_PASSES_DISABLED }
     : null
+}
+
+/** Igual que el pago en línea: sin columna o sin `true` explícito, apagado. */
+export function recurringPaymentsBlock(settings: FlagSettings): CreateBlock | null {
+  return settings?.recurring_payments_enabled === true
+    ? null
+    : { status: 503, error: RECURRING_PAYMENTS_DISABLED }
 }

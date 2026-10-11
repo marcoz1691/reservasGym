@@ -31,12 +31,14 @@ describe('Funciones de la app (interruptores del admin)', () => {
     vi.unstubAllEnvs()
   })
 
-  it('el admin ve los cuatro interruptores con su explicación', async () => {
+  it('el admin ve los interruptores con su explicación', async () => {
     await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
     renderBranding()
 
     expect(await screen.findByRole('heading', { name: 'Funciones de la app' })).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Pago en línea' })).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByRole('switch', { name: 'Pago recurrente mensual' })).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByText(/Requiere la recurrencia contratada con Pagomedios/)).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Lista de espera' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('switch', { name: 'Medidas corporales' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('switch', { name: 'Pases diarios en la app' })).toHaveAttribute('aria-checked', 'true')
@@ -62,7 +64,8 @@ describe('Funciones de la app (interruptores del admin)', () => {
     renderBranding()
 
     expect(await screen.findByRole('switch', { name: 'Pago en línea' })).toBeDisabled()
-    expect(screen.getByText('Pagomedios no está configurado en este ambiente')).toBeInTheDocument()
+    // Uno por cada cobro: pago en línea y pago recurrente.
+    expect(screen.getAllByText('Pagomedios no está configurado en este ambiente')).toHaveLength(2)
   })
 
   it('con Pagomedios en el ambiente, el admin enciende el pago en línea', async () => {
@@ -77,6 +80,32 @@ describe('Funciones de la app (interruptores del admin)', () => {
 
     await waitFor(() => expect(online).toHaveAttribute('aria-checked', 'true'))
     expect((await repo.load()).settings.onlinePaymentsEnabled).toBe(true)
+  })
+
+  it('el admin enciende el pago recurrente; con el pago en línea apagado avisa que no se ofrece', async () => {
+    vi.stubEnv('VITE_ONLINE_PAYMENTS', '1')
+    await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    renderBranding()
+
+    const recurring = await screen.findByRole('switch', { name: 'Pago recurrente mensual' })
+    expect(recurring).toBeEnabled()
+    await userEvent.click(recurring)
+    await waitFor(() => expect(recurring).toHaveAttribute('aria-checked', 'true'))
+    expect((await repo.load()).settings.recurringPaymentsEnabled).toBe(true)
+    expect(screen.getByText('No se ofrece mientras el pago en línea esté apagado')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('switch', { name: 'Pago en línea' }))
+    await waitFor(() =>
+      expect(screen.queryByText('No se ofrece mientras el pago en línea esté apagado')).toBeNull(),
+    )
+  })
+
+  it('sin Pagomedios en el ambiente, el pago recurrente tampoco se puede encender', async () => {
+    vi.stubEnv('VITE_ONLINE_PAYMENTS', '0')
+    await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    renderBranding()
+
+    expect(await screen.findByRole('switch', { name: 'Pago recurrente mensual' })).toBeDisabled()
   })
 
   it('el staff no puede cambiar la configuración del gym', async () => {

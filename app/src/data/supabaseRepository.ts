@@ -95,6 +95,7 @@ function mapSettings(row: {
   waitlist_enabled?: boolean | null
   measurements_enabled?: boolean | null
   day_passes_enabled?: boolean | null
+  recurring_payments_enabled?: boolean | null
   whatsapp_payments?: string | null
   bank_name?: string | null
   bank_account_type?: string | null
@@ -116,6 +117,7 @@ function mapSettings(row: {
     waitlistEnabled: row.waitlist_enabled ?? undefined,
     measurementsEnabled: row.measurements_enabled ?? undefined,
     dayPassesEnabled: row.day_passes_enabled ?? undefined,
+    recurringPaymentsEnabled: row.recurring_payments_enabled ?? undefined,
     whatsappPayments: row.whatsapp_payments ?? null,
     bankName: row.bank_name ?? null,
     bankAccountType: row.bank_account_type ?? null,
@@ -803,6 +805,9 @@ export class SupabaseRepository implements GymRepository {
       row.measurements_enabled = patch.measurementsEnabled
     }
     if (patch.dayPassesEnabled !== undefined) row.day_passes_enabled = patch.dayPassesEnabled
+    if (patch.recurringPaymentsEnabled !== undefined) {
+      row.recurring_payments_enabled = patch.recurringPaymentsEnabled
+    }
     for (const [key, column] of Object.entries(PAYMENT_DETAIL_COLUMNS)) {
       const value = patch[key as keyof typeof PAYMENT_DETAIL_COLUMNS]
       if (value !== undefined) row[column] = value?.trim() || null

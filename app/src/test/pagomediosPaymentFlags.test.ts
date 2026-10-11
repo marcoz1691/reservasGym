@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   DAY_PASSES_DISABLED,
   ONLINE_PAYMENTS_DISABLED,
+  RECURRING_PAYMENTS_DISABLED,
   dayPassBlock,
   isDayPassPlan,
   onlinePaymentsBlock,
+  recurringPaymentsBlock,
 } from '../../supabase/functions/pagomedios-payment/flags'
 import { DAY_PASSES_APP_DISABLED_MESSAGE, isDayPassPlan as domainIsDayPass } from '@/domain/rules'
 
@@ -60,5 +62,18 @@ describe('pagomedios-payment: pases diarios apagados', () => {
         }),
       )
     }
+  })
+})
+
+describe('pagomedios-payment: interruptor del pago recurrente', () => {
+  it('apagado, sin fila o sin columna responde 503 "Pago recurrente desactivado"', () => {
+    const off = { status: 503, error: RECURRING_PAYMENTS_DISABLED }
+    expect(recurringPaymentsBlock({ recurring_payments_enabled: false })).toEqual(off)
+    expect(recurringPaymentsBlock({})).toEqual(off)
+    expect(recurringPaymentsBlock(null)).toEqual(off)
+  })
+
+  it('encendido deja registrar la tarjeta', () => {
+    expect(recurringPaymentsBlock({ recurring_payments_enabled: true })).toBeNull()
   })
 })

@@ -15,7 +15,11 @@ const FEATURE_SWITCHES: {
   feature: AppFeature
   setting: keyof Pick<
     GymSettings,
-    'onlinePaymentsEnabled' | 'waitlistEnabled' | 'measurementsEnabled' | 'dayPassesEnabled'
+    | 'onlinePaymentsEnabled'
+    | 'recurringPaymentsEnabled'
+    | 'waitlistEnabled'
+    | 'measurementsEnabled'
+    | 'dayPassesEnabled'
   >
   label: string
   detail: string
@@ -25,6 +29,12 @@ const FEATURE_SWITCHES: {
     setting: 'onlinePaymentsEnabled',
     label: 'Pago en línea',
     detail: 'Los socios pagan su plan con tarjeta desde la app. Si lo apagas, solo verán efectivo, transferencia y Deuna.',
+  },
+  {
+    feature: 'recurringPayments',
+    setting: 'recurringPaymentsEnabled',
+    label: 'Pago recurrente mensual',
+    detail: 'En los planes mensuales, el socio registra su tarjeta y paga el primer mes; los meses siguientes los cobras desde el panel de Pagomedios. Requiere la recurrencia contratada con Pagomedios.',
   },
   {
     feature: 'waitlist',
@@ -264,7 +274,11 @@ export function BrandingPage() {
         <ul className="divide-y divide-line">
           {FEATURE_SWITCHES.map(({ feature, setting, label, detail }) => {
             const on = isFeatureEnabled(data.settings, feature)
-            const unavailable = feature === 'onlinePayments' && !pagomediosConfigured
+            const paymentFeature = feature === 'onlinePayments' || feature === 'recurringPayments'
+            const unavailable = paymentFeature && !pagomediosConfigured
+            // El recurrente cobra con tarjeta: sin pago en línea no se ofrece aunque esté encendido.
+            const needsOnline =
+              feature === 'recurringPayments' && on && !isFeatureEnabled(data.settings, 'onlinePayments')
             const id = `feature-${feature}`
             return (
               <li key={feature} className="flex items-start justify-between gap-4 py-3">
@@ -276,6 +290,10 @@ export function BrandingPage() {
                   {unavailable ? (
                     <p className="mt-1 text-xs font-semibold text-warn">
                       Pagomedios no está configurado en este ambiente
+                    </p>
+                  ) : needsOnline ? (
+                    <p className="mt-1 text-xs font-semibold text-warn">
+                      No se ofrece mientras el pago en línea esté apagado
                     </p>
                   ) : null}
                 </div>

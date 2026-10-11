@@ -34,7 +34,7 @@ const BILLING = {
 const DAY = 24 * 60 * 60 * 1000
 
 type Membership = { id: string; plan_id: string; status: string; starts_at: string; ends_at: string; grace_ends_at: string; visits_left: number | null }
-type FlagRow = { online_payments_enabled: boolean; day_passes_enabled: boolean }
+type FlagRow = { online_payments_enabled: boolean; day_passes_enabled: boolean; recurring_payments_enabled: boolean }
 type Card = { token: string; number: string; created_at: string }
 
 let fn: ChildProcess | undefined
@@ -52,7 +52,9 @@ const paymentRow = async (id: string) =>
   ))[0]
 const setFlags = (flags: FlagRow) =>
   sql(`update gym_settings set online_payments_enabled = ${flags.online_payments_enabled},
-    day_passes_enabled = ${flags.day_passes_enabled} where id = 1`)
+    day_passes_enabled = ${flags.day_passes_enabled},
+    recurring_payments_enabled = ${flags.recurring_payments_enabled} where id = 1`)
+const ALL_ON: FlagRow = { online_payments_enabled: true, day_passes_enabled: true, recurring_payments_enabled: true }
 const latestEnd = async () =>
   (await sql<{ ends_at: string | null }>(
     `select max(ends_at) ends_at from memberships where user_id = '${socioId}'`,
@@ -88,10 +90,11 @@ test.beforeAll(async () => {
   snapshot = await sql<Membership>(
     `select id, plan_id, status, starts_at, ends_at, grace_ends_at, visits_left from memberships where user_id = '${socioId}'`,
   )
+  // Requiere recurring-payments.sql aplicado en QA.
   flagsSnapshot = (await sql<FlagRow>(
-    `select online_payments_enabled, day_passes_enabled from gym_settings where id = 1`,
+    `select online_payments_enabled, day_passes_enabled, recurring_payments_enabled from gym_settings where id = 1`,
   ))[0]
-  await setFlags({ online_payments_enabled: true, day_passes_enabled: true })
+  await setFlags(ALL_ON)
   cardsBefore = new Set((await cardsOf(BILLING.document)).map((c) => c.token))
   socioJwt = await accessToken(ACCOUNTS.socio, PASSWORD)
   fn = await startFunction()
@@ -119,6 +122,20 @@ test.afterAll(async () => {
 
 test.describe('Pago recurrente con Pagomedios (sandbox + QA)', () => {
   test.setTimeout(240_000)
+
+  test('interruptor del admin: con el pago recurrente apagado no crea nada (503)', async () => {
+    const before = (await sql<{ c: number }>(`select count(*)::int c from payments where provider = 'pagomedios'`))[0]!.c
+    try {
+      await setFlags({ ...ALL_ON, recurring_payments_enabled: false })
+      const off = await createRecurring(PLAN_MONTHLY.id)
+      expect(off.status).toBe(503)
+      expect(off.body.error).toBe('Pago recurrente desactivado')
+    } finally {
+      await setFlags(ALL_ON)
+    }
+    const after = (await sql<{ c: number }>(`select count(*)::int c from payments where provider = 'pagomedios'`))[0]!.c
+    expect(after).toBe(before)
+  })
 
   test('solo planes mensuales: el pase del día no admite débito', async () => {
     const r = await createRecurring(DAY_PASS)

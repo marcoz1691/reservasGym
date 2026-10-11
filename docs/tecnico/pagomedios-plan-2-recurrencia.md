@@ -11,7 +11,7 @@ El socio puede elegir "Pago recurrente mensual": registra su tarjeta en Pagomedi
 ## Flujo
 Comprobado contra el sandbox el 11-oct-2026 (`e2e/pagomedios-recurrencia.e2e.ts`).
 
-1. **Vitrina de planes → botón secundario "Pago recurrente mensual"**, junto al botón principal. Solo aparece en planes mensuales (28 a 31 días, no pase del día), con el pago en línea encendido y `VITE_RECURRING_PAYMENTS=1`.
+1. **Vitrina de planes → botón secundario "Pago recurrente mensual"**, junto al botón principal. Solo aparece en planes mensuales (28 a 31 días, no pase del día), con el pago en línea encendido y el interruptor **Pago recurrente mensual** del admin (Marca & Config → Funciones de la app, columna `gym_settings.recurring_payments_enabled` de `recurring-payments.sql`, nace apagado). La Edge Function responde 503 "Pago recurrente desactivado" si está apagado.
 2. **`/membresia/pago?planId=…&modo=recurrente`**: el mismo formulario de facturación del Plan 1, solo con tarjeta, y el texto de la adenda: *"Registras tu tarjeta y pagas el primer mes ahora. Los meses siguientes Zona Cero hará el cobro a esta tarjeta a través de Pagomedios. Para cancelarlo, avisa en recepción."* También avisa de la validación de $1,15.
 3. **"Registrar tarjeta y pagar"** → `create` con `recurring: true` en la Edge Function:
    - crea el pago `pending` por el valor del plan, con la nota `Pago recurrente (ID <cédula>): registro de tarjeta en curso.`;

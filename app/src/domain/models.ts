@@ -192,6 +192,8 @@ export interface GymSettings {
   waitlistEnabled?: boolean
   measurementsEnabled?: boolean
   dayPassesEnabled?: boolean
+  /** Pago recurrente mensual con Pagomedios (recurring-payments.sql, Adenda N.º 1). */
+  recurringPaymentsEnabled?: boolean
   /** Datos de pago que el socio ve al elegir transferencia o Deuna (manual-payments-deuna.sql). */
   whatsappPayments?: string | null
   bankName?: string | null

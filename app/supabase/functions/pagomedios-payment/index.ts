@@ -10,7 +10,8 @@
 // Acciones:
 //   POST { action: "create", planId, document, documentType, phone, address, native?, recurring? } (JWT)
 //     → crea payments(pending) + solicitud Pagomedios y devuelve { url, paymentId }
-//     → recurring: true (solo planes mensuales) usa POST /cards/register: el socio registra
+//     → recurring: true (solo planes mensuales, 503 si el admin apagó el pago recurrente:
+//       gym_settings.recurring_payments_enabled) usa POST /cards/register: el socio registra
 //       su tarjeta y, al verificar, se cobra el primer mes con POST /cards/charge (recurring.ts)
 //     → 503 si el admin apagó el pago en línea (gym_settings.online_payments_enabled);
 //       403 si apagó los pases diarios en la app y el plan es uno
@@ -24,7 +25,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2"
 import { splitTax } from "./tax.ts"
-import { dayPassBlock, onlinePaymentsBlock, type FlagSettings } from "./flags.ts"
+import {
+  dayPassBlock,
+  onlinePaymentsBlock,
+  recurringPaymentsBlock,
+  type FlagSettings,
+} from "./flags.ts"
 import {
   chargeReference,
   isRecurringEligiblePlan,
@@ -156,7 +162,7 @@ async function handleCreate(
     .eq("id", 1)
     .maybeSingle()
   const flags = (settings ?? null) as FlagSettings
-  const disabled = onlinePaymentsBlock(flags)
+  const disabled = onlinePaymentsBlock(flags) ?? (recurring ? recurringPaymentsBlock(flags) : null)
   if (disabled) return json({ error: disabled.error }, disabled.status)
 
   if (!planId) return json({ error: "planId requerido" }, 400)

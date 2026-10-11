@@ -51,8 +51,6 @@ const dayPass = {
 
 const app = vi.hoisted(() => ({
   settings: { onlinePaymentsEnabled: true, dayPassesEnabled: true } as Record<string, unknown>,
-  /** VITE_RECURRING_PAYMENTS: el gimnasio contrató la recurrencia en Pagomedios. */
-  recurringEnv: true,
 }))
 
 vi.mock('@/data/RepositoryProvider', () => ({
@@ -67,8 +65,8 @@ vi.mock('./onlinePay', async (importOriginal) => ({
   isOnlinePayEnvEnabled: () => true,
   isOnlinePayEnabled: (settings?: { onlinePaymentsEnabled?: boolean }) =>
     settings?.onlinePaymentsEnabled === true,
-  isRecurringPayEnabled: (settings?: { onlinePaymentsEnabled?: boolean }) =>
-    app.recurringEnv && settings?.onlinePaymentsEnabled === true,
+  isRecurringPayEnabled: (settings?: { onlinePaymentsEnabled?: boolean; recurringPaymentsEnabled?: boolean }) =>
+    settings?.onlinePaymentsEnabled === true && settings?.recurringPaymentsEnabled === true,
 }))
 
 const native = vi.hoisted(() => ({ value: false }))
@@ -684,8 +682,7 @@ describe('splitTax — desglose de IVA para Pagomedios', () => {
 describe('PagomediosCheckoutPage — pago recurrente', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    app.settings = { onlinePaymentsEnabled: true, dayPassesEnabled: true }
-    app.recurringEnv = true
+    app.settings = { onlinePaymentsEnabled: true, recurringPaymentsEnabled: true, dayPassesEnabled: true }
     native.value = false
     localStorage.clear()
     Object.defineProperty(window, 'location', {
@@ -730,8 +727,8 @@ describe('PagomediosCheckoutPage — pago recurrente', () => {
     expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
   })
 
-  it('sin la recurrencia contratada no se ofrece', () => {
-    app.recurringEnv = false
+  it('con el interruptor del admin apagado no se ofrece', () => {
+    app.settings = { ...app.settings, recurringPaymentsEnabled: false }
     renderAt('/membresia/pago?planId=plan_mensual&modo=recurrente')
     expect(screen.getByText(/El pago recurrente no está disponible para este plan/)).toBeInTheDocument()
   })

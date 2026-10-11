@@ -36,6 +36,7 @@ create table if not exists gym_settings (
   waitlist_enabled boolean not null default true,
   measurements_enabled boolean not null default true,
   day_passes_enabled boolean not null default true,
+  recurring_payments_enabled boolean not null default false,
   -- Datos de pago para transferencia y Deuna (manual-payments-deuna.sql)
   whatsapp_payments text,
   bank_name text,

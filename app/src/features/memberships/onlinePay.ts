@@ -31,16 +31,17 @@ export function isOnlinePayEnabled(
 }
 
 /**
- * Se ofrece el pago recurrente mensual: pago en línea con Pagomedios encendido y
- * VITE_RECURRING_PAYMENTS=1 (el gimnasio contrató la recurrencia en Pagomedios).
+ * Se ofrece el pago recurrente mensual: pago en línea con Pagomedios encendido y el
+ * interruptor del admin (gym_settings.recurring_payments_enabled). La Edge Function
+ * revisa lo mismo.
  */
 export function isRecurringPayEnabled(
-  settings: Pick<GymSettings, 'onlinePaymentsEnabled'> | null | undefined,
+  settings: Pick<GymSettings, 'onlinePaymentsEnabled' | 'recurringPaymentsEnabled'> | null | undefined,
 ): boolean {
   return (
-    import.meta.env.VITE_RECURRING_PAYMENTS === '1' &&
     getOnlinePayProvider() === 'pagomedios' &&
-    isOnlinePayEnabled(settings)
+    isOnlinePayEnabled(settings) &&
+    isFeatureEnabled(settings, 'recurringPayments')
   )
 }
 

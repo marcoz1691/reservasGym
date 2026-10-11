@@ -1,10 +1,16 @@
 import type { GymSettings, MembershipPlan } from '../models'
 import { isDayPassPlan } from './membershipPlan'
 
-export type AppFeature = 'onlinePayments' | 'waitlist' | 'measurements' | 'dayPasses'
+export type AppFeature =
+  | 'onlinePayments'
+  | 'recurringPayments'
+  | 'waitlist'
+  | 'measurements'
+  | 'dayPasses'
 
 const SETTING_BY_FEATURE = {
   onlinePayments: 'onlinePaymentsEnabled',
+  recurringPayments: 'recurringPaymentsEnabled',
   waitlist: 'waitlistEnabled',
   measurements: 'measurementsEnabled',
   dayPasses: 'dayPassesEnabled',
@@ -14,14 +20,16 @@ type FeatureSettings = Partial<Pick<GymSettings, (typeof SETTING_BY_FEATURE)[App
 
 /**
  * Lista de espera, medidas y pases diarios nacen encendidos: sin dato cuentan como
- * activos. El pago en línea cobra dinero, así que solo vale con `true` explícito.
+ * activos. El pago en línea y el recurrente cobran dinero: solo valen con `true` explícito.
  */
 export function isFeatureEnabled(
   settings: FeatureSettings | null | undefined,
   feature: AppFeature,
 ): boolean {
   const value = settings?.[SETTING_BY_FEATURE[feature]]
-  return feature === 'onlinePayments' ? value === true : value !== false
+  return feature === 'onlinePayments' || feature === 'recurringPayments'
+    ? value === true
+    : value !== false
 }
 
 /** Mismo texto que el create de pagomedios-payment. */
