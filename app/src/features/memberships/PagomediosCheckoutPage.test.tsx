@@ -730,7 +730,7 @@ describe('PagomediosCheckoutPage — pago recurrente', () => {
   it('con el interruptor del admin apagado no se ofrece', () => {
     app.settings = { ...app.settings, recurringPaymentsEnabled: false }
     renderAt('/membresia/pago?planId=plan_mensual&modo=recurrente')
-    expect(screen.getByText(/El pago recurrente no está disponible para este plan/)).toBeInTheDocument()
+    expect(screen.getByText(/El pago recurrente no está disponible en este momento/)).toBeInTheDocument()
   })
 
   it('al volver aprobado, el comprobante avisa que la tarjeta quedó registrada', async () => {

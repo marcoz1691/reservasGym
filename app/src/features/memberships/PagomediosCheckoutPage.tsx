@@ -185,8 +185,8 @@ export function PagomediosCheckoutPage() {
   const onlineOk = isOnlinePayEnvEnabled() && typeof repo.createPagomediosPayment === 'function'
   const cardEnabled = onlineOk && isOnlinePayEnabled(data.settings)
   const deunaEnabled = isDeunaConfigured(data.settings)
-  const recurringEnabled =
-    onlineOk && isRecurringPayEnabled(data.settings) && plan !== null && isRecurringEligiblePlan(plan)
+  const recurringSwitchOn = onlineOk && isRecurringPayEnabled(data.settings)
+  const recurringEnabled = recurringSwitchOn && plan !== null && isRecurringEligiblePlan(plan)
   // El pago recurrente es solo con tarjeta: no ofrece recepción, transferencia ni Deuna.
   const methodOptions = METHOD_OPTIONS.filter((o) =>
     recurring
@@ -378,7 +378,10 @@ export function PagomediosCheckoutPage() {
     return (
       <div className="mx-auto max-w-lg space-y-4 p-4">
         <p className="text-sm text-ink-2">
-          El pago recurrente no está disponible para este plan. Puedes pagarlo una sola vez desde Mi Plan.
+          {recurringSwitchOn
+            ? 'El pago recurrente no está disponible para este plan.'
+            : 'El pago recurrente no está disponible en este momento.'}{' '}
+          Puedes pagarlo una sola vez desde Mi Plan.
         </p>
         <BackLink label="Ir a Mi Plan" />
       </div>
