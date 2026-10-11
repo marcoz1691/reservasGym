@@ -8,8 +8,10 @@
 // create/verify validan la sesión del socio manualmente.
 //
 // Acciones:
-//   POST { action: "create", planId, document, documentType, phone, address, native? } (JWT)
+//   POST { action: "create", planId, document, documentType, phone, address, native?, recurring? } (JWT)
 //     → crea payments(pending) + solicitud Pagomedios y devuelve { url, paymentId }
+//     → recurring: true (solo planes mensuales) usa POST /cards/register: el socio registra
+//       su tarjeta y, al verificar, se cobra el primer mes con POST /cards/charge (recurring.ts)
 //     → 503 si el admin apagó el pago en línea (gym_settings.online_payments_enabled);
 //       403 si apagó los pases diarios en la app y el plan es uno
 //       (verify y notify no revisan los interruptores: un pago ya iniciado se registra igual)
@@ -17,11 +19,23 @@
 //     → consulta Pagomedios y, si está autorizado, activa/extiende la membresía
 //   POST|GET ?action=notify&paymentId=  (Pagomedios, sin JWT)
 //     → nunca confía en el body: re-consulta Pagomedios con el token y redirige a la app
+//       (el cardToken del body solo se usa si GET /cards lo lista para ese documento)
 //       (con &native=1 muestra "cierra esta ventana": la app nativa verifica al cerrar el navegador)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2"
 import { splitTax } from "./tax.ts"
 import { dayPassBlock, onlinePaymentsBlock, type FlagSettings } from "./flags.ts"
+import {
+  chargeReference,
+  isRecurringEligiblePlan,
+  parseRecurringNote,
+  pickRegisteredCard,
+  recurringNote,
+  registrationOutcome,
+  type CardRow,
+  type PaymentRequestRow,
+  type RecurringStage,
+} from "./recurring.ts"
 
 const PAGOMEDIOS_API = (
   Deno.env.get("PAGOMEDIOS_API_URL") ?? "https://api.abitmedia.cloud/pagomedios/v2"
@@ -133,6 +147,7 @@ async function handleCreate(
   const phone = String(body.phone ?? "").replace(/\D/g, "")
   const address = String(body.address ?? "").trim() || "Quito"
   const native = body.native === true
+  const recurring = body.recurring === true
 
   const { admin } = env
   const { data: settings } = await admin
@@ -169,6 +184,9 @@ async function handleCreate(
   }
   const dayPassOff = dayPassBlock(flags, plan)
   if (dayPassOff) return json({ error: dayPassOff.error }, dayPassOff.status)
+  if (recurring && !isRecurringEligiblePlan(plan)) {
+    return json({ error: "El pago recurrente es solo para planes mensuales." }, 400)
+  }
   if (!plan.price_cents || plan.price_cents < 100) {
     return json({ error: "Monto mínimo $1.00" }, 400)
   }
@@ -200,6 +218,7 @@ async function handleCreate(
       provider: "pagomedios",
       manual_method: null,
       reference: null,
+      notes: recurring ? recurringNote("registering", document) : null,
       created_at: new Date().toISOString(),
     })
     .select("id")
@@ -215,33 +234,39 @@ async function handleCreate(
   const notifyUrl =
     `${functionUrl}?action=notify&paymentId=${payment.id}` + (native ? "&native=1" : "")
 
-  const pmRes = await fetch(`${PAGOMEDIOS_API}/payment-requests`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.token}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
+  const request = {
+    integration: true,
+    third: {
+      document,
+      document_type: documentType,
+      name: name.slice(0, 100),
+      email,
+      phones: phone.slice(0, 15),
+      address: address.slice(0, 150),
+      type: documentType === "04" ? "Company" : "Individual",
     },
-    body: JSON.stringify({
-      integration: true,
-      third: {
-        document,
-        document_type: documentType,
-        name: name.slice(0, 100),
-        email,
-        phones: phone.slice(0, 15),
-        address: address.slice(0, 150),
-        type: documentType === "04" ? "Company" : "Individual",
+    generate_invoice: 0,
+    description: `Zona Cero - ${plan.name}`.slice(0, 150),
+    ...amounts,
+    notify_url: notifyUrl,
+    custom_value: payment.id,
+  }
+  // El registro de tarjeta cobra $1,15 de validación (Pagomedios lo reversa); el plan
+  // se cobra después con el token, en verifyRecurring.
+  const pmRes = await fetch(
+    `${PAGOMEDIOS_API}/${recurring ? "cards/register" : "payment-requests"}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
-      generate_invoice: 0,
-      description: `Zona Cero - ${plan.name}`.slice(0, 150),
-      ...amounts,
-      settings: [],
-      notify_url: notifyUrl,
-      custom_value: payment.id,
-      has_cards: 1,
-    }),
-  })
+      body: JSON.stringify(
+        recurring ? request : { ...request, settings: [], has_cards: 1 },
+      ),
+    },
+  )
   const pmBody = await pmRes.json().catch(() => null)
   const pmToken = pmBody?.data?.token
   const pmUrl = pmBody?.data?.url
@@ -266,14 +291,17 @@ async function handleCreate(
 
 async function handleNotify(req: Request, url: URL, env: Env) {
   let paymentId = url.searchParams.get("paymentId")
-  if (!paymentId && req.method === "POST") {
+  let cardToken: string | null = null
+  if (req.method === "POST") {
     const form = await req.formData().catch(() => null)
     const custom = form?.get("customValue")
-    if (typeof custom === "string") paymentId = custom
+    if (!paymentId && typeof custom === "string") paymentId = custom
+    const token = form?.get("cardToken")
+    if (typeof token === "string" && token) cardToken = token
   }
   if (paymentId) {
     try {
-      await verifyPayment(paymentId, env)
+      await verifyPayment(paymentId, env, cardToken)
     } catch (err) {
       console.error("notify verify failed", err)
     }
@@ -289,17 +317,23 @@ type Receipt = {
   authorizationCode: string | null
   membershipStartsAt: string | null
   membershipEndsAt: string | null
+  /** Pago recurrente: la tarjeta quedó registrada para los cobros siguientes. */
+  recurring: boolean
 }
 
 type VerifyResult =
   | { ok: true; status: "approved"; membershipId?: string; receipt?: Receipt }
   | { ok: false; status: "pending" | "rejected"; description: string }
 
-async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult> {
+async function verifyPayment(
+  paymentId: string,
+  env: Env,
+  cardToken: string | null = null,
+): Promise<VerifyResult> {
   const { admin } = env
   const { data: payment } = await admin
     .from("payments")
-    .select("id, user_id, plan_id, status, provider, reference")
+    .select("id, user_id, plan_id, status, provider, reference, amount_cents, notes")
     .eq("id", paymentId)
     .maybeSingle()
   if (!payment || payment.provider !== "pagomedios") {
@@ -314,6 +348,10 @@ async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult>
   }
   if (!payment.reference) {
     return { ok: false, status: "rejected", description: "Pago sin solicitud Pagomedios" }
+  }
+  const recurringState = parseRecurringNote(payment.notes)
+  if (recurringState) {
+    return await verifyRecurring(payment, recurringState, env, cardToken)
   }
 
   const query = new URLSearchParams({ integration: "true", uuid: payment.reference })
@@ -356,15 +394,26 @@ async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult>
   const authCode = String(
     transaction?.auth_code ?? transaction?.merchant_transaction_id ?? request.reference ?? "",
   ).slice(0, 120)
-  const paidAt = new Date()
+  return await approveAndActivate(payment, authCode, admin)
+}
 
-  // Reclamo atómico: notify y verify pueden llegar a la vez; solo uno extiende la membresía.
+/**
+ * Marca el pago aprobado y aplica la compra. Reclamo atómico: notify y verify pueden
+ * llegar a la vez; solo uno extiende la membresía. Si la activación falla, el pago
+ * vuelve a pendiente para reintentarla en la siguiente verificación.
+ */
+async function approveAndActivate(
+  payment: { id: string; user_id: string; plan_id: string },
+  authCode: string,
+  admin: SupabaseClient,
+): Promise<VerifyResult> {
+  const paidAt = new Date()
   const { data: claimed } = await admin
     .from("payments")
     .update({
       status: "approved",
       approved_at: paidAt.toISOString(),
-      mp_payment_id: authCode || null,
+      ...(authCode ? { mp_payment_id: authCode } : {}),
     })
     .eq("id", payment.id)
     .in("status", ["pending", "rejected"])
@@ -412,10 +461,164 @@ async function verifyPayment(paymentId: string, env: Env): Promise<VerifyResult>
   }
 }
 
+/**
+ * Pago recurrente, con la tarjeta ya registrada en el formulario de Pagomedios:
+ * busca el token (GET /cards) y cobra el primer mes (POST /cards/charge) una sola vez.
+ * La nota del pago hace de candado: solo quien la pasa de "registro" a "cobrando" cobra.
+ */
+async function verifyRecurring(
+  payment: { id: string; user_id: string; plan_id: string; status: string; reference: string; amount_cents: number; notes: string | null },
+  state: { stage: RecurringStage; document: string },
+  env: Env,
+  cardToken: string | null,
+): Promise<VerifyResult> {
+  const { admin } = env
+  const reviewMessage =
+    "Tu tarjeta quedó registrada. Estamos confirmando el cobro del primer mes; si no se confirma, recepción lo revisará."
+  const setNote = (stage: RecurringStage, extra: Record<string, unknown> = {}) =>
+    admin
+      .from("payments")
+      .update({ notes: recurringNote(stage, state.document), ...extra })
+      .eq("id", payment.id)
+      .eq("notes", payment.notes)
+      .eq("status", "pending")
+      .select("id")
+
+  if (state.stage === "charged") {
+    // El cobro ya pasó; falta (o falló) activar la membresía: se reintenta sin cobrar.
+    return await approveAndActivate(payment, "", admin)
+  }
+  if (state.stage === "charging" || state.stage === "review") {
+    return { ok: false, status: "pending", description: reviewMessage }
+  }
+  if (state.stage === "rejected") {
+    return { ok: false, status: "rejected", description: "No se cobró el primer mes." }
+  }
+
+  const query = new URLSearchParams({ integration: "true", uuid: payment.reference })
+  const reqRes = await fetch(`${PAGOMEDIOS_API}/payment-requests?${query}`, {
+    headers: { Authorization: `Bearer ${env.token}`, Accept: "application/json" },
+  }).catch(() => null)
+  const reqBody = await reqRes?.json().catch(() => null)
+  const request: PaymentRequestRow | null = Array.isArray(reqBody?.data) ? reqBody.data[0] : null
+  if (!reqRes?.ok || !request) {
+    return {
+      ok: false,
+      status: "pending",
+      description: "No se pudo consultar el estado en Pagomedios. Intenta de nuevo.",
+    }
+  }
+  const outcome = registrationOutcome(request)
+  if (outcome === "pending") {
+    return { ok: false, status: "pending", description: "Registro de tarjeta pendiente de confirmación." }
+  }
+  if (outcome === "rejected") {
+    await setNote("rejected", { status: "rejected" })
+    return {
+      ok: false,
+      status: "rejected",
+      description: "No se pudo registrar tu tarjeta. Intenta con otra o paga en recepción.",
+    }
+  }
+
+  const cardsQuery = new URLSearchParams({ integration: "true", document: state.document })
+  const cardsRes = await fetch(`${PAGOMEDIOS_API}/cards?${cardsQuery}`, {
+    headers: { Authorization: `Bearer ${env.token}`, Accept: "application/json" },
+  }).catch(() => null)
+  const cardsBody = await cardsRes?.json().catch(() => null)
+  const cards: CardRow[] = Array.isArray(cardsBody?.data)
+    ? cardsBody.data.flatMap((holder: { cards?: CardRow[] }) => holder?.cards ?? [])
+    : []
+  const card = pickRegisteredCard(cards, request, cardToken)
+  if (!card) {
+    return {
+      ok: false,
+      status: "pending",
+      description: "Tu tarjeta se está registrando en Pagomedios. Vuelve a verificar en un momento.",
+    }
+  }
+
+  const { data: locked } = await setNote("charging")
+  if (!locked || locked.length === 0) {
+    const { data: current } = await admin
+      .from("payments")
+      .select("status")
+      .eq("id", payment.id)
+      .maybeSingle()
+    return current?.status === "approved"
+      ? { ok: true, status: "approved", receipt: await receiptFor(payment.id, admin) }
+      : { ok: false, status: "pending", description: reviewMessage }
+  }
+  const charging = { ...payment, notes: recurringNote("charging", state.document) }
+  const setChargingNote = (stage: RecurringStage, extra: Record<string, unknown> = {}) =>
+    admin
+      .from("payments")
+      .update({ notes: recurringNote(stage, state.document), ...extra })
+      .eq("id", payment.id)
+      .eq("notes", charging.notes)
+
+  const { data: plan } = await admin
+    .from("membership_plans")
+    .select("name")
+    .eq("id", payment.plan_id)
+    .maybeSingle()
+  let result: { status?: number | string; authorizationCode?: string } | null = null
+  try {
+    const chargeRes = await fetch(`${PAGOMEDIOS_API}/cards/charge`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        integration: true,
+        document: state.document,
+        token: card.token,
+        reference: chargeReference(payment.id),
+        description: `Zona Cero - ${plan?.name ?? "Plan"} (mes 1)`.slice(0, 150),
+        ...splitTax(payment.amount_cents, env.taxRate),
+        generate_invoice: 0,
+      }),
+    })
+    const chargeBody = await chargeRes.json().catch(() => null)
+    const data = chargeBody?.data
+    result = Array.isArray(data) ? data[0] ?? null : data ?? null
+  } catch (err) {
+    console.error("cards/charge failed", err)
+  }
+
+  const chargeStatus = Number(result?.status)
+  if (chargeStatus === 1) {
+    await setChargingNote("charged")
+    return await approveAndActivate(
+      payment,
+      String(result?.authorizationCode ?? "").slice(0, 120),
+      admin,
+    )
+  }
+  if (chargeStatus === 2) {
+    await setChargingNote("rejected", { status: "rejected" })
+    // La tarjeta no queda registrada para débitos si el primer mes no se cobró.
+    await fetch(`${PAGOMEDIOS_API}/cards/${encodeURIComponent(card.token)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${env.token}`, Accept: "application/json" },
+    }).catch(() => null)
+    return {
+      ok: false,
+      status: "rejected",
+      description: "El banco rechazó el cobro del primer mes. Intenta con otra tarjeta o paga en recepción.",
+    }
+  }
+  // Sin respuesta clara no se reintenta: un segundo cobro podría duplicarlo.
+  await setChargingNote("review")
+  return { ok: false, status: "pending", description: reviewMessage }
+}
+
 async function receiptFor(paymentId: string, admin: SupabaseClient): Promise<Receipt | undefined> {
   const { data: payment } = await admin
     .from("payments")
-    .select("plan_id, membership_id, amount_cents, mp_payment_id")
+    .select("plan_id, membership_id, amount_cents, mp_payment_id, notes")
     .eq("id", paymentId)
     .maybeSingle()
   if (!payment) return undefined
@@ -435,6 +638,7 @@ async function receiptFor(paymentId: string, admin: SupabaseClient): Promise<Rec
     authorizationCode: payment.mp_payment_id ?? null,
     membershipStartsAt: membership?.starts_at ?? null,
     membershipEndsAt: membership?.ends_at ?? null,
+    recurring: parseRecurringNote(payment.notes)?.stage === "charged",
   }
 }
 
