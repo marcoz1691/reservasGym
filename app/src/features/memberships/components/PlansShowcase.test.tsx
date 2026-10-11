@@ -114,6 +114,30 @@ describe('PlansShowcase', () => {
     expect(screen.getByRole('button', { name: /Programar cambio/ })).toBeInTheDocument()
   })
 
+  it('el pago recurrente mensual se ofrece solo en los planes mensuales', async () => {
+    const user = userEvent.setup()
+    const recurring: string[] = []
+    render(
+      <PlansShowcase
+        plans={catalog}
+        zones={[]}
+        onlinePayEnabled
+        onPayOnline={() => undefined}
+        onPayRecurring={(id) => void recurring.push(id)}
+      />,
+    )
+
+    const buttons = screen.getAllByRole('button', { name: 'Pago recurrente mensual' })
+    expect(buttons).toHaveLength(1)
+    await user.click(buttons[0]!)
+    expect(recurring).toEqual(['s30'])
+  })
+
+  it('sin recurrencia contratada no aparece el botón', () => {
+    render(<PlansShowcase plans={catalog} zones={[]} onlinePayEnabled onPayOnline={() => undefined} />)
+    expect(screen.queryByRole('button', { name: 'Pago recurrente mensual' })).not.toBeInTheDocument()
+  })
+
   it('con un plan en espera bloquea otros planes salvo el pase del día, el actual y el que espera', async () => {
     const user = userEvent.setup()
     const withPass = [

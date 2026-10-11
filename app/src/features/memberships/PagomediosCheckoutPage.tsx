@@ -14,6 +14,7 @@ import {
   Loader2,
   Lock,
   QrCode,
+  Repeat,
   Store,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -48,11 +49,13 @@ import { CardBrandLogos } from './components/CardBrandLogos'
 import { LeaveCheckoutSheet } from './components/LeaveCheckoutSheet'
 import { ManualPaymentInstructions } from './components/ManualPaymentInstructions'
 import { splitTax } from '../../../supabase/functions/pagomedios-payment/tax'
+import { isRecurringEligiblePlan } from '../../../supabase/functions/pagomedios-payment/recurring'
 import {
   ONLINE_PAYMENT_TAX_RATE,
   isNativeApp,
   isOnlinePayEnabled,
   isOnlinePayEnvEnabled,
+  isRecurringPayEnabled,
   onPaymentScreenClosed,
   openPaymentPage,
   rememberPendingPayment,
@@ -92,9 +95,14 @@ type VerifyState =
   | { kind: 'pending'; message: string }
   | { kind: 'error'; message: string }
 
+/** Texto que ve el socio antes de registrar su tarjeta (Adenda N.º 1, cláusula Tercera). */
+export const RECURRING_NOTICE =
+  'Registras tu tarjeta y pagas el primer mes ahora. Los meses siguientes Zona Cero hará el cobro a esta tarjeta a través de Pagomedios. Para cancelarlo, avisa en recepción.'
+
 /**
  * Pago único con Pagomedios.
  * Entrada: /membresia/pago?planId=  → formulario de facturación → redirect a payurl.link
+ * Pago recurrente: /membresia/pago?planId=&modo=recurrente → registro de tarjeta en Pagomedios
  * Retorno: /membresia/pago?provider=pagomedios&paymentId=  → verificación
  */
 export function PagomediosCheckoutPage() {
@@ -106,6 +114,7 @@ export function PagomediosCheckoutPage() {
 
   const planId = searchParams.get('planId')
   const paymentId = searchParams.get('paymentId')
+  const recurring = searchParams.get('modo') === 'recurrente'
 
   const plan = useMemo(
     () => (data.membershipPlans ?? []).find((p) => p.id === planId && p.active) ?? null,
@@ -176,8 +185,13 @@ export function PagomediosCheckoutPage() {
   const onlineOk = isOnlinePayEnvEnabled() && typeof repo.createPagomediosPayment === 'function'
   const cardEnabled = onlineOk && isOnlinePayEnabled(data.settings)
   const deunaEnabled = isDeunaConfigured(data.settings)
-  const methodOptions = METHOD_OPTIONS.filter(
-    (o) => (o.value !== 'card' || cardEnabled) && (o.value !== 'deuna' || deunaEnabled),
+  const recurringEnabled =
+    onlineOk && isRecurringPayEnabled(data.settings) && plan !== null && isRecurringEligiblePlan(plan)
+  // El pago recurrente es solo con tarjeta: no ofrece recepción, transferencia ni Deuna.
+  const methodOptions = METHOD_OPTIONS.filter((o) =>
+    recurring
+      ? o.value === 'card'
+      : (o.value !== 'card' || cardEnabled) && (o.value !== 'deuna' || deunaEnabled),
   )
   const method: CheckoutMethod = methodOptions.some((o) => o.value === chosenMethod)
     ? chosenMethod
@@ -279,6 +293,7 @@ export function PagomediosCheckoutPage() {
         phone: phone.trim(),
         address: address.trim(),
         native,
+        ...(recurring ? { recurring: true } : {}),
       })
       if (native) rememberPendingPayment(newPaymentId)
       await openPaymentPage(url, () => {
@@ -314,7 +329,7 @@ export function PagomediosCheckoutPage() {
   if (paymentId) {
     return (
       <div className="mx-auto max-w-lg space-y-4 p-4">
-        <PageHeader title="Confirmando pago" subtitle="Pagomedios · pago único" />
+        <PageHeader title="Confirmando pago" subtitle="Pagomedios" />
         {verify.kind === 'checking' ? (
           <div role="status" className="flex items-center gap-2 text-sm text-ink-2">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -354,6 +369,17 @@ export function PagomediosCheckoutPage() {
     return (
       <div className="mx-auto max-w-lg space-y-4 p-4">
         <p className="text-sm text-ink-2">Selecciona un plan desde Mi Plan.</p>
+        <BackLink label="Ir a Mi Plan" />
+      </div>
+    )
+  }
+
+  if (recurring && !recurringEnabled) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 p-4">
+        <p className="text-sm text-ink-2">
+          El pago recurrente no está disponible para este plan. Puedes pagarlo una sola vez desde Mi Plan.
+        </p>
         <BackLink label="Ir a Mi Plan" />
       </div>
     )
@@ -462,7 +488,11 @@ export function PagomediosCheckoutPage() {
           <X className="h-6 w-6" />
         </button>
       </div>
-      <PageHeader title="Pago" subtitle="Elige cómo quieres pagar tu plan" />
+      {recurring ? (
+        <PageHeader title="Pago recurrente" subtitle="Registra tu tarjeta y paga el primer mes" />
+      ) : (
+        <PageHeader title="Pago" subtitle="Elige cómo quieres pagar tu plan" />
+      )}
 
       <section className="rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
         <p className="text-xs font-bold uppercase tracking-wider text-ink-3">Tu plan</p>
@@ -473,7 +503,9 @@ export function PagomediosCheckoutPage() {
         <p className="text-sm text-ink-3">
           {purchase?.kind === 'day_pass'
             ? 'Válido solo hoy · sin cobros recurrentes'
-            : `Vigencia de ${plan.durationDays} días · sin cobros recurrentes`}
+            : recurring
+              ? `Vigencia de ${plan.durationDays} días · se cobra cada mes a tu tarjeta`
+              : `Vigencia de ${plan.durationDays} días · sin cobros recurrentes`}
         </p>
         {purchase?.kind === 'queue' ? (
           <p className="mt-2 text-sm font-semibold text-ink">
@@ -487,6 +519,20 @@ export function PagomediosCheckoutPage() {
       </section>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
+        {recurring ? (
+          <Section title="Pago recurrente mensual">
+            <div className="space-y-2 rounded-2xl border border-line bg-surface p-4 text-sm text-ink-2">
+              <p className="flex items-start gap-2 text-ink">
+                <Repeat className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                {RECURRING_NOTICE}
+              </p>
+              <p className="text-xs text-ink-3">
+                Al registrar tu tarjeta, Pagomedios hace una validación de $1,15 que se reversa automáticamente.
+              </p>
+            </div>
+            <CardBrandLogos />
+          </Section>
+        ) : (
         <Section title="Método de pago">
           <div role="radiogroup" aria-label="Método de pago" className="space-y-2">
             {methodOptions.map((option) => {
@@ -523,6 +569,7 @@ export function PagomediosCheckoutPage() {
             />
           ) : null}
         </Section>
+        )}
 
         {payingByCard ? (
         <section className="space-y-3">
@@ -659,11 +706,17 @@ export function PagomediosCheckoutPage() {
             {busy ? (
               <span className="flex w-full items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {payingByCard ? 'Abriendo pago seguro…' : 'Enviando solicitud…'}
+                {payingByCard
+                  ? recurring
+                    ? 'Abriendo registro seguro…'
+                    : 'Abriendo pago seguro…'
+                  : 'Enviando solicitud…'}
               </span>
             ) : (
               <>
-                <span>{payingByCard ? 'Pagar' : 'Confirmar solicitud'}</span>
+                <span>
+                  {recurring ? 'Registrar tarjeta y pagar' : payingByCard ? 'Pagar' : 'Confirmar solicitud'}
+                </span>
                 <span>{formatCurrency(plan.priceCents)}</span>
               </>
             )}
@@ -672,7 +725,9 @@ export function PagomediosCheckoutPage() {
             {payingByCard ? (
               <>
                 <Lock className="h-3.5 w-3.5" aria-hidden />
-                Pago seguro en Pagomedios. No guardamos los datos de tu tarjeta.
+                {recurring
+                  ? 'Registro seguro en Pagomedios. No guardamos los datos de tu tarjeta.'
+                  : 'Pago seguro en Pagomedios. No guardamos los datos de tu tarjeta.'}
               </>
             ) : isRemotePaymentMethod(method) ? (
               data.settings?.whatsappPayments
@@ -762,6 +817,13 @@ function ApprovedReceipt({ receipt }: { receipt?: OnlinePaymentReceipt }) {
         ¡Pago aprobado!
       </p>
       <p>Tu membresía ya está activa.</p>
+      {receipt?.recurring ? (
+        <p className="flex items-start gap-2">
+          <Repeat className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />
+          Tu tarjeta quedó registrada. Los meses siguientes Zona Cero hará el cobro a través de
+          Pagomedios. Para cancelarlo, avisa en recepción.
+        </p>
+      ) : null}
       {rows.length > 0 ? (
         <dl className="space-y-1.5">
           {rows.map(([label, value]) => (

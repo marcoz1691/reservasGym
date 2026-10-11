@@ -1527,6 +1527,7 @@ export class SupabaseRepository implements GymRepository {
     phone: string
     address: string
     native?: boolean
+    recurring?: boolean
   }): Promise<{ url: string; paymentId: string }> {
     await this.requireUser()
     const { data, error } = await this.invokePagomedios({ action: 'create', ...params })

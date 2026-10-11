@@ -159,6 +159,11 @@ export interface GymRepository {
     address: string
     /** App nativa: el retorno muestra "cierra esta ventana" en vez de volver a la web. */
     native?: boolean
+    /**
+     * Pago recurrente mensual: el socio registra su tarjeta en Pagomedios y, al
+     * verificar, se cobra el primer mes. Los siguientes los cobra el gimnasio.
+     */
+    recurring?: boolean
   }): Promise<{ url: string; paymentId: string }>
   /** Consulta el estado en Pagomedios y activa la membresía si está autorizado. */
   verifyPagomediosPayment?(params: { paymentId: string }): Promise<OnlinePaymentResult>
@@ -172,6 +177,8 @@ export interface OnlinePaymentReceipt {
   /** Inicio de la fila comprada (futuro si quedó en espera). */
   membershipStartsAt?: string | null
   membershipEndsAt: string | null
+  /** Pago recurrente: la tarjeta quedó registrada para los cobros siguientes. */
+  recurring?: boolean
 }
 
 export interface OnlinePaymentResult {

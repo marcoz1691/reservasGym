@@ -1360,6 +1360,7 @@ export class LocalRepository implements GymRepository {
     phone: string
     address: string
     native?: boolean
+    recurring?: boolean
   }): Promise<{ url: string; paymentId: string }> {
     throw new Error(
       'El pago en línea (Pagomedios) requiere el ambiente Supabase (QA). Usa recepción en modo local.',

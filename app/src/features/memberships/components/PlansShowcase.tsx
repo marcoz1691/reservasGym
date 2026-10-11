@@ -5,6 +5,7 @@ import {
   CreditCard,
   Infinity as InfinityIcon,
   Loader2,
+  Repeat,
   Ticket,
 } from 'lucide-react'
 import type { MembershipPlan, Zone } from '@/domain/models'
@@ -17,6 +18,7 @@ import {
   type PlanFamilyId,
 } from '@/domain/rules/membershipPlan'
 import { QUEUED_PLAN_LIMIT_MESSAGE } from '@/domain/rules/memberships'
+import { isRecurringEligiblePlan } from '../../../../supabase/functions/pagomedios-payment/recurring'
 import { formatCurrency } from '@/lib/format'
 
 interface PlansShowcaseProps {
@@ -28,6 +30,8 @@ interface PlansShowcaseProps {
   queuesChanges?: boolean
   zones: Zone[]
   onPayOnline?: (planId: string) => void | Promise<void>
+  /** Pago recurrente mensual (solo planes mensuales). */
+  onPayRecurring?: (planId: string) => void
   onChoosePlan?: (planId: string) => void
   payingPlanId?: string | null
   onlinePayEnabled?: boolean
@@ -106,6 +110,7 @@ export function PlansShowcase({
   queuesChanges,
   zones,
   onPayOnline,
+  onPayRecurring,
   onChoosePlan,
   payingPlanId = null,
   onlinePayEnabled = false,
@@ -366,6 +371,17 @@ export function PlansShowcase({
                         {onlineLabel}
                       </>
                     )}
+                  </button>
+                ) : null}
+                {onlinePayEnabled && onPayRecurring && isRecurringEligiblePlan(plan) ? (
+                  <button
+                    type="button"
+                    disabled={Boolean(payingPlanId) || blockedByQueue}
+                    onClick={() => onPayRecurring(plan.id)}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-elevated disabled:opacity-60 active:scale-[0.98]"
+                  >
+                    <Repeat className="h-4 w-4" aria-hidden />
+                    Pago recurrente mensual
                   </button>
                 ) : null}
                 {onlinePayEnabled && onPayOnline ? (

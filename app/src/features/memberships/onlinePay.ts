@@ -30,6 +30,20 @@ export function isOnlinePayEnabled(
   return isOnlinePayEnvEnabled() && isFeatureEnabled(settings, 'onlinePayments')
 }
 
+/**
+ * Se ofrece el pago recurrente mensual: pago en línea con Pagomedios encendido y
+ * VITE_RECURRING_PAYMENTS=1 (el gimnasio contrató la recurrencia en Pagomedios).
+ */
+export function isRecurringPayEnabled(
+  settings: Pick<GymSettings, 'onlinePaymentsEnabled'> | null | undefined,
+): boolean {
+  return (
+    import.meta.env.VITE_RECURRING_PAYMENTS === '1' &&
+    getOnlinePayProvider() === 'pagomedios' &&
+    isOnlinePayEnabled(settings)
+  )
+}
+
 export function getOnlinePayProvider(): OnlinePayProvider {
   return import.meta.env.VITE_PAYMENT_PROVIDER === 'datafast' ? 'datafast' : 'pagomedios'
 }

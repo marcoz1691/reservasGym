@@ -51,6 +51,8 @@ const dayPass = {
 
 const app = vi.hoisted(() => ({
   settings: { onlinePaymentsEnabled: true, dayPassesEnabled: true } as Record<string, unknown>,
+  /** VITE_RECURRING_PAYMENTS: el gimnasio contrató la recurrencia en Pagomedios. */
+  recurringEnv: true,
 }))
 
 vi.mock('@/data/RepositoryProvider', () => ({
@@ -65,6 +67,8 @@ vi.mock('./onlinePay', async (importOriginal) => ({
   isOnlinePayEnvEnabled: () => true,
   isOnlinePayEnabled: (settings?: { onlinePaymentsEnabled?: boolean }) =>
     settings?.onlinePaymentsEnabled === true,
+  isRecurringPayEnabled: (settings?: { onlinePaymentsEnabled?: boolean }) =>
+    app.recurringEnv && settings?.onlinePaymentsEnabled === true,
 }))
 
 const native = vi.hoisted(() => ({ value: false }))
@@ -674,5 +678,89 @@ describe('splitTax — desglose de IVA para Pagomedios', () => {
       amount_without_tax: 35,
       tax_value: 0,
     })
+  })
+})
+
+describe('PagomediosCheckoutPage — pago recurrente', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    app.settings = { onlinePaymentsEnabled: true, dayPassesEnabled: true }
+    app.recurringEnv = true
+    native.value = false
+    localStorage.clear()
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, assign: vi.fn() },
+    })
+  })
+
+  it('muestra el aviso del débito, solo ofrece tarjeta y registra la tarjeta en Pagomedios', async () => {
+    repo.createPagomediosPayment.mockResolvedValue({
+      url: 'https://payurl.link/REG123',
+      paymentId: 'pay_rec',
+    })
+    renderAt('/membresia/pago?planId=plan_mensual&modo=recurrente')
+
+    expect(screen.getByRole('heading', { name: 'Pago recurrente' })).toBeInTheDocument()
+    expect(
+      screen.getByText(/Registras tu tarjeta y pagas el primer mes ahora\. Los meses siguientes Zona Cero hará el cobro/),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/validación de \$1,15 que se reversa automáticamente/)).toBeInTheDocument()
+    expect(screen.getByText(/se cobra cada mes a tu tarjeta/)).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: /Efectivo en recepción/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: /Transferencia/ })).not.toBeInTheDocument()
+
+    await fillBilling()
+    await userEvent.click(screen.getByRole('button', { name: /Registrar tarjeta y pagar\s*\$35\.00/ }))
+
+    expect(repo.createPagomediosPayment).toHaveBeenCalledWith({
+      planId: 'plan_mensual',
+      document: '1710034065',
+      documentType: '05',
+      phone: '0987569852',
+      address: ADDRESS,
+      native: false,
+      recurring: true,
+    })
+  })
+
+  it('el pase del día no admite pago recurrente', () => {
+    renderAt('/membresia/pago?planId=plan_day&modo=recurrente')
+    expect(screen.getByText(/El pago recurrente no está disponible para este plan/)).toBeInTheDocument()
+    expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
+  })
+
+  it('sin la recurrencia contratada no se ofrece', () => {
+    app.recurringEnv = false
+    renderAt('/membresia/pago?planId=plan_mensual&modo=recurrente')
+    expect(screen.getByText(/El pago recurrente no está disponible para este plan/)).toBeInTheDocument()
+  })
+
+  it('al volver aprobado, el comprobante avisa que la tarjeta quedó registrada', async () => {
+    repo.verifyPagomediosPayment.mockResolvedValue({
+      status: 'approved',
+      receipt: {
+        planName: 'Plan Mensual',
+        amountCents: 3500,
+        authorizationCode: '254374',
+        membershipEndsAt: '2026-11-10T04:59:59.000Z',
+        recurring: true,
+      },
+    })
+    renderAt('/membresia/pago?provider=pagomedios&paymentId=pay_rec')
+
+    expect(await screen.findByText('¡Pago aprobado!')).toBeInTheDocument()
+    expect(screen.getByText(/Tu tarjeta quedó registrada\. Los meses siguientes Zona Cero hará el cobro/)).toBeInTheDocument()
+  })
+
+  it('un pago único aprobado no menciona débitos', async () => {
+    repo.verifyPagomediosPayment.mockResolvedValue({
+      status: 'approved',
+      receipt: { planName: 'Plan Mensual', amountCents: 3500, authorizationCode: '1', membershipEndsAt: null },
+    })
+    renderAt('/membresia/pago?provider=pagomedios&paymentId=pay_1')
+
+    expect(await screen.findByText('¡Pago aprobado!')).toBeInTheDocument()
+    expect(screen.queryByText(/Tu tarjeta quedó registrada/)).not.toBeInTheDocument()
   })
 })
