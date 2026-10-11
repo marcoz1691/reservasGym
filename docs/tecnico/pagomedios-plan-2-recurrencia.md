@@ -9,14 +9,23 @@ Se construye sobre el [Plan 1](./pagomedios-plan-1-pago-unico.md) y reutiliza su
 El socio puede elegir "Pago recurrente mensual": registra su tarjeta en Pagomedios y paga el primer mes. Los meses siguientes el gimnasio le cobra desde el **panel de Pagomedios**. La app no controla esos cobros.
 
 ## Flujo
-1. **Vitrina de planes → botón secundario "Pago recurrente mensual"**, junto a "Pagar en línea".
-2. **`/membresia/pago?planId=…&modo=recurrente`**: el mismo formulario del Plan 1, con este texto: *"Registras tu tarjeta y pagas el primer mes ahora. Los meses siguientes Zona Cero hará el cobro a esta tarjeta a través de Pagomedios. Para cancelarlo, avisa en recepción."*
-3. **"Pagar $X en Pagomedios"** → acción nueva `subscribe` de la Edge Function:
-   - crea el pago `pending` (primer mes);
-   - llama a **`POST /cards/register`** (registrar y tokenizar la tarjeta y cobrar el primer mes);
-   - abre el formulario de Pagomedios, igual que en el Plan 1: pestaña en web y hoja dentro de la app en nativo.
-4. **Regreso y notify**, igual que el Plan 1. Si el primer cobro está autorizado, la membresía se activa. Se verifica consultando Pagomedios; si `GET /payment-requests` no muestra registros de tarjeta, se confirma con `GET /cards?document=`, que la tarjeta quedó registrada.
+Comprobado contra el sandbox el 11-oct-2026 (`e2e/pagomedios-recurrencia.e2e.ts`).
+
+1. **Vitrina de planes → botón secundario "Pago recurrente mensual"**, junto al botón principal. Solo aparece en planes mensuales (28 a 31 días, no pase del día), con el pago en línea encendido y `VITE_RECURRING_PAYMENTS=1`.
+2. **`/membresia/pago?planId=…&modo=recurrente`**: el mismo formulario de facturación del Plan 1, solo con tarjeta, y el texto de la adenda: *"Registras tu tarjeta y pagas el primer mes ahora. Los meses siguientes Zona Cero hará el cobro a esta tarjeta a través de Pagomedios. Para cancelarlo, avisa en recepción."* También avisa de la validación de $1,15.
+3. **"Registrar tarjeta y pagar"** → `create` con `recurring: true` en la Edge Function:
+   - crea el pago `pending` por el valor del plan, con la nota `Pago recurrente (ID <cédula>): registro de tarjeta en curso.`;
+   - llama a **`POST /cards/register`**. Pagomedios ignora el monto y crea un "Registro de tarjeta" de **$1,15**, que autoriza y **reversa solo** (queda en estado 3 con código de autorización);
+   - abre el formulario "Registrar tarjeta" de Pagomedios (pestaña en web, ventana dentro de la app en nativo).
+4. **Notify / verify** (`verifyRecurring` en `recurring.ts` + `index.ts`):
+   - `GET /payment-requests?uuid=` confirma el registro (estado 1 o 3 con código de autorización);
+   - `GET /cards?document=` da el token de la tarjeta nueva. El `cardToken` del notify solo se usa si Pagomedios lo lista para ese documento;
+   - **`POST /cards/charge`** cobra el primer mes con referencia fija por pago (`ZC…`, 20 caracteres). La nota del pago hace de candado: solo quien la pasa de "registro" a "cobrando" cobra, así que nunca se cobra dos veces;
+   - si se autoriza, el pago se aprueba y `apply_plan_purchase` activa o extiende la membresía, igual que en el Plan 1. Si se rechaza, el pago queda rechazado y la tarjeta se borra de Pagomedios (`DELETE /cards/{token}`). Si no hay respuesta clara, la nota queda en "Requiere revisión" y no se reintenta;
+   - `POST /cards/charge` no aparece después en `GET /payment-requests`: su respuesta es la única constancia, por eso el código de autorización se guarda en `payments.mp_payment_id`.
 5. **Meses siguientes, fuera de la app:** el gimnasio cobra desde el panel de Pagomedios a la tarjeta registrada, y recepción renueva la membresía en la app como hoy.
+
+La app no guarda tokens ni datos de la tarjeta. La cédula va en la nota del pago porque `GET /cards` la exige.
 
 ## ¿Qué pasa con la vigencia cuando Pagomedios cobra solo cada mes?
 Aunque Pagomedios cobre la tarjeta cada mes de forma automática, **la app no se entera de ese cobro**. La API no avisa a la app de los cobros siguientes; solo del primero. Entonces:
@@ -35,11 +44,11 @@ Aunque Pagomedios cobre la tarjeta cada mes de forma automática, **la app no se
 - Es un desarrollo adicional que se cotiza aparte. No forma parte de este plan.
 
 ## Qué incluye
-- El botón "Pago recurrente mensual" y el texto explicativo.
-- La acción `subscribe` en la Edge Function, integrada con `POST /cards/register`.
-- La verificación del primer cobro y la activación de la membresía (reutiliza lo del Plan 1).
-- `subscribePagomedios()` en el repositorio y la variante `?modo=recurrente` del checkout.
-- El primer cobro aparece en Cobros como un pago de Pagomedios más, porque es dinero real que entró.
+- El botón "Pago recurrente mensual" en la vitrina y el modo `?modo=recurrente` del checkout, con el texto de la adenda.
+- `create` con `recurring: true` en la Edge Function, integrada con `POST /cards/register`, y el cobro del primer mes con `GET /cards` + `POST /cards/charge` (`recurring.ts`).
+- La verificación del registro y del primer cobro, y la activación de la membresía con `apply_plan_purchase`, igual que en el Plan 1.
+- `createPagomediosPayment({ …, recurring: true })` en el repositorio.
+- El primer cobro aparece en Cobros como un pago de Pagomedios más, con la nota "Pago recurrente…", porque es dinero real que entró. El comprobante del socio dice que la tarjeta quedó registrada.
 
 ## Qué no incluye
 La app registra la tarjeta en Pagomedios y cobra el primer mes. **Todo el control de los cobros siguientes lo tienen Pagomedios y el gimnasio**, y la app no se responsabiliza de ello. En concreto, la app **no**:
@@ -77,11 +86,11 @@ La app registra la tarjeta en Pagomedios y cobra el primer mes. **Todo el contro
 Cualquiera de estos puntos, si el cliente lo pide después, se cotiza aparte como un cambio de alcance.
 
 ## Verificación
-1. **Vitest:** botón y texto recurrente, llamada a `subscribe`, pantallas de resultado.
-2. **E2E local** con el simulador: `subscribe` → notify → membresía activa; rechazo.
-3. **Local contra el sandbox real** (misma configuración del Plan 1):
-   - recurrente aprobado → la tarjeta aparece en `GET /cards?document=` y la membresía queda activa;
-   - monto $2 → rechazado.
+1. **Vitest:** `src/test/pagomediosRecurring.test.ts` (reglas puras), checkout recurrente y botón de la vitrina.
+2. **Local contra el sandbox real y la base de QA:** `SUPABASE_ACCESS_TOKEN=… npx playwright test -c e2e/playwright.config.ts pagomedios-recurrencia`:
+   - el pase del día no admite débito;
+   - registro aprobado → primer mes cobrado, membresía extendida exactamente 30 días, la tarjeta queda en `GET /cards`, verify y un notify repetido no cobran dos veces;
+   - cobro rechazado ($2) → pago rechazado, sin membresía y la tarjeta se borra.
 
-   Al final se borra la tarjeta de prueba con `DELETE /cards/{token}` y se limpian los datos.
-4. Checks y commit en la rama local, sin push ni deploy.
+   Al final borra las tarjetas de prueba y deja QA como estaba.
+3. Checks y commit en la rama local `feat/pagomedios-recurrencia`, sin push ni deploy.

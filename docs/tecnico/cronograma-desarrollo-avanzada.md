@@ -160,7 +160,7 @@ El contrato fija el reparto 30/50/20 pero no la fecha de cada pago. Las fechas d
 | 3 · 20% final | $1.360,00 | $0,00 | $1.360,00 | Propuesto al **Quality Gate 4 (31 Dic)**, con el Acta de Entrega |
 | **Total contrato** | **$6.800,00** | **$2.540,00** | **$4.260,00** | |
 
-Anexo de recurrencia ($300): solo si William firma la cotización COT-ZC-REC-2026-001 rev. 5. $150 al aceptar y $150 al Quality Gate 1b (15 Oct).
+Adenda N.º 1, pago recurrente con Pagomedios ($300, IVA incluido): solo si William la firma (reemplaza la cotización COT-ZC-REC-2026-001 rev. 5). Pago único de $300 hasta el **15 Oct 2026**.
 
 ---
 
