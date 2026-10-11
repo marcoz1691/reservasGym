@@ -34,6 +34,7 @@ import {
 import {
   chargeReference,
   isRecurringEligiblePlan,
+  isUnresolvedRecurring,
   parseRecurringNote,
   pickRegisteredCard,
   recurringNote,
@@ -203,6 +204,26 @@ async function handleCreate(
   )
   if (blockError) return json({ error: blockError.message }, 500)
   if (blockReason) return json({ error: blockReason, code: "PLAN_QUEUE_LIMIT" }, 409)
+  if (recurring) {
+    // Un primer mes que quizá ya se cobró (sin respuesta clara) no se vuelve a intentar
+    // con otro pago: recepción lo confirma en Pagomedios.
+    const { data: open } = await admin
+      .from("payments")
+      .select("notes")
+      .eq("user_id", user.id)
+      .eq("provider", "pagomedios")
+      .eq("status", "pending")
+      .like("notes", "Pago recurrente%")
+    if ((open ?? []).some((row: { notes: string | null }) => isUnresolvedRecurring(row.notes))) {
+      return json(
+        {
+          error: "Tienes un pago recurrente en revisión. Recepción lo confirmará antes de cobrarte otro.",
+          code: "RECURRING_IN_REVIEW",
+        },
+        409,
+      )
+    }
+  }
 
   const { data: profile } = await admin
     .from("profiles")
@@ -414,16 +435,25 @@ async function approveAndActivate(
   admin: SupabaseClient,
 ): Promise<VerifyResult> {
   const paidAt = new Date()
-  const { data: claimed } = await admin
-    .from("payments")
-    .update({
-      status: "approved",
-      approved_at: paidAt.toISOString(),
-      ...(authCode ? { mp_payment_id: authCode } : {}),
-    })
-    .eq("id", payment.id)
-    .in("status", ["pending", "rejected"])
-    .select("id")
+  const claim = (code: string) =>
+    admin
+      .from("payments")
+      .update({
+        status: "approved",
+        approved_at: paidAt.toISOString(),
+        ...(code ? { mp_payment_id: code } : {}),
+      })
+      .eq("id", payment.id)
+      .in("status", ["pending", "rejected"])
+      .select("id")
+  let { data: claimed, error: claimError } = await claim(authCode)
+  // mp_payment_id es único (pensado para MercadoPago) y los códigos de autorización del
+  // banco se repiten: sin esto el pago ya cobrado quedaría pendiente y sin membresía.
+  if (claimError?.code === "23505" && authCode) {
+    console.error("código de autorización repetido; se aprueba sin guardarlo", authCode)
+    ;({ data: claimed, error: claimError } = await claim(""))
+  }
+  if (claimError) throw new Error(claimError.message)
   if (!claimed || claimed.length === 0) {
     return { ok: true, status: "approved", receipt: await receiptFor(payment.id, admin) }
   }
@@ -439,10 +469,11 @@ async function approveAndActivate(
         .eq("id", payment.id)
       return { ok: true, status: "approved", receipt: await receiptFor(payment.id, admin) }
     }
-    await admin
+    const { error: linkError } = await admin
       .from("payments")
       .update({ membership_id: membershipId })
       .eq("id", payment.id)
+    if (linkError) console.error("no se pudo vincular la membresía al pago", payment.id, linkError)
     // Una solicitud de "pago en recepción" que seguía pendiente ya no aplica:
     // el socio pagó en línea. Sin esto Mi Plan seguiría diciendo "Solicitud enviada".
     await admin
@@ -497,7 +528,7 @@ async function verifyRecurring(
   if (state.stage === "charging" || state.stage === "review") {
     return { ok: false, status: "pending", description: reviewMessage }
   }
-  if (state.stage === "rejected") {
+  if (state.stage === "rejected" || state.stage === "rejected_card_kept") {
     return { ok: false, status: "rejected", description: "No se cobró el primer mes." }
   }
 
@@ -596,20 +627,26 @@ async function verifyRecurring(
 
   const chargeStatus = Number(result?.status)
   if (chargeStatus === 1) {
-    await setChargingNote("charged")
-    return await approveAndActivate(
-      payment,
-      String(result?.authorizationCode ?? "").slice(0, 120),
-      admin,
+    // "Cobrado" y el código de autorización se guardan juntos: si algo falla después,
+    // la siguiente verificación activa la membresía sin volver a cobrar ni perder el código.
+    const authCode = String(result?.authorizationCode ?? "").slice(0, 120)
+    let { error: chargedError } = await setChargingNote(
+      "charged",
+      authCode ? { mp_payment_id: authCode } : {},
     )
+    if (chargedError?.code === "23505") ({ error: chargedError } = await setChargingNote("charged"))
+    if (chargedError) console.error("cobro autorizado sin marcar como cobrado", payment.id, chargedError)
+    return await approveAndActivate(payment, "", admin)
   }
   if (chargeStatus === 2) {
-    await setChargingNote("rejected", { status: "rejected" })
     // La tarjeta no queda registrada para débitos si el primer mes no se cobró.
-    await fetch(`${PAGOMEDIOS_API}/cards/${encodeURIComponent(card.token)}`, {
+    const deleted = await fetch(`${PAGOMEDIOS_API}/cards/${encodeURIComponent(card.token)}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${env.token}`, Accept: "application/json" },
-    }).catch(() => null)
+    })
+      .then(async (res) => res.ok && (await res.json().catch(() => null))?.success !== false)
+      .catch(() => false)
+    await setChargingNote(deleted ? "rejected" : "rejected_card_kept", { status: "rejected" })
     return {
       ok: false,
       status: "rejected",

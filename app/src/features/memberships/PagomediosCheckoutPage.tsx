@@ -819,7 +819,12 @@ function ApprovedReceipt({ receipt }: { receipt?: OnlinePaymentReceipt }) {
         <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
         ¡Pago aprobado!
       </p>
-      <p>Tu membresía ya está activa.</p>
+      {/* Cobrado pero sin membresía aplicada (p. ej. otro plan en espera): recepción revisa. */}
+      <p>
+        {receipt && !receipt.membershipEndsAt
+          ? 'Tu pago quedó registrado. Recepción confirmará tu membresía.'
+          : 'Tu membresía ya está activa.'}
+      </p>
       {receipt?.recurring ? (
         <p className="flex items-start gap-2">
           <Repeat className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />

@@ -137,6 +137,18 @@ test.describe('Pago recurrente con Pagomedios (sandbox + QA)', () => {
     expect(after).toBe(before)
   })
 
+  test('con un primer mes en revisión no se abre otro pago recurrente (409)', async () => {
+    const stuck = await createRecurring(PLAN_MONTHLY.id)
+    expect(stuck.status).toBe(200)
+    // Simula un cobro sin respuesta clara: quedó "en revisión" sin saber si se cobró.
+    await sql(`update payments set notes = 'Pago recurrente (ID ${BILLING.document}): Requiere revisión: no se pudo confirmar el cobro del primer mes en Pagomedios.'
+      where id = '${stuck.body.paymentId}'`)
+    const again = await createRecurring(PLAN_MONTHLY.id)
+    expect(again.status).toBe(409)
+    expect(again.body.code).toBe('RECURRING_IN_REVIEW')
+    await sql(`delete from payments where id = '${stuck.body.paymentId}'`)
+  })
+
   test('solo planes mensuales: el pase del día no admite débito', async () => {
     const r = await createRecurring(DAY_PASS)
     expect(r.status).toBe(400)

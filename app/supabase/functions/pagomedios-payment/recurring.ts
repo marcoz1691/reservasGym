@@ -29,7 +29,13 @@ export function isRecurringEligiblePlan(plan: {
   return days >= RECURRING_MIN_DAYS && days <= RECURRING_MAX_DAYS
 }
 
-export type RecurringStage = "registering" | "charging" | "charged" | "rejected" | "review"
+export type RecurringStage =
+  | "registering"
+  | "charging"
+  | "charged"
+  | "rejected"
+  | "rejected_card_kept"
+  | "review"
 
 const PREFIX = "Pago recurrente"
 const STAGE_TEXT: Record<RecurringStage, string> = {
@@ -37,6 +43,7 @@ const STAGE_TEXT: Record<RecurringStage, string> = {
   charging: "cobrando el primer mes",
   charged: "tarjeta registrada en Pagomedios y primer mes cobrado. Los meses siguientes se cobran desde el panel de Pagomedios",
   rejected: "el primer mes no se cobró",
+  rejected_card_kept: "el primer mes no se cobró y la tarjeta sigue registrada en Pagomedios: bórrala desde el panel",
   review: "Requiere revisión: no se pudo confirmar el cobro del primer mes en Pagomedios",
 }
 
@@ -77,21 +84,23 @@ export function registrationOutcome(request: PaymentRequestRow | null): "registe
 
 export type CardRow = { token: string; number?: string; created_at?: string }
 
+/** Etapas en las que el primer mes pudo cobrarse: no se abre otro pago recurrente encima. */
+export function isUnresolvedRecurring(notes: string | null | undefined): boolean {
+  const stage = parseRecurringNote(notes)?.stage
+  return stage === "charging" || stage === "charged" || stage === "review"
+}
+
 /**
- * Tarjeta recién registrada entre las del documento. Si llega el token del notify,
- * solo se usa si Pagomedios lo lista para ese documento (no se confía en el body).
- * Si no, la más reciente creada desde la solicitud, con los mismos últimos 4 dígitos
- * que la transacción cuando se conocen.
+ * Tarjeta recién registrada entre las del documento: creada desde la solicitud y con
+ * los mismos últimos 4 dígitos que la transacción cuando se conocen. El token del
+ * notify (body sin firma) solo desempata entre esas candidatas: un token antiguo del
+ * mismo documento no se cobra aunque Pagomedios lo liste.
  */
 export function pickRegisteredCard(
   cards: CardRow[],
   request: PaymentRequestRow,
   hintToken?: string | null,
 ): CardRow | null {
-  if (hintToken) {
-    const hinted = cards.find((card) => card.token === hintToken)
-    if (hinted) return hinted
-  }
   const since = request.created_at ?? ""
   const last4 = lastFour(
     (request.transactions ?? []).find((t) => t?.display_number)?.display_number ?? null,
@@ -100,7 +109,7 @@ export function pickRegisteredCard(
     .filter((card) => (card.created_at ?? "") >= since)
     .filter((card) => !last4 || lastFour(card.number ?? null) === last4)
     .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
-  return fresh[0] ?? null
+  return fresh.find((card) => card.token === hintToken) ?? fresh[0] ?? null
 }
 
 function lastFour(value: string | null): string | null {

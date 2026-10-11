@@ -750,6 +750,18 @@ describe('PagomediosCheckoutPage — pago recurrente', () => {
     expect(screen.getByText(/Tu tarjeta quedó registrada\. Los meses siguientes Zona Cero hará el cobro/)).toBeInTheDocument()
   })
 
+  it('cobrado sin membresía aplicada: no dice que está activa, recepción la confirma', async () => {
+    repo.verifyPagomediosPayment.mockResolvedValue({
+      status: 'approved',
+      receipt: { planName: 'Plan Mensual', amountCents: 3500, authorizationCode: '1', membershipEndsAt: null, recurring: true },
+    })
+    renderAt('/membresia/pago?provider=pagomedios&paymentId=pay_rec')
+
+    expect(await screen.findByText('¡Pago aprobado!')).toBeInTheDocument()
+    expect(screen.getByText('Tu pago quedó registrado. Recepción confirmará tu membresía.')).toBeInTheDocument()
+    expect(screen.queryByText('Tu membresía ya está activa.')).not.toBeInTheDocument()
+  })
+
   it('un pago único aprobado no menciona débitos', async () => {
     repo.verifyPagomediosPayment.mockResolvedValue({
       status: 'approved',
