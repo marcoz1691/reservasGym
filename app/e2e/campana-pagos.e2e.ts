@@ -62,6 +62,10 @@ async function socioPage(browser: Browser, options = {}) {
   await login(page, ACCOUNTS.socio)
   return { ctx, page }
 }
+/** Afirmar que algo NO aparece solo vale con la pantalla ya cargada (si no, una carga lenta aprueba el caso). */
+async function checkoutReady(page: Page) {
+  await expect(page.getByRole('radio', { name: /Efectivo en recepción/ })).toBeVisible({ timeout: 30_000 })
+}
 async function fillBilling(page: Page, doc = DOC) {
   await page.getByLabel('Número de identificación').fill(doc)
   await page.getByLabel('Celular').fill(BILLING.phone)
@@ -230,19 +234,23 @@ test('E exploratorias del checkout', async ({ browser }) => {
   record({ id: 'E-05', tipo: 'Exploratoria', area: 'Ambos', caso: 'Salir del checkout con la X', resultado: sheet ? 'pasa' : 'observación', detalle: sheet ? 'Pregunta antes de salir (hoja de confirmación)' : 'No apareció la confirmación', evidencia: [await shot(page, 'E05-salir', false)] })
 
   await page.goto(`/membresia/pago?planId=${DAY_PASS}`)
+  await checkoutReady(page)
   const noRecDay = (await page.getByRole('radio', { name: /Pago recurrente con tarjeta/ }).count()) === 0
   record({ id: 'E-06', tipo: 'Exploratoria', area: 'Pago recurrente', caso: 'Pase del día: ¿ofrece pago recurrente?', resultado: noRecDay ? 'pasa' : 'falla', detalle: noRecDay ? 'No lo ofrece; sí tarjeta y recepción' : 'Lo ofreció' })
 
-  await page.goto(`/membresia/pago?planId=c1000000-0000-4000-8000-000000000090`).catch(() => undefined)
+  await page.goto(`/membresia/pago?planId=c1000000-0000-4000-8000-000000000090`)
+  await checkoutReady(page)
   const quarterly = await page.getByRole('radio', { name: /Pago recurrente con tarjeta/ }).count()
   record({ id: 'E-07', tipo: 'Exploratoria', area: 'Pago recurrente', caso: 'Plan trimestral: ¿ofrece pago recurrente?', resultado: quarterly === 0 ? 'pasa' : 'falla', detalle: quarterly === 0 ? 'Solo los mensuales lo ofrecen' : 'Lo ofreció en un plan no mensual' })
 
   await setFlags({ recurring_payments_enabled: false })
   await page.goto(url)
+  await checkoutReady(page)
   const offRec = (await page.getByRole('radio', { name: /Pago recurrente con tarjeta/ }).count()) === 0
   record({ id: 'E-08', tipo: 'Exploratoria', area: 'Pago recurrente', caso: 'Interruptor "Pago recurrente mensual" apagado', resultado: offRec ? 'pasa' : 'falla', detalle: offRec ? 'El medio desaparece del checkout' : 'Siguió visible' })
   await setFlags({ online_payments_enabled: false })
   await page.goto(url)
+  await checkoutReady(page)
   const noCard = (await page.getByRole('radio', { name: /Tarjeta de crédito o débito/ }).count()) === 0
   record({ id: 'E-09', tipo: 'Exploratoria', area: 'Pago único', caso: 'Interruptor "Pago en línea" apagado', resultado: noCard ? 'pasa' : 'falla', detalle: noCard ? 'Solo quedan efectivo, transferencia y Deuna' : 'La tarjeta siguió visible', evidencia: [await shot(page, 'E09-sin-pago-en-linea')] })
   await setFlags({ online_payments_enabled: true, recurring_payments_enabled: true })
