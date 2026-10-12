@@ -6,7 +6,9 @@ El PDF aprobado está incluido en `public/legal/terminos-zona-cero-v1.pdf`, vers
 
 Aplicar `supabase/terms-documents.sql` en el proyecto de destino y desplegar la aplicación. El script agrega las columnas de documento, versión y fecha a `gym_settings` y crea el bucket `legal-documents`, público para consulta de los documentos legales. Solo admin puede subir y eliminar archivos. Las políticas existentes de `gym_settings` restringen la publicación al administrador.
 
-Esta migración está preparada en el repositorio; no se ha ejecutado en un proyecto remoto durante esta revisión. Las pruebas de repositorio remoto utilizan un cliente simulado, por lo que no certifican las políticas de un proyecto desplegado.
+La migración se aplicó en el proyecto QA `kqhmclbexnnsbzbgerbx` mediante la API de gestión. Se verificaron las tres columnas, el bucket público con límite de 5 MB y tipo `application/pdf`, y las políticas de INSERT, SELECT y DELETE para admin. Falta desplegar la aplicación y comprobar el flujo completo de carga en QA. Las pruebas de repositorio utilizan un cliente simulado; la verificación de la migración comprueba la configuración real, pero no sustituye la prueba de subida desde la app.
+
+Para repetir la migración de QA y sus comprobaciones, ejecutar `node scripts/migrate-terms-qa.mjs`. El comando obtiene el token del entorno, de `.env.supabase.local` o de `~/.supabase-token`, sin mostrarlo, y rechaza cualquier proyecto distinto del QA configurado.
 
 ## Flujo de uso
 
