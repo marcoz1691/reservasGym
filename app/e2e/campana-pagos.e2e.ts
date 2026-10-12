@@ -354,13 +354,13 @@ test('A accesibilidad, responsivo y diseño', async ({ browser }) => {
     ['Checkout · tarjeta', `/membresia/pago?planId=${PLAN_MONTHLY}`, async () => {}],
     ['Checkout · pago recurrente', `/membresia/pago?planId=${PLAN_MONTHLY}`, async () => { await page.getByRole('radio', { name: /Pago recurrente con tarjeta/ }).click() }],
   ]
-  for (const [name, path, prep] of screens) {
+  for (const [index, [name, path, prep]] of screens.entries()) {
     await page.goto(path)
     await page.waitForLoadState('networkidle')
     await prep()
     const v = await axeScan(page)
     const serious = v.filter((x) => x.impact === 'serious' || x.impact === 'critical')
-    record({ id: `A-${name}`, tipo: 'No funcional · accesibilidad (WCAG 2.1 AA, axe-core)', area: name.startsWith('Mi Plan') ? 'Ambos' : name.includes('recurrente') ? 'Pago recurrente' : 'Pago único', caso: name, resultado: serious.length === 0 ? (v.length === 0 ? 'pasa' : 'observación') : 'falla', detalle: v.length === 0 ? 'Sin infracciones' : v.map((x) => `${x.id} (${x.impact}, ${x.nodes})`).join('; ') })
+    record({ id: `A-${String(index + 1).padStart(2, '0')}`, tipo: 'No funcional · accesibilidad (WCAG 2.1 AA, axe-core)', area: name.startsWith('Mi Plan') ? 'Ambos' : name.includes('recurrente') ? 'Pago recurrente' : 'Pago único', caso: name, resultado: serious.length === 0 ? (v.length === 0 ? 'pasa' : 'observación') : 'falla', detalle: v.length === 0 ? 'Sin infracciones' : v.map((x) => `${x.id} (${x.impact}, ${x.nodes})`).join('; ') })
   }
 
   await page.goto(`/membresia/pago?planId=${PLAN_MONTHLY}`)
