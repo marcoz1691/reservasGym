@@ -97,6 +97,7 @@ describe('PlansShowcase', () => {
         plans={catalog}
         zones={[]}
         currentPlanId="s30"
+        queueStartsAt="2026-10-18T04:59:59.000Z"
         onlinePayEnabled
         onPayOnline={(id) => void paid.push(id)}
       />,
@@ -104,14 +105,18 @@ describe('PlansShowcase', () => {
 
     expect(screen.getByRole('button', { name: /Renovar plan/ })).toBeInTheDocument()
     // Start Mensual (actual) + Trimestral, Semestral y Anual de la misma familia
-    expect(screen.getAllByRole('button', { name: /Renovar plan|Programar cambio/ })).toHaveLength(4)
-    expect(screen.getAllByText('Tarjeta, efectivo o transferencia')).toHaveLength(4)
+    expect(screen.getAllByRole('button', { name: /Renovar plan|Elegir este plan/ })).toHaveLength(4)
+    // El actual se renueva con cualquier medio; los otros dicen desde cuándo empiezan.
+    expect(screen.getAllByText('Tarjeta, efectivo o transferencia')).toHaveLength(1)
+    expect(
+      screen.getAllByText('Empieza el 17 de octubre de 2026, al terminar tu plan actual'),
+    ).toHaveLength(3)
 
-    await user.click(screen.getAllByRole('button', { name: /Programar cambio/ })[0]!)
+    await user.click(screen.getAllByRole('button', { name: /Elegir este plan/ })[0]!)
     expect(paid).toEqual(['s90'])
 
     await user.click(screen.getByRole('tab', { name: 'Zero Elite' }))
-    expect(screen.getByRole('button', { name: /Programar cambio/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Elegir este plan/ })).toBeInTheDocument()
   })
 
   it('el pago recurrente mensual se ofrece solo en los planes mensuales', async () => {
@@ -163,7 +168,7 @@ describe('PlansShowcase', () => {
 
     expect(screen.getByRole('button', { name: /Renovar plan/ })).toBeEnabled()
     expect(screen.getByRole('button', { name: /Extender plan en espera/ })).toBeEnabled()
-    for (const button of screen.getAllByRole('button', { name: /Programar cambio/ })) {
+    for (const button of screen.getAllByRole('button', { name: /Elegir este plan/ })) {
       expect(button).toBeDisabled()
     }
     expect(screen.getAllByText(/Ya tienes un plan en espera/).length).toBeGreaterThan(0)

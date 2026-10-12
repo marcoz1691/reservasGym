@@ -19,7 +19,7 @@ import {
 } from '@/domain/rules/membershipPlan'
 import { QUEUED_PLAN_LIMIT_MESSAGE } from '@/domain/rules/memberships'
 import { isRecurringEligiblePlan } from '../../../../supabase/functions/pagomedios-payment/recurring'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatDateSpanish } from '@/lib/format'
 
 interface PlansShowcaseProps {
   plans: MembershipPlan[]
@@ -28,6 +28,8 @@ interface PlansShowcaseProps {
   queuedPlanId?: string | null
   /** Comprar otro plan lo deja en espera (plan actual activo, no en gracia). */
   queuesChanges?: boolean
+  /** Desde cuándo empezaría un plan comprado ahora (fin del plan actual). */
+  queueStartsAt?: string | null
   zones: Zone[]
   onPayOnline?: (planId: string) => void | Promise<void>
   /** Pago recurrente mensual (solo planes mensuales). */
@@ -108,6 +110,7 @@ export function PlansShowcase({
   currentPlanId,
   queuedPlanId = null,
   queuesChanges,
+  queueStartsAt = null,
   zones,
   onPayOnline,
   onPayRecurring,
@@ -244,6 +247,9 @@ export function PlansShowcase({
           const isQueued = plan.id === queuedPlanId
           const blockedByQueue =
             Boolean(queuedPlanId) && !isDayPass && !isQueued && !isCurrent
+          // Otro plan con el actual activo queda en espera: se dice desde cuándo empieza.
+          const startsLater =
+            changesQueue && Boolean(queueStartsAt) && !isDayPass && !isQueued && !isCurrent
           const onlineLabel = isDayPass
             ? 'Comprar pase del día'
             : isCurrent
@@ -251,7 +257,7 @@ export function PlansShowcase({
               : isQueued
                 ? 'Extender plan en espera'
                 : changesQueue
-                  ? 'Programar cambio'
+                  ? 'Elegir este plan'
                   : 'Elegir plan'
           const title =
             offer.familyId === 'otros'
@@ -388,7 +394,9 @@ export function PlansShowcase({
                   <p className="text-center text-xs text-ink-3">
                     {blockedByQueue
                       ? QUEUED_PLAN_LIMIT_MESSAGE
-                      : 'Tarjeta, efectivo o transferencia'}
+                      : startsLater
+                        ? `Empieza el ${formatDateSpanish(queueStartsAt!)}, al terminar tu plan actual`
+                        : 'Tarjeta, efectivo o transferencia'}
                   </p>
                 ) : null}
                 {onChoosePlan && !onlinePayEnabled && !isCurrent ? (

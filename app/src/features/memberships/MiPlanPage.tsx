@@ -318,6 +318,7 @@ export function MiPlanPage() {
           }
           queuedPlanId={queued?.membership.planId ?? null}
           queuesChanges={currentMembership?.status === 'active'}
+          queueStartsAt={currentMembership?.status === 'active' ? currentMembership.endsAt : null}
           zones={data.zones ?? []}
           onlinePayEnabled={onlinePayEnabled}
           onPayOnline={onlinePayEnabled ? handlePayOnline : undefined}
