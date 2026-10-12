@@ -163,6 +163,8 @@ test('F-04 el admin enciende y apaga el pago recurrente desde Personalización',
   await setFlags({ recurring_payments_enabled: false })
   await page.goto('/admin/marca')
   const toggle = page.getByRole('switch', { name: 'Pago recurrente mensual' })
+  // La primera visita compila la pantalla en el servidor de desarrollo: se le da margen.
+  await expect(toggle).toBeVisible({ timeout: 60_000 })
   await expect(toggle).toHaveAttribute('aria-checked', 'false')
   await toggle.scrollIntoViewIfNeeded()
   const ev = [await shot(page, 'F04-1-apagado', false)]
