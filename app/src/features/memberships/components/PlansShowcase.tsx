@@ -480,7 +480,7 @@ export function PlansShowcase({
         Todos los planes incluyen reserva de clases desde la app, check-in con código y
         seguimiento de tu progreso.{' '}
         {onlinePayEnabled
-          ? 'Puedes pagar en línea con tarjeta (pago único) o en recepción (efectivo, transferencia o Datafast).'
+          ? 'Puedes pagar en línea con tarjeta (pago único) o en recepción (efectivo, transferencia o datáfono).'
           : currentPlanId
             ? 'Elige el plan y cómo vas a pagar: recepción activa el cambio al registrar el cobro.'
             : 'Elige el plan y cómo vas a pagar: el cobro se completa en recepción.'}

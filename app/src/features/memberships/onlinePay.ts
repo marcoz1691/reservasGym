@@ -3,8 +3,6 @@ import { isSupabaseConfigured } from '@/data/supabaseRepository'
 import type { GymSettings } from '@/domain/models'
 import { isFeatureEnabled } from '@/domain/rules/featureFlags'
 
-export type OnlinePayProvider = 'pagomedios' | 'datafast'
-
 /**
  * IVA para mostrar el desglose antes de pagar. Debe coincidir con el secret
  * PAGOMEDIOS_TAX_RATE de la Edge Function, que es la que arma el cobro real.
@@ -13,8 +11,7 @@ export const ONLINE_PAYMENT_TAX_RATE = 0.15
 
 /**
  * El ambiente tiene pasarela: VITE_ONLINE_PAYMENTS=1 y Supabase.
- * Pagomedios (default) requiere el secret PAGOMEDIOS_TOKEN en Supabase;
- * Datafast (VITE_PAYMENT_PROVIDER=datafast) requiere los secrets DATAFAST_*.
+ * Pagomedios requiere el secret PAGOMEDIOS_TOKEN en Supabase.
  */
 export function isOnlinePayEnvEnabled(): boolean {
   return import.meta.env.VITE_ONLINE_PAYMENTS === '1' && isSupabaseConfigured()
@@ -38,15 +35,7 @@ export function isOnlinePayEnabled(
 export function isRecurringPayEnabled(
   settings: Pick<GymSettings, 'onlinePaymentsEnabled' | 'recurringPaymentsEnabled'> | null | undefined,
 ): boolean {
-  return (
-    getOnlinePayProvider() === 'pagomedios' &&
-    isOnlinePayEnabled(settings) &&
-    isFeatureEnabled(settings, 'recurringPayments')
-  )
-}
-
-export function getOnlinePayProvider(): OnlinePayProvider {
-  return import.meta.env.VITE_PAYMENT_PROVIDER === 'datafast' ? 'datafast' : 'pagomedios'
+  return isOnlinePayEnabled(settings) && isFeatureEnabled(settings, 'recurringPayments')
 }
 
 export function isNativeApp(): boolean {

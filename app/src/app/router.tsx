@@ -80,9 +80,9 @@ const MiPlanPage = lazy(() =>
     default: m.MiPlanPage,
   })),
 )
-const OnlineCheckoutPage = lazy(() =>
-  import('@/features/memberships/OnlineCheckoutPage').then((m) => ({
-    default: m.OnlineCheckoutPage,
+const PagomediosCheckoutPage = lazy(() =>
+  import('@/features/memberships/PagomediosCheckoutPage').then((m) => ({
+    default: m.PagomediosCheckoutPage,
   })),
 )
 const WelcomeFichaPage = lazy(() =>
@@ -119,7 +119,7 @@ export function AppRouter() {
         <Route element={<RequireAuth />}>
           <Route path="bienvenida" element={<WelcomeFichaPage />} />
           {/* Pago a pantalla completa (fuera del menú), como en las apps de compra. */}
-          <Route path="membresia/pago" element={<OnlineCheckoutPage />} />
+          <Route path="membresia/pago" element={<PagomediosCheckoutPage />} />
           <Route element={<AppLayout />}>
             <Route index element={<HomePage />} />
             <Route path="membresia" element={<MiPlanPage />} />

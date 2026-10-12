@@ -16,7 +16,8 @@ export type ZoneType =
 /** 'scheduled' solo se calcula (plan en espera que aún no empieza); nunca se guarda. */
 export type MembershipStatus = 'active' | 'grace' | 'expired' | 'cancelled' | 'scheduled'
 export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded'
-export type PaymentProvider = 'manual' | 'datafast' | 'mercadopago' | 'pagomedios'
+/** Datáfono físico Datafast en recepción = manual con manual_method 'card_pos'. */
+export type PaymentProvider = 'manual' | 'pagomedios'
 export type ManualPaymentMethod = 'cash' | 'transfer' | 'card_pos' | 'deuna'
 export type MembershipPlanKind = 'membership' | 'day_pass'
 

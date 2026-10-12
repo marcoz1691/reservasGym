@@ -204,7 +204,7 @@ create table if not exists payments (
   membership_id uuid references memberships(id) on delete set null,
   amount_cents int not null,
   status text not null check (status in ('pending', 'approved', 'rejected', 'refunded')),
-  provider text not null check (provider in ('manual', 'datafast', 'mercadopago', 'pagomedios')),
+  provider text not null check (provider in ('manual', 'pagomedios')),
   manual_method text check (manual_method in ('cash', 'transfer', 'card_pos', 'deuna')),
   reference text,
   mp_payment_id text,
@@ -219,9 +219,6 @@ create index if not exists idx_memberships_user_dates on memberships(user_id, st
 create index if not exists idx_memberships_status on memberships(status);
 create index if not exists idx_payments_user_id on payments(user_id);
 create index if not exists idx_payments_status on payments(status);
--- Pagomedios guarda ahí el código de autorización del banco, que se repite (pagomedios-auth-code-index.sql)
-create unique index if not exists idx_payments_mp_payment_id on payments (mp_payment_id)
-  where mp_payment_id is not null and provider <> 'pagomedios';
 
 -- ============================================================================
 -- 3. FUNCIONES Y PROCEDURES

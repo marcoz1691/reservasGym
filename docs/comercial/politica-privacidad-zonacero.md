@@ -84,7 +84,7 @@ El tratamiento de los datos personales se sustenta en:
 
 Los datos son almacenados en infraestructuras tecnológicas seguras de proveedores de servicios que actúan como Encargados del Tratamiento bajo estrictos acuerdos de confidencialidad y procesamiento de datos:
 - **Supabase Inc. / AWS**: Infraestructura de base de datos en la nube con cifrado en reposo (AES-256) y en tránsito (TLS 1.3), con centros de datos que cumplen con certificaciones SOC 2 Type II e ISO 27001.
-- **Mercado Pago / Procesadores de Pago Certificados PCI-DSS**: Para transacciones de renovación de membresía. Zona Cero no almacena números completos de tarjetas de crédito o débito en sus servidores propios.
+- **Pagomedios (Abitmedia S.A.) / Procesador de Pago Certificado PCI-DSS**: Para transacciones de renovación de membresía. Zona Cero no almacena números completos de tarjetas de crédito o débito en sus servidores propios.
 
 ---
 

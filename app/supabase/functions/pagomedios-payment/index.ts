@@ -447,8 +447,8 @@ async function approveAndActivate(
       .in("status", ["pending", "rejected"])
       .select("id")
   let { data: claimed, error: claimError } = await claim(authCode)
-  // mp_payment_id es único (pensado para MercadoPago) y los códigos de autorización del
-  // banco se repiten: sin esto el pago ya cobrado quedaría pendiente y sin membresía.
+  // Hasta aplicar quitar-mercadopago-datafast.sql, mp_payment_id es único y los códigos de
+  // autorización del banco se repiten: sin esto el pago cobrado quedaría pendiente y sin membresía.
   if (claimError?.code === "23505" && authCode) {
     console.error("código de autorización repetido; se aprueba sin guardarlo", authCode)
     ;({ data: claimed, error: claimError } = await claim(""))

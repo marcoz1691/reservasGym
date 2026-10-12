@@ -188,9 +188,7 @@ export function formatPaymentMethod(
         return 'Recepción'
     }
   }
-  if (provider === 'datafast') return 'Datafast'
   if (provider === 'pagomedios') return 'Tarjeta en línea'
-  if (provider === 'mercadopago') return 'Mercado Pago'
   return provider
 }
 
