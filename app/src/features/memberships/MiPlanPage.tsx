@@ -27,7 +27,7 @@ import {
 import { plansForAppSale } from '@/domain/rules/featureFlags'
 import { formatCurrency } from '@/lib/format'
 import { Button, PageHeader } from '@/ui/primitives'
-import { isOnlinePayEnabled, isRecurringPayEnabled } from './onlinePay'
+import { isOnlinePayEnabled } from './onlinePay'
 import {
   DayPassNotice,
   ManualPaymentInstructions,
@@ -69,7 +69,6 @@ export function MiPlanPage() {
   const paymentStepRef = useRef<HTMLDivElement>(null)
 
   const onlinePayEnabled = isOnlinePayEnabled(data.settings)
-  const recurringPayEnabled = isRecurringPayEnabled(data.settings)
   const paymentMethods = isDeunaConfigured(data.settings)
     ? PAYMENT_METHODS
     : PAYMENT_METHODS.filter((method) => method !== 'deuna')
@@ -171,10 +170,6 @@ export function MiPlanPage() {
 
   function handlePayOnline(selectedPlanId: string) {
     navigate(`/membresia/pago?planId=${encodeURIComponent(selectedPlanId)}`)
-  }
-
-  function handlePayRecurring(selectedPlanId: string) {
-    navigate(`/membresia/pago?planId=${encodeURIComponent(selectedPlanId)}&modo=recurrente`)
   }
 
   function handleChoosePlan(planId: string) {
@@ -322,7 +317,6 @@ export function MiPlanPage() {
           zones={data.zones ?? []}
           onlinePayEnabled={onlinePayEnabled}
           onPayOnline={onlinePayEnabled ? handlePayOnline : undefined}
-          onPayRecurring={recurringPayEnabled ? handlePayRecurring : undefined}
           onChoosePlan={onlinePayEnabled ? undefined : handleChoosePlan}
         />
       ) : null}

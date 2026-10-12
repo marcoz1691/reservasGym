@@ -63,11 +63,12 @@ import {
 } from './onlinePay'
 
 /** Cómo paga el socio: tarjeta en línea (Pagomedios), en recepción, transferencia o Deuna. */
-type CheckoutMethod = 'card' | 'cash' | 'transfer' | 'deuna'
-type ManualCheckoutMethod = Exclude<CheckoutMethod, 'card'>
+type CheckoutMethod = 'card' | 'recurring' | 'cash' | 'transfer' | 'deuna'
+type ManualCheckoutMethod = Exclude<CheckoutMethod, 'card' | 'recurring'>
 
 const METHOD_OPTIONS: { value: CheckoutMethod; title: string; detail: string; icon: LucideIcon }[] = [
-  { value: 'card', title: 'Tarjeta de crédito o débito', detail: 'En línea, procesado por Pagomedios', icon: CreditCard },
+  { value: 'card', title: 'Tarjeta de crédito o débito', detail: 'Un solo pago en línea, procesado por Pagomedios', icon: CreditCard },
+  { value: 'recurring', title: 'Pago recurrente con tarjeta', detail: 'Pagas hoy y cada mes se cobra a tu tarjeta', icon: Repeat },
   { value: 'cash', title: 'Efectivo en recepción', detail: 'Pagas al llegar al gimnasio', icon: Banknote },
   { value: 'transfer', title: 'Transferencia bancaria', detail: 'Recepción confirma tu comprobante', icon: Landmark },
   { value: 'deuna', title: 'Deuna (Banco Pichincha)', detail: 'Pagas con el QR o el código del gym', icon: QrCode },
@@ -114,7 +115,8 @@ export function PagomediosCheckoutPage() {
 
   const planId = searchParams.get('planId')
   const paymentId = searchParams.get('paymentId')
-  const recurring = searchParams.get('modo') === 'recurrente'
+  // ?modo=recurrente llega con el pago recurrente ya elegido.
+  const wantsRecurring = searchParams.get('modo') === 'recurrente'
 
   const plan = useMemo(
     () => (data.membershipPlans ?? []).find((p) => p.id === planId && p.active) ?? null,
@@ -140,7 +142,7 @@ export function PagomediosCheckoutPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [payerOpen, setPayerOpen] = useState(true)
-  const [chosenMethod, setMethod] = useState<CheckoutMethod>('card')
+  const [chosenMethod, setMethod] = useState<CheckoutMethod>(wantsRecurring ? 'recurring' : 'card')
   const [requestSent, setRequestSent] = useState<{
     method: ManualCheckoutMethod
     reference: string | null
@@ -185,17 +187,21 @@ export function PagomediosCheckoutPage() {
   const onlineOk = isOnlinePayEnvEnabled() && typeof repo.createPagomediosPayment === 'function'
   const cardEnabled = onlineOk && isOnlinePayEnabled(data.settings)
   const deunaEnabled = isDeunaConfigured(data.settings)
-  const recurringSwitchOn = onlineOk && isRecurringPayEnabled(data.settings)
-  const recurringEnabled = recurringSwitchOn && plan !== null && isRecurringEligiblePlan(plan)
-  // El pago recurrente es solo con tarjeta: no ofrece recepción, transferencia ni Deuna.
-  const methodOptions = METHOD_OPTIONS.filter((o) =>
-    recurring
-      ? o.value === 'card'
-      : (o.value !== 'card' || cardEnabled) && (o.value !== 'deuna' || deunaEnabled),
+  // Pago recurrente: interruptor del admin encendido y plan mensual (no pase del día).
+  const recurringEnabled =
+    onlineOk && isRecurringPayEnabled(data.settings) && plan !== null && isRecurringEligiblePlan(plan)
+  const methodOptions = METHOD_OPTIONS.filter(
+    (o) =>
+      (o.value !== 'card' || cardEnabled) &&
+      (o.value !== 'recurring' || recurringEnabled) &&
+      (o.value !== 'deuna' || deunaEnabled),
   )
   const method: CheckoutMethod = methodOptions.some((o) => o.value === chosenMethod)
     ? chosenMethod
-    : 'cash'
+    : cardEnabled
+      ? 'card'
+      : 'cash'
+  const recurring = method === 'recurring'
   const dayPassBlocked =
     plan !== null && isDayPassPlan(plan) && !isFeatureEnabled(data.settings, 'dayPasses')
 
@@ -254,7 +260,7 @@ export function PagomediosCheckoutPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!planId) return
-    if (method !== 'card') {
+    if (method !== 'card' && method !== 'recurring') {
       if (!acceptedTerms) return
       setBusy(true)
       setError(null)
@@ -374,20 +380,6 @@ export function PagomediosCheckoutPage() {
     )
   }
 
-  if (recurring && !recurringEnabled) {
-    return (
-      <div className="mx-auto max-w-lg space-y-4 p-4">
-        <p className="text-sm text-ink-2">
-          {recurringSwitchOn
-            ? 'El pago recurrente no está disponible para este plan.'
-            : 'El pago recurrente no está disponible en este momento.'}{' '}
-          Puedes pagarlo una sola vez desde Mi Plan.
-        </p>
-        <BackLink label="Ir a Mi Plan" />
-      </div>
-    )
-  }
-
   if (dayPassBlocked) {
     return (
       <div className="mx-auto max-w-lg space-y-4 p-4">
@@ -462,7 +454,7 @@ export function PagomediosCheckoutPage() {
 
   const amounts = splitTax(plan.priceCents, ONLINE_PAYMENT_TAX_RATE)
   const cents = (value: number) => Math.round(value * 100)
-  const payingByCard = method === 'card'
+  const payingByCard = method === 'card' || recurring
   const formValid =
     acceptedTerms && (!payingByCard || Object.keys(billingErrors).length === 0)
   const docLabel = BILLING_DOCUMENT_TYPES.find((t) => t.value === documentType)?.label ?? 'ID'
@@ -491,11 +483,7 @@ export function PagomediosCheckoutPage() {
           <X className="h-6 w-6" />
         </button>
       </div>
-      {recurring ? (
-        <PageHeader title="Pago recurrente" subtitle="Registra tu tarjeta y paga el primer mes" />
-      ) : (
-        <PageHeader title="Pago" subtitle="Elige cómo quieres pagar tu plan" />
-      )}
+      <PageHeader title="Pago" subtitle="Elige cómo quieres pagar tu plan" />
 
       <section className="rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
         <p className="text-xs font-bold uppercase tracking-wider text-ink-3">Tu plan</p>
@@ -522,20 +510,6 @@ export function PagomediosCheckoutPage() {
       </section>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
-        {recurring ? (
-          <Section title="Pago recurrente mensual">
-            <div className="space-y-2 rounded-2xl border border-line bg-surface p-4 text-sm text-ink-2">
-              <p className="flex items-start gap-2 text-ink">
-                <Repeat className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                {RECURRING_NOTICE}
-              </p>
-              <p className="text-xs text-ink-3">
-                Al registrar tu tarjeta, Pagomedios hace una validación de $1,15 que se reversa automáticamente.
-              </p>
-            </div>
-            <CardBrandLogos />
-          </Section>
-        ) : (
         <Section title="Método de pago">
           <div role="radiogroup" aria-label="Método de pago" className="space-y-2">
             {methodOptions.map((option) => {
@@ -562,6 +536,17 @@ export function PagomediosCheckoutPage() {
               )
             })}
           </div>
+          {recurring ? (
+            <div className="space-y-2 rounded-2xl border border-line bg-surface p-4 text-sm text-ink-2">
+              <p className="flex items-start gap-2 text-ink">
+                <Repeat className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                {RECURRING_NOTICE}
+              </p>
+              <p className="text-xs text-ink-3">
+                Al registrar tu tarjeta, Pagomedios hace una validación de $1,15 que se reversa automáticamente.
+              </p>
+            </div>
+          ) : null}
           {payingByCard ? <CardBrandLogos /> : null}
           {isRemotePaymentMethod(method) ? (
             <ManualPaymentInstructions
@@ -572,7 +557,6 @@ export function PagomediosCheckoutPage() {
             />
           ) : null}
         </Section>
-        )}
 
         {payingByCard ? (
         <section className="space-y-3">

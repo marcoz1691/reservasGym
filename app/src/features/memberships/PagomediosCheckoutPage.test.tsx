@@ -691,21 +691,24 @@ describe('PagomediosCheckoutPage — pago recurrente', () => {
     })
   })
 
-  it('muestra el aviso del débito, solo ofrece tarjeta y registra la tarjeta en Pagomedios', async () => {
+  it('es un medio de pago más: al elegirlo muestra el aviso y registra la tarjeta en Pagomedios', async () => {
     repo.createPagomediosPayment.mockResolvedValue({
       url: 'https://payurl.link/REG123',
       paymentId: 'pay_rec',
     })
-    renderAt('/membresia/pago?planId=plan_mensual&modo=recurrente')
+    renderAt('/membresia/pago?planId=plan_mensual')
 
-    expect(screen.getByRole('heading', { name: 'Pago recurrente' })).toBeInTheDocument()
+    // Un solo pago con tarjeta por defecto; el recurrente se elige como otro medio.
+    expect(screen.getByRole('radio', { name: /Tarjeta de crédito o débito/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: /Efectivo en recepción/ })).toBeInTheDocument()
+    expect(screen.queryByText(/Registras tu tarjeta y pagas el primer mes/)).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('radio', { name: /Pago recurrente con tarjeta/ }))
     expect(
       screen.getByText(/Registras tu tarjeta y pagas el primer mes ahora\. Los meses siguientes Zona Cero hará el cobro/),
     ).toBeInTheDocument()
     expect(screen.getByText(/validación de \$1,15 que se reversa automáticamente/)).toBeInTheDocument()
     expect(screen.getByText(/se cobra cada mes a tu tarjeta/)).toBeInTheDocument()
-    expect(screen.queryByRole('radio', { name: /Efectivo en recepción/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('radio', { name: /Transferencia/ })).not.toBeInTheDocument()
 
     await fillBilling()
     await userEvent.click(screen.getByRole('button', { name: /Registrar tarjeta y pagar\s*\$35\.00/ }))
@@ -721,16 +724,22 @@ describe('PagomediosCheckoutPage — pago recurrente', () => {
     })
   })
 
-  it('el pase del día no admite pago recurrente', () => {
+  it('con ?modo=recurrente llega con el pago recurrente ya elegido', () => {
+    renderAt('/membresia/pago?planId=plan_mensual&modo=recurrente')
+    expect(screen.getByRole('radio', { name: /Pago recurrente con tarjeta/ })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('el pase del día no ofrece pago recurrente', () => {
     renderAt('/membresia/pago?planId=plan_day&modo=recurrente')
-    expect(screen.getByText(/El pago recurrente no está disponible para este plan/)).toBeInTheDocument()
-    expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
+    expect(screen.queryByRole('radio', { name: /Pago recurrente con tarjeta/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Tarjeta de crédito o débito/ })).toBeInTheDocument()
   })
 
   it('con el interruptor del admin apagado no se ofrece', () => {
     app.settings = { ...app.settings, recurringPaymentsEnabled: false }
     renderAt('/membresia/pago?planId=plan_mensual&modo=recurrente')
-    expect(screen.getByText(/El pago recurrente no está disponible en este momento/)).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: /Pago recurrente con tarjeta/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Tarjeta de crédito o débito/ })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('al volver aprobado, el comprobante avisa que la tarjeta quedó registrada', async () => {
