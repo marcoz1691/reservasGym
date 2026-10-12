@@ -1,12 +1,26 @@
+"""Genera el informe HTML de validación de pagos para el cliente.
+
+Uso (desde app/):
+  python3 reports/generar-informe-pagos.py [carpeta-de-resultados] [registro-de-vitest]
+
+- carpeta-de-resultados: la que escribe e2e/campana-pagos.e2e.ts (resultados.json y
+  capturas). Por defecto e2e/results/campana-pagos, o la variable CAMPANA_DIR.
+- registro-de-vitest: salida de `npx vitest run` para citar el total de la suite
+  (opcional, o la variable SUITE_LOG).
+"""
 from pathlib import Path
 import base64
 import html
 import json
+import os
 import re
+import sys
 
-source = Path('/private/tmp/claude-501/-Users-marquinho-Users-marquinho-reservasGym/1ee48449-e113-43f1-babf-9736c00accec/scratchpad/campana')
+app_dir = Path(__file__).resolve().parent.parent
+source = Path(sys.argv[1] if len(sys.argv) > 1 else os.environ.get('CAMPANA_DIR', app_dir / 'e2e/results/campana-pagos'))
 results = json.loads((source / 'resultados.json').read_text())
-log = Path('/private/tmp/zona-cero-pruebas-completas-controladas.log').read_text()
+log_path = sys.argv[2] if len(sys.argv) > 2 else os.environ.get('SUITE_LOG')
+log = Path(log_path).read_text() if log_path else ''
 summary = re.search(r'^\s*Tests\s+([^\n]+)', log, re.MULTILINE)
 complete = bool(re.search(r'Duration\s+', log))
 suite = html.escape(summary.group(1).strip().replace('failed', 'fallidas').replace('passed', 'aprobadas')) if complete and summary else 'Ejecución pendiente de cierre'
