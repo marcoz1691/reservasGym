@@ -334,7 +334,8 @@ test('A accesibilidad, responsivo y diseño', async ({ browser }) => {
   await page.getByRole('radio', { name: /Pago recurrente con tarjeta/ }).click()
   const small = await page.evaluate(() =>
     [...document.querySelectorAll('button, [role="radio"], input[type="checkbox"], a')]
-      .map((el) => { const r = el.getBoundingClientRect(); return { t: (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 30), h: Math.round(r.height), w: Math.round(r.width) } })
+      // El área táctil de una casilla es la de su etiqueta, no la del cuadro de 24 px.
+      .map((el) => { const target = el.closest('label') ?? el; const r = target.getBoundingClientRect(); return { t: (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 30), h: Math.round(r.height), w: Math.round(r.width) } })
       .filter((x) => x.h > 0 && (x.h < 44 || x.w < 44)),
   )
   record({ id: 'U-01', tipo: 'UI/UX · tamaño táctil', area: 'Ambos', caso: 'Controles del checkout de al menos 44 × 44 px (guía de Apple)', resultado: small.length === 0 ? 'pasa' : 'observación', detalle: small.length === 0 ? 'Todos cumplen' : small.map((s) => `"${s.t}" ${s.w}×${s.h}`).join('; ') })
