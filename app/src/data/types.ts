@@ -54,6 +54,7 @@ export interface GymRepository {
   updateProfile?(patch: Partial<Omit<User, 'id' | 'email' | 'role' | 'createdAt'>>): Promise<User>
 
   updateSettings(patch: Partial<GymSettings>): Promise<GymSettings>
+  publishTermsPdf?(file: File, version: string): Promise<GymSettings>
 
   listZones(): Promise<Zone[]>
   upsertZone(zone: Zone): Promise<Zone>

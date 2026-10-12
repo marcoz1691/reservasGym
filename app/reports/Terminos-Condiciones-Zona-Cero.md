@@ -1,0 +1,153 @@
+# Términos y condiciones de uso de la aplicación Zona Cero
+
+**Zona Cero Performance Center · Versión documental 1.0**
+
+## 1. Objeto y ámbito de aplicación
+
+Estos términos regulan el acceso y uso de la aplicación de Zona Cero Performance Center, sus interfaces web y móviles y los servicios digitales vinculados con la cuenta del socio. Comprenden el registro, autenticación, ficha personal, consulta y contratación de planes, pagos, reservas, lista de espera, control de asistencia y seguimiento de mediciones físicas, conforme a las funciones habilitadas.
+
+La aplicación constituye un canal de gestión del gimnasio. La creación de una cuenta no equivale a contratar una membresía ni concede acceso ilimitado a instalaciones, actividades o prestaciones. Los servicios contratados se determinan por el plan adquirido, su vigencia y las condiciones informadas al confirmar la operación.
+
+## 2. Aceptación y alcance de las autorizaciones
+
+El usuario debe leer estos términos antes de aceptar expresamente su aplicación en el flujo correspondiente. La confirmación de una reserva, solicitud o compra expresa una instrucción sobre esa operación, con los datos y condiciones que se presentan en pantalla. La aceptación de los términos no sustituye una autorización de cobros recurrentes ni un consentimiento específico para tratamientos de datos que lo requieran.
+
+El usuario puede conservar una copia de este documento. La lectura del texto, la consulta del catálogo o la navegación por una pantalla no constituyen, por sí solas, autorización de un débito, de publicidad ni de tratamiento indiscriminado de información de salud.
+
+## 3. Registro, identidad y titularidad de la cuenta
+
+El usuario debe registrar información veraz y mantener actualizados su nombre, correo y los demás datos necesarios para los servicios que utilice. La cuenta es personal; no se permite crear registros mediante suplantación de identidad ni utilizar credenciales de otra persona. La identificación solicitada en el pago se utiliza para la gestión de esa operación y no concede permisos administrativos.
+
+El uso por menores debe contar con la intervención de su representante cuando corresponda por la normativa y las condiciones de admisión del gimnasio. Una cuenta digital no sustituye las autorizaciones necesarias para contratar servicios o participar en actividades físicas.
+
+## 4. Autenticación, sesiones y recuperación de acceso
+
+Las funciones asociadas al socio requieren una sesión autenticada. La aplicación utiliza credenciales y mecanismos de sesión para identificar la cuenta y consultar los servicios que le corresponden. Una sesión puede caducar o requerir nueva autenticación; permanecer dentro de una pantalla no garantiza que la sesión continúe vigente.
+
+La recuperación de contraseña se realiza mediante el correo registrado y el mecanismo de verificación proporcionado por el servicio de autenticación. Los códigos de recuperación son confidenciales y no deben compartirse. El usuario debe cerrar sesión en dispositivos compartidos, proteger su correo y comunicar a recepción cualquier acceso que no reconozca. Zona Cero no solicitará contraseñas ni códigos de recuperación para gestionar un pago.
+
+## 5. Perfiles de acceso y operaciones autorizadas
+
+La aplicación distingue permisos de socio, personal autorizado y administración. El socio consulta y gestiona la información vinculada a su cuenta; el personal autorizado puede ejecutar operaciones de atención, cobro y asistencia dentro de sus permisos; la administración configura los parámetros del servicio y las funciones habilitadas.
+
+Los permisos se verifican en los servicios y la base de datos. Cambiar una dirección web, manipular una pantalla o enviar solicitudes técnicas no concede acceso a información ajena ni permite aprobar un pago, ampliar una membresía o modificar privilegios. Toda operación debe respetar la identidad autenticada y las reglas del servicio.
+
+## 6. Catálogo, membresías y vigencia
+
+Cada plan identifica su precio, duración y servicios o zonas incluidos. Cuando un plan tenga un límite de visitas, la disponibilidad se sujetará al saldo registrado y a las reglas de consumo aplicables. El socio debe revisar el plan y sus fechas antes de confirmar su contratación.
+
+Las membresías pueden encontrarse activas, en espera de inicio, en período de gracia, vencidas o canceladas. Una membresía futura no concede acceso antes de su inicio. La vigencia de treinta días y un ciclo de facturación mensual son conceptos distintos: las fechas de acceso y las condiciones de cobro deben interpretarse según la información de la operación. Las promociones, cambios de plan o beneficios adicionales se sujetan a las condiciones comunicadas para cada oferta.
+
+## 7. Reservas, cupos y lista de espera
+
+Una reserva se procesa considerando el horario de la sesión, los cupos disponibles, el acceso del plan y las reservas existentes. La aplicación puede rechazar una solicitud por membresía no habilitada, falta de acceso a una zona, coincidencia de horarios o porque la clase ya empezó. No se permite duplicar una reserva activa para la misma sesión.
+
+La lista de espera representa una solicitud pendiente de cupo y no una reserva confirmada. La promoción a un lugar disponible depende de las reglas de asignación y del estado registrado en el sistema. El socio debe comprobar la confirmación antes de asistir; una captura de una solicitud anterior no acredita que el cupo siga vigente.
+
+## 8. Cancelación, reagendamiento y asistencia
+
+La cancelación y el reagendamiento se sujetan a la ventana de tiempo y disponibilidad informadas para la actividad. El cambio de horario requiere validar el cupo y los permisos de la nueva sesión. Una operación que no obtenga confirmación no debe interpretarse como una modificación completada.
+
+El control de ingreso puede utilizar un código QR o un código corto asociado a la reserva. Estos identificadores son personales, deben protegerse y no pueden cederse a terceros. La asistencia queda sujeta a la validación de la reserva y al registro del personal autorizado. El historial puede distinguir asistencias, cancelaciones e inasistencias y no sustituye la comprobación de una reserva actual.
+
+## 9. Solicitudes de pago y confirmación de membresía
+
+La aplicación puede habilitar efectivo en recepción, transferencia bancaria, Deuna o pago con tarjeta. Una solicitud de pago manual permite identificar el plan y el medio seleccionado; la activación depende de la revisión y registro de recepción. El envío de un comprobante no acredita por sí solo su validación ni autoriza al usuario a marcar el pago como aprobado.
+
+Antes de pagar, el usuario debe revisar el plan, importe total, impuestos mostrados y datos de facturación. La referencia de la operación facilita su conciliación. Un comprobante de pago en la app y un documento tributario tienen funciones diferentes; las consultas de facturación se atienden a través de recepción.
+
+## 10. Procesamiento de tarjeta y estados de la transacción
+
+Los pagos en línea se procesan mediante Pagomedios. La introducción de los datos de tarjeta se realiza en la interfaz del proveedor. La aplicación de Zona Cero no solicita ni almacena el número completo de tarjeta o su código de seguridad en el formulario de facturación.
+
+El resultado debe confirmarse con el proveedor y registrarse en los servicios del gimnasio. Una transacción puede aparecer pendiente, aprobada, rechazada o reembolsada. Volver a la app, recibir una redirección o cerrar la pantalla del proveedor no prueba por sí solo que el pago haya sido aprobado. Las fechas de membresía se aplican conforme al resultado confirmado y a las reglas del plan.
+
+## 11. Pago único y cobros recurrentes
+
+Un pago único no autoriza cargos posteriores. La recurrencia requiere que el usuario seleccione expresamente ese medio y conozca el plan, importe y periodicidad comunicados antes de confirmar. El usuario debe ser titular de la tarjeta o estar legítimamente autorizado a utilizarla. El registro de tarjeta con el proveedor y el cargo de la membresía son etapas diferenciadas.
+
+El usuario puede solicitar a recepción la revocación de futuros cobros recurrentes y obtener información sobre su estado. La revocación, los cargos ya procesados y una eventual devolución deben tratarse como operaciones distintas. No se presume autorización para un importe nuevo por el solo hecho de existir una tarjeta registrada. Los cambios de precio o condiciones de cobro deben comunicarse antes de aplicarse y obtener la autorización que corresponda.
+
+## 12. Interrupciones de pago, duplicidad y devoluciones
+
+Si se pierde la conexión, se cierra la app o se vuelve desde el proveedor, el usuario debe verificar la operación antes de repetirla, especialmente si su banco registra un movimiento. La aplicación incorpora protección frente a envíos repetidos del formulario y ofrece mecanismos de consulta del pago; estas medidas no sustituyen la conciliación de la transacción con el proveedor.
+
+El usuario puede reportar en recepción cargos duplicados, incorrectos, no reconocidos o vinculados con un servicio no prestado. La revisión debe considerar la referencia, fecha, importe y resultado del proveedor. Las devoluciones se tramitan según la naturaleza del caso, las condiciones de la compra y los derechos aplicables. Un problema de visualización no elimina el derecho a reclamar ni convierte automáticamente una operación en fallida.
+
+## 13. Datos personales tratados por la aplicación
+
+El responsable del tratamiento es la entidad operadora de Zona Cero Performance Center respecto de los datos que utiliza para gestionar su relación con los socios. El titular puede dirigirse a recepción para identificar al responsable y presentar solicitudes relacionadas con su información.
+
+Según las funciones utilizadas, la aplicación trata datos de cuenta y contacto; información de perfil y objetivos; datos de identificación y facturación; membresías, referencias de pago y estados de cobro; reservas, asistencia y lista de espera; y mediciones físicas y notas de salud que el usuario o el personal autorizado registren. La infraestructura tecnológica también puede generar información técnica necesaria para atender conexiones, autenticar solicitudes y diagnosticar incidencias.
+
+## 14. Finalidades y límites del tratamiento
+
+Los datos se utilizan para autenticar al usuario, gestionar su perfil y los servicios contratados, verificar pagos, controlar reservas y asistencia, mostrar su evolución física y atender solicitudes. La información se tratará con una base de legitimación aplicable a cada finalidad y se limitará a lo necesario para ella.
+
+La aceptación de estos términos no habilita finalidades incompatibles, venta de información personal ni acceso indiscriminado a los datos del socio. Los tratamientos que requieran consentimiento deben explicarse de forma específica y permitir su revocación. La negativa a proporcionar datos necesarios para una operación puede impedir su ejecución, pero no debe impedir servicios que no dependan de esos datos.
+
+## 15. Mediciones físicas e información de salud
+
+La ficha personal puede incluir estatura, peso, objetivos y observaciones de salud; el seguimiento puede contener mediciones corporales y metas. Esta información merece protección reforzada y debe utilizarse para la atención y el seguimiento autorizado del socio. El usuario debe evitar incluir datos de terceros o información que no sea pertinente para ese propósito.
+
+El registro o uso de datos de salud requiere la base jurídica y, cuando corresponda, el consentimiento específico exigidos por la normativa. La aceptación general de estos términos no constituye una autorización ilimitada para esos tratamientos. Los indicadores y gráficos de la app son orientativos: no ofrecen un diagnóstico, no sustituyen una evaluación profesional ni garantizan un resultado físico.
+
+## 16. Seguridad de la información
+
+La operación de la aplicación utiliza autenticación, permisos por perfil, controles de acceso a registros y validación de solicitudes en los servicios que procesan las operaciones. Las conexiones de los entornos publicados se realizan mediante protocolos seguros para proteger la información en tránsito. La aprobación de un pago exige comprobación con el proveedor y no depende de un estado enviado libremente por el usuario.
+
+La seguridad requiere también el cuidado del dispositivo y de las credenciales. El usuario debe mantener actualizado su sistema, evitar aplicaciones o enlaces que suplanten al gimnasio y proteger los códigos de acceso y comprobantes. Ningún sistema elimina todos los riesgos; una incidencia debe gestionarse con medidas proporcionales y con las comunicaciones exigibles a los afectados y a la autoridad cuando corresponda. Esta cláusula no limita los deberes de seguridad de Zona Cero.
+
+## 17. Almacenamiento local y recuperación del formulario
+
+La aplicación puede utilizar almacenamiento del navegador o del dispositivo para gestionar la sesión y conservar información necesaria para continuar una operación. Al salir al proveedor de pagos desde la web, el formulario puede guardarse temporalmente en la pestaña actual, asociado al socio y al plan, para recuperar los datos al volver. Ese borrador no contiene datos completos de tarjeta y deja de ser recuperable al cumplirse una hora.
+
+El borrador se elimina al confirmar el pago o abandonar expresamente ese flujo. Cerrar la pestaña, borrar los datos del navegador o bloquear su almacenamiento puede impedir la recuperación del formulario. La información local no sustituye el registro de una membresía o de un pago en los servicios del gimnasio. En dispositivos compartidos, el usuario debe cerrar sesión y evitar dejar información personal accesible.
+
+## 18. Proveedores tecnológicos y comunicación de datos
+
+La aplicación utiliza servicios tecnológicos para autenticación, base de datos y procesamiento de pagos, incluidos Supabase y Pagomedios en los componentes correspondientes. Los proveedores reciben la información necesaria para su función. El uso de servicios de infraestructura no autoriza a compartir datos para fines ajenos al servicio ni a utilizar información de salud para publicidad.
+
+Cuando exista tratamiento o comunicación internacional de datos, deberán cumplirse las condiciones y garantías aplicables. El titular puede solicitar a recepción información sobre los destinatarios, finalidades y garantías de esas comunicaciones. Si el usuario elige enviar un comprobante por WhatsApp, interviene además ese servicio externo y se aplican sus condiciones al canal de mensajería; no deben enviarse contraseñas ni datos completos de tarjeta.
+
+## 19. Conservación, actualización y derechos del titular
+
+La información se conserva durante el tiempo necesario para gestionar la relación con el socio y cumplir las obligaciones aplicables. Los registros que deban mantenerse por una obligación legal o por la atención de un reclamo deben limitarse a esa finalidad, con acceso restringido. La conservación no habilita el uso indefinido para otros propósitos.
+
+El titular puede solicitar información sobre el tratamiento y ejercer, cuando proceda, sus derechos de acceso, rectificación, actualización, eliminación, oposición, portabilidad y limitación del tratamiento, así como revocar su consentimiento. Las solicitudes pueden presentarse en recepción, que deberá canalizarlas al responsable y verificar la identidad de forma proporcional. La solicitud debe permitir identificar el dato u operación afectados; no requiere entregar contraseñas ni códigos de seguridad. El titular conserva la posibilidad de acudir a la autoridad competente.
+
+## 20. Eliminación de cuenta y desvinculación del servicio
+
+La aplicación permite solicitar la eliminación de la cuenta mediante una confirmación expresa. La operación cierra el acceso y elimina los datos vinculados a la cuenta que alcance el procedimiento; su confirmación no debe realizarse si el usuario desea únicamente cerrar sesión o dejar de recibir promociones. La eliminación es distinta de desinstalar la app, cancelar una reserva o cambiar una contraseña.
+
+Eliminar la cuenta no revoca por sí solo una autorización de cobro conservada por el proveedor ni devuelve automáticamente períodos pagados. El socio debe gestionar con recepción la cancelación de futuros cargos y verificar su confirmación. La información que deba conservarse legítimamente fuera de la cuenta operativa permanece sujeta a las restricciones y derechos aplicables.
+
+## 21. Comunicaciones y permisos del dispositivo
+
+Los avisos operativos de la cuenta, reservas y pagos se distinguen de las comunicaciones promocionales. La aceptación de estos términos no constituye una suscripción general a publicidad. Los permisos adicionales del dispositivo, cuando una función los solicite, deben relacionarse con su finalidad y pueden gestionarse desde las opciones del sistema o navegador.
+
+Denegar un permiso puede limitar la función que lo necesita, sin autorizar el acceso a otros recursos. La existencia de capacidades técnicas en un dispositivo no significa que estén habilitadas en la app ni que se recojan datos de ubicación, contactos, cámara o biometría de forma automática.
+
+## 22. Uso indebido, restricciones y propiedad intelectual
+
+Se prohíben la suplantación, cesión de códigos personales, alteración de comprobantes, extracción no autorizada de información, envío de solicitudes destinadas a eludir permisos y acciones que afecten la disponibilidad del sistema. Zona Cero puede restringir operaciones ante indicios de abuso o riesgo, con medidas justificadas y posibilidad de aclaración, sin desconocer los derechos del usuario.
+
+La marca, interfaces y contenidos de la aplicación se facilitan para utilizar el servicio. No se concede autorización para su reventa o explotación comercial. Las restricciones de propiedad intelectual no afectan los derechos del titular sobre sus datos personales ni impiden conservar sus comprobantes o este documento.
+
+## 23. Disponibilidad, actualizaciones y actividad física
+
+El funcionamiento depende de conectividad, compatibilidad del dispositivo y disponibilidad de los servicios tecnológicos y del proveedor de pagos. Pueden existir períodos de mantenimiento o interrupciones. El usuario debe consultar el estado de sus operaciones después de una incidencia; la falta de respuesta de una pantalla no demuestra que una solicitud haya sido recibida ni que un cargo haya sido anulado.
+
+Las actualizaciones pueden modificar interfaces y corregir fallos. El uso del servicio digital no sustituye las instrucciones de seguridad del gimnasio, la supervisión aplicable a una actividad ni la valoración profesional que necesite el socio. Estas condiciones no excluyen responsabilidad por incumplimiento, negligencia o prestación defectuosa de los servicios.
+
+## 24. Atención, cambios del documento y legislación
+
+Recepción es el punto de atención para incidencias de acceso, reservas, pagos, membresías y solicitudes sobre datos personales. El usuario debe describir la operación y aportar la referencia que tenga disponible. Los reclamos deben tratarse conforme a la normativa y las condiciones de la operación, sin exigir información confidencial ajena a su comprobación.
+
+Las modificaciones de estos términos deben identificarse mediante una versión y comunicarse cuando afecten condiciones esenciales o autorizaciones. No alteran retroactivamente una compra completada ni sustituyen el consentimiento que deba obtenerse para una finalidad nueva. La relación se rige por la legislación ecuatoriana aplicable al servicio, al consumidor, a la contratación electrónica y a la protección de datos. Ninguna cláusula exige renunciar a derechos irrenunciables o a las vías legales de reclamación.
+
+## 25. Declaración de aceptación del usuario
+
+Al aceptar estos términos, el usuario declara que ha leído las condiciones de uso de la aplicación, comprende el carácter personal de su cuenta, las reglas de acceso a planes y reservas, los procedimientos de verificación de pagos y el alcance del tratamiento necesario para los servicios que utiliza. Se compromete a proporcionar información correcta y a proteger sus credenciales y códigos personales.
+
+La autorización de pagos recurrentes, el consentimiento específico para datos de salud y la elección de recibir promociones conservan su naturaleza diferenciada. La aceptación de este documento no se interpreta como aprobación de cargos no informados, tratamiento ilimitado de datos o renuncia a los derechos que reconoce la legislación.

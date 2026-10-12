@@ -46,6 +46,41 @@ describe('Funciones de la app (interruptores del admin)', () => {
     expect(screen.getByText(/Recepción siempre puede venderlos en Cobros/)).toBeInTheDocument()
   })
 
+  it('el admin publica un PDF con versión y puede volver al documento incluido', async () => {
+    await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    renderBranding()
+    const pdf = new File(['%PDF-1.7\ncontenido'], 'terminos.pdf', { type: 'application/pdf' })
+    await userEvent.upload(await screen.findByLabelText('PDF de términos y condiciones'), pdf)
+    await userEvent.type(screen.getByLabelText('Versión del documento'), '1.1')
+    await userEvent.click(screen.getByRole('button', { name: 'Publicar PDF' }))
+    expect(await screen.findByText('Términos y condiciones publicados')).toBeInTheDocument()
+    const settings = (await repo.load()).settings
+    expect(settings.termsVersion).toBe('1.1')
+    expect(settings.termsPdfUrl).toMatch(/^data:application\/pdf;base64,/)
+    expect(screen.getByRole('link', { name: 'Abrir PDF publicado' })).toHaveAttribute('href', settings.termsPdfUrl)
+    await userEvent.click(screen.getByRole('button', { name: 'Usar documento incluido' }))
+    expect(await screen.findByText('Se usa el documento incluido de Zona Cero')).toBeInTheDocument()
+    expect((await repo.load()).settings.termsPdfUrl).toBeNull()
+  })
+
+  it('rechaza un archivo que solo fue renombrado a PDF y conserva el documento actual', async () => {
+    await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    renderBranding()
+    await userEvent.upload(await screen.findByLabelText('PDF de términos y condiciones'), new File(['texto'], 'falso.pdf', { type: 'application/pdf' }))
+    await userEvent.type(screen.getByLabelText('Versión del documento'), '1.1')
+    await userEvent.click(screen.getByRole('button', { name: 'Publicar PDF' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('PDF válido')
+    expect((await repo.load()).settings.termsPdfUrl).toBeUndefined()
+  })
+
+  it('staff y socio no pueden publicar un PDF mediante el repositorio', async () => {
+    const pdf = new File(['%PDF-1.7'], 'terminos.pdf', { type: 'application/pdf' })
+    for (const email of ['staff@gym.local', 'socio@gym.local']) {
+      await repo.signIn({ email, password: DEMO_PASSWORD })
+      await expect(repo.publishTermsPdf(pdf, '1.1')).rejects.toThrow('Solo admin')
+    }
+  })
+
   it('apagar la lista de espera queda guardado', async () => {
     await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
     renderBranding()

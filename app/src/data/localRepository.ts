@@ -46,6 +46,7 @@ import {
   resolveRequestReference,
 } from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
+import { readPdfDataUrl, validateTermsPdf } from '../domain/rules/termsDocument'
 import type {
   AuthCredentials,
   GymRepository,
@@ -506,6 +507,17 @@ export class LocalRepository implements GymRepository {
     this.state.settings = { ...this.state.settings, ...patch }
     this.persistState()
     return { ...this.state.settings }
+  }
+
+  async publishTermsPdf(file: File, version: string): Promise<GymSettings> {
+    const actor = await this.requireUser()
+    if (actor.role !== 'admin') throw new Error('Solo admin')
+    await validateTermsPdf(file, version)
+    return this.updateSettings({
+      termsPdfUrl: await readPdfDataUrl(file),
+      termsVersion: version.trim(),
+      termsUpdatedAt: new Date().toISOString(),
+    })
   }
 
   async listZones(): Promise<Zone[]> {

@@ -100,10 +100,14 @@ describe('Auth and Profile expanded flows', () => {
     await repo.signIn({ email: 'borrar@test.com', password: 'password123' })
     expect(await repo.getMemberMembership(user.id)).not.toBeNull()
 
-    // Book a session
+    // La primera sesión del catálogo puede haber empezado: reservar una futura con cupo.
     const sessions = await repo.listSessions()
-    expect(sessions.length).toBeGreaterThan(0)
-    await repo.createBooking(sessions[0]!.id, user.id)
+    const tomorrow = Date.now() + 24 * 60 * 60 * 1000
+    const targetSession = sessions.find(
+      (session) => new Date(session.startsAt).getTime() > tomorrow && session.bookedCount < session.capacity,
+    )
+    expect(targetSession).toBeDefined()
+    await repo.createBooking(targetSession!.id, user.id)
 
     const bookingsBefore = await repo.listBookingsForUser(user.id)
     expect(bookingsBefore.length).toBe(1)

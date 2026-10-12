@@ -117,6 +117,7 @@ describe('PagomediosCheckoutPage — pago único', () => {
     native.value = false
     browser.listeners = {}
     localStorage.clear()
+    sessionStorage.clear()
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...window.location, assign },
@@ -529,6 +530,55 @@ describe('PagomediosCheckoutPage — pago único', () => {
     expect(screen.getByRole('button', { name: /Confirmar solicitud/ })).toBeEnabled()
   })
 
+  it('al volver sin caché recupera los datos, términos y método, sin quedar procesando', async () => {
+    repo.createPagomediosPayment.mockResolvedValue({ url: 'https://payurl.link/X', paymentId: 'pay_reload' })
+    const page = renderAt('/membresia/pago?planId=plan_mensual')
+    await fillBilling()
+    await userEvent.click(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ }))
+    await waitFor(() => expect(assign).toHaveBeenCalled())
+    page.unmount()
+
+    renderAt('/membresia/pago?planId=plan_mensual')
+    expect(screen.getByLabelText('Número de identificación')).toHaveValue('1710034065')
+    expect(screen.getByLabelText('Celular')).toHaveValue('0987569852')
+    expect(screen.getByLabelText('Dirección')).toHaveValue(ADDRESS)
+    expect(screen.getByRole('checkbox', { name: /Acepto los términos/ })).toBeChecked()
+    expect(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ })).toBeEnabled()
+    expect(screen.getByRole('link', { name: /verifica su estado/ })).toHaveAttribute(
+      'href', '/membresia/pago?provider=pagomedios&paymentId=pay_reload',
+    )
+    expect(repo.createPagomediosPayment).toHaveBeenCalledTimes(1)
+  })
+
+  it('acepta términos al primer toque mientras se muestra el error de celular', async () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    const phone = screen.getByLabelText('Celular')
+    const errorSlot = phone.closest('label')!.nextElementSibling
+    expect(errorSlot).toHaveClass('min-h-8')
+    expect(errorSlot).toBeEmptyDOMElement()
+    await userEvent.click(phone)
+    await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos/ }))
+    expect(errorSlot).toHaveTextContent('Ingresa tu celular.')
+    expect(screen.getByRole('checkbox', { name: /Acepto los términos/ })).toBeChecked()
+    expect(phone.closest('label')!.nextElementSibling).toBe(errorSlot)
+  })
+
+  it('recuperar el formulario no acepta una versión nueva publicada mientras el socio pagaba', async () => {
+    repo.createPagomediosPayment.mockResolvedValue({ url: 'https://payurl.link/X', paymentId: 'pay_terms' })
+    const page = renderAt('/membresia/pago?planId=plan_mensual')
+    await fillBilling()
+    await userEvent.click(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ }))
+    await waitFor(() => expect(assign).toHaveBeenCalled())
+    page.unmount()
+    app.settings = { ...app.settings, termsPdfUrl: 'https://example.com/v2.pdf', termsVersion: '2.0' }
+    renderAt('/membresia/pago?planId=plan_mensual')
+    expect(screen.getByLabelText('Número de identificación')).toHaveValue('1710034065')
+    expect(screen.getByRole('checkbox', { name: /Acepto los términos/ })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'términos y condiciones' }))
+    expect(screen.getByRole('link', { name: 'Abrir PDF para imprimir' })).toHaveAttribute('href', 'https://example.com/v2.pdf')
+  })
+
   it('muestra el resumen con subtotal, IVA 15% y total', async () => {
     renderAt('/membresia/pago?planId=plan_mensual')
     const summary = screen.getByRole('region', { name: 'Resumen del pago' })
@@ -685,10 +735,23 @@ describe('PagomediosCheckoutPage — pago recurrente', () => {
     app.settings = { onlinePaymentsEnabled: true, recurringPaymentsEnabled: true, dayPassesEnabled: true }
     native.value = false
     localStorage.clear()
+    sessionStorage.clear()
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...window.location, assign: vi.fn() },
     })
+  })
+
+  it('dos toques seguidos en "Pagar" crean un solo pago', async () => {
+    repo.createPagomediosPayment.mockReturnValue(new Promise(() => {}))
+    renderAt('/membresia/pago?planId=plan_mensual')
+    await fillBilling()
+    const pay = screen.getByRole('button', { name: /Pagar\s*\$35\.00/ })
+    // El mismo toque repetido antes de que React vuelva a dibujar el botón deshabilitado.
+    pay.click()
+    pay.click()
+    pay.click()
+    await waitFor(() => expect(repo.createPagomediosPayment).toHaveBeenCalledTimes(1))
   })
 
   it('es un medio de pago más: al elegirlo muestra el aviso y registra la tarjeta en Pagomedios', async () => {

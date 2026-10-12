@@ -10,6 +10,7 @@ import { isFeatureEnabled, normalizeWhatsAppPhone, type AppFeature } from '@/dom
 import { applyBrandColors } from '@/lib/format'
 import { Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
 import { ButtonLink } from '@/ui/ButtonLink'
+import { TermsDocumentSettings } from './TermsDocumentSettings'
 
 const FEATURE_SWITCHES: {
   feature: AppFeature
@@ -190,7 +191,7 @@ export function BrandingPage() {
     <div>
       <PageHeader
         title="Personalización"
-        subtitle="Marca, funciones de la app y datos de pago"
+        subtitle="Marca, funciones de la app, datos de pago y términos"
         action={
           <ButtonLink to="/admin" variant="ghost">Volver al admin</ButtonLink>
         }
@@ -268,6 +269,8 @@ export function BrandingPage() {
           <Button type="submit">Guardar marca</Button>
         </form>
       </Card>
+
+      <TermsDocumentSettings settings={data.settings} repo={repo} onPublished={refresh} />
 
       <Card className="mt-6 max-w-lg space-y-4">
         <h2 className="font-display text-lg font-bold text-ink">Funciones de la app</h2>

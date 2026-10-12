@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { TERMS_BUCKET, validateTermsPdf } from '@/domain/rules/termsDocument'
 import type {
   BodyGoal,
   BodyGoalStatus,
@@ -104,6 +105,9 @@ function mapSettings(row: {
   bank_account_id?: string | null
   deuna_code?: string | null
   deuna_qr_url?: string | null
+  terms_pdf_url?: string | null
+  terms_version?: string | null
+  terms_updated_at?: string | null
 }): GymSettings {
   return {
     name: row.name,
@@ -126,6 +130,9 @@ function mapSettings(row: {
     bankAccountId: row.bank_account_id ?? null,
     deunaCode: row.deuna_code ?? null,
     deunaQrUrl: row.deuna_qr_url ?? null,
+    termsPdfUrl: row.terms_pdf_url ?? null,
+    termsVersion: row.terms_version ?? null,
+    termsUpdatedAt: row.terms_updated_at ?? null,
   }
 }
 
@@ -782,12 +789,15 @@ export class SupabaseRepository implements GymRepository {
   }
 
   async updateSettings(patch: Partial<GymSettings>): Promise<GymSettings> {
-    await this.requireUser()
+    await this.requireAdmin()
     const row: Record<string, unknown> = {}
     if (patch.name !== undefined) row.name = patch.name
     if (patch.logoUrl !== undefined) row.logo_url = patch.logoUrl
     if (patch.primaryColor !== undefined) row.primary_color = patch.primaryColor
     if (patch.accentColor !== undefined) row.accent_color = patch.accentColor
+    if (patch.termsPdfUrl !== undefined) row.terms_pdf_url = patch.termsPdfUrl
+    if (patch.termsVersion !== undefined) row.terms_version = patch.termsVersion
+    if (patch.termsUpdatedAt !== undefined) row.terms_updated_at = patch.termsUpdatedAt
     if (patch.bookingWindowHours !== undefined) {
       row.booking_window_hours = patch.bookingWindowHours
     }
@@ -820,6 +830,26 @@ export class SupabaseRepository implements GymRepository {
       .single()
     if (error) throw new Error(error.message)
     return mapSettings(data)
+  }
+
+  async publishTermsPdf(file: File, version: string): Promise<GymSettings> {
+    await this.requireAdmin()
+    await validateTermsPdf(file, version)
+    const bucket = this.client.storage.from(TERMS_BUCKET)
+    const path = `terms/${crypto.randomUUID()}.pdf`
+    const { error } = await bucket.upload(path, file, { contentType: 'application/pdf', upsert: false })
+    if (error) throw new Error(error.message)
+    try {
+      return await this.updateSettings({
+        termsPdfUrl: bucket.getPublicUrl(path).data.publicUrl,
+        termsVersion: version.trim(),
+        termsUpdatedAt: new Date().toISOString(),
+      })
+    } catch (err) {
+      // Si publicar falla, se conserva la configuración anterior y se limpia solo el archivo nuevo.
+      await bucket.remove([path]).catch(() => undefined)
+      throw err
+    }
   }
 
   async listZones(): Promise<Zone[]> {

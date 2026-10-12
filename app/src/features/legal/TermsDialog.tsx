@@ -1,10 +1,13 @@
 import { X } from 'lucide-react'
 import { formatDateSpanish } from '@/lib/format'
 import { Button } from '@/ui/primitives'
-import { TERMS, termsArePublished } from './termsContent'
+import { TERMS } from './termsContent'
+import type { GymSettings } from '@/domain/models'
+import { resolveTermsDocument } from '@/domain/rules/termsDocument'
 
 /** Términos y condiciones en una ventana, sin salir del pago (no se pierde lo escrito). */
-export function TermsDialog({ onClose }: { onClose: () => void }) {
+export function TermsDialog({ onClose, settings }: { onClose: () => void; settings?: Pick<GymSettings, 'termsPdfUrl' | 'termsVersion' | 'termsUpdatedAt'> }) {
+  const document = resolveTermsDocument(settings, import.meta.env.BASE_URL)
   return (
     <div
       role="dialog"
@@ -18,8 +21,9 @@ export function TermsDialog({ onClose }: { onClose: () => void }) {
             <h2 id="terms-title" className="text-lg font-bold text-ink">
               {TERMS.title}
             </h2>
-            {TERMS.updatedAt ? (
-              <p className="text-xs text-ink-3">Vigentes desde {formatDateSpanish(TERMS.updatedAt)}</p>
+            <p className="text-xs text-ink-3">Versión {document.version}</p>
+            {document.updatedAt ? (
+              <p className="text-xs text-ink-3">Publicado el {formatDateSpanish(document.updatedAt)}</p>
             ) : null}
           </div>
           <button
@@ -31,15 +35,19 @@ export function TermsDialog({ onClose }: { onClose: () => void }) {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="space-y-3 overflow-y-auto px-5 py-4 text-sm leading-relaxed text-ink-2">
-          {termsArePublished() ? (
-            TERMS.paragraphs.map((paragraph, i) => <p key={i}>{paragraph}</p>)
-          ) : (
-            <p>
-              Zona Cero está preparando este documento. Si tienes dudas sobre tu pago o tu
-              membresía, consúltalas en recepción.
-            </p>
-          )}
+        <div className="space-y-4 overflow-y-auto px-5 py-4 text-sm leading-relaxed text-ink-2">
+          <div className="flex flex-wrap gap-3">
+            <a href={document.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center font-semibold text-ink underline">Abrir PDF para imprimir</a>
+            <a href={document.url} target="_blank" rel="noopener noreferrer" download="Terminos-Condiciones-Zona-Cero.pdf" className="inline-flex min-h-11 items-center font-semibold text-ink underline">Descargar PDF</a>
+          </div>
+          {document.custom ? (
+            <p>Consulta el PDF publicado para leer las condiciones de esta versión. Al abrirlo conservas los datos de tu formulario de pago.</p>
+          ) : TERMS.sections.map((section) => (
+            <section key={section.title} className="space-y-3">
+              <h3 className="font-bold text-ink">{section.title}</h3>
+              {section.paragraphs.map((paragraph, i) => <p key={i} className="text-justify [hyphens:auto]">{paragraph}</p>)}
+            </section>
+          ))}
         </div>
         <div className="border-t border-line px-5 py-4">
           <Button type="button" className="w-full" onClick={onClose}>

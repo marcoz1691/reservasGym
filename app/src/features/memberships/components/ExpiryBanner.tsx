@@ -132,7 +132,7 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
           <button
             type="button"
             onClick={() => navigate('/membresia')}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-warn/50 bg-warn/20 px-3 py-1.5 text-xs font-bold text-warn transition hover:bg-warn/30 active:scale-95"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-warn/50 bg-warn/20 px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-warn/30 active:scale-95"
           >
             <span>Ver mi plan</span>
             <ArrowRight className="h-3.5 w-3.5" />

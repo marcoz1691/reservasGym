@@ -1,5 +1,5 @@
 import type { FormEvent, ReactNode } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -45,9 +45,11 @@ import {
 import { formatCurrency, formatDateSpanish } from '@/lib/format'
 import { PageHeader } from '@/ui/primitives'
 import { TermsDialog } from '@/features/legal/TermsDialog'
+import { resolveTermsDocument } from '@/domain/rules/termsDocument'
 import { CardBrandLogos } from './components/CardBrandLogos'
 import { LeaveCheckoutSheet } from './components/LeaveCheckoutSheet'
 import { ManualPaymentInstructions } from './components/ManualPaymentInstructions'
+import { clearCheckoutDraft, readCheckoutDraft, saveCheckoutDraft, type CheckoutMethod } from './checkoutDraft'
 import { splitTax } from '../../../supabase/functions/pagomedios-payment/tax'
 import { isRecurringEligiblePlan } from '../../../supabase/functions/pagomedios-payment/recurring'
 import {
@@ -63,7 +65,6 @@ import {
 } from './onlinePay'
 
 /** Cómo paga el socio: tarjeta en línea (Pagomedios), en recepción, transferencia o Deuna. */
-type CheckoutMethod = 'card' | 'recurring' | 'cash' | 'transfer' | 'deuna'
 type ManualCheckoutMethod = Exclude<CheckoutMethod, 'card' | 'recurring'>
 
 const METHOD_OPTIONS: { value: CheckoutMethod; title: string; detail: string; icon: LucideIcon }[] = [
@@ -134,15 +135,20 @@ export function PagomediosCheckoutPage() {
     [data.memberships, data.membershipPlans, plan, user],
   )
 
-  const [documentType, setDocumentType] = useState<BillingDocumentType>('05')
-  const [document, setDocument] = useState('')
-  const [phone, setPhone] = useState('')
-  const [address, setAddress] = useState('')
+  const [draft] = useState(() => readCheckoutDraft(user?.id, planId))
+  const termsDocumentKey = resolveTermsDocument(data.settings, import.meta.env.BASE_URL).key
+  const [previousPaymentId, setPreviousPaymentId] = useState(draft?.paymentId ?? null)
+  const [documentType, setDocumentType] = useState<BillingDocumentType>(draft?.documentType ?? '05')
+  const [document, setDocument] = useState(draft?.document ?? '')
+  const [phone, setPhone] = useState(draft?.phone ?? '')
+  const [address, setAddress] = useState(draft?.address ?? '')
   const [touched, setTouched] = useState<Partial<Record<keyof BillingErrors, boolean>>>({})
-  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [acceptedTermsKey, setAcceptedTermsKey] = useState<string | null>(draft?.acceptedTerms && draft.termsDocumentKey === termsDocumentKey ? termsDocumentKey : null)
+  const acceptedTerms = acceptedTermsKey === termsDocumentKey
   const [showTerms, setShowTerms] = useState(false)
   const [payerOpen, setPayerOpen] = useState(true)
-  const [chosenMethod, setMethod] = useState<CheckoutMethod>(wantsRecurring ? 'recurring' : 'card')
+  const [chosenMethod, setMethod] = useState<CheckoutMethod>(draft?.method ?? (wantsRecurring ? 'recurring' : 'card'))
+  const termsId = useId()
   const [requestSent, setRequestSent] = useState<{
     method: ManualCheckoutMethod
     reference: string | null
@@ -154,12 +160,16 @@ export function PagomediosCheckoutPage() {
     ? pendingRequest.reference
     : draftReference
   const [busy, setBusy] = useState(false)
+  // `busy` deshabilita el botón recién en el siguiente render: dos toques seguidos alcanzaban
+  // a crear dos pagos. Este candado se toma en el mismo toque.
+  const submitting = useRef(false)
   const [error, setError] = useState<string | null>(null)
   // Al volver de Pagomedios con "atrás", el navegador puede restaurar la página
   // desde su caché (bfcache) con el estado "procesando": se rehabilita el formulario.
   useEffect(() => {
     const onPageShow = (e: PageTransitionEvent) => {
       if (e.persisted) {
+        submitting.current = false
         setBusy(false)
         setError(null)
       }
@@ -175,6 +185,7 @@ export function PagomediosCheckoutPage() {
   useLeaveGuard(guardActive, askToLeave)
 
   function leaveCheckout() {
+    clearCheckoutDraft()
     setConfirmLeave(false)
     leaveGuardedPage(() => navigate('/membresia', { replace: true }))
   }
@@ -212,6 +223,7 @@ export function PagomediosCheckoutPage() {
     try {
       const result = await verifyPayment({ paymentId })
       if (result.status === 'approved') {
+        clearCheckoutDraft()
         // Se queda en el comprobante hasta que el socio vuelva a Mi Plan.
         setVerify({ kind: 'approved', receipt: result.receipt })
         await refresh()
@@ -260,8 +272,10 @@ export function PagomediosCheckoutPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!planId) return
+    if (submitting.current) return
     if (method !== 'card' && method !== 'recurring') {
       if (!acceptedTerms) return
+      submitting.current = true
       setBusy(true)
       setError(null)
       try {
@@ -271,6 +285,7 @@ export function PagomediosCheckoutPage() {
             : { planId, manualMethod: method },
         )
         await refresh()
+        clearCheckoutDraft()
         setRequestSent({
           method,
           reference: isPaymentReference(request?.reference) ? request.reference : reference,
@@ -278,6 +293,7 @@ export function PagomediosCheckoutPage() {
       } catch (err) {
         setError(err instanceof Error ? err.message : 'No se pudo enviar la solicitud')
       } finally {
+        submitting.current = false
         setBusy(false)
       }
       return
@@ -288,6 +304,7 @@ export function PagomediosCheckoutPage() {
       setPayerOpen(true)
       return
     }
+    submitting.current = true
     setBusy(true)
     setError(null)
     try {
@@ -302,13 +319,24 @@ export function PagomediosCheckoutPage() {
         ...(recurring ? { recurring: true } : {}),
       })
       if (native) rememberPendingPayment(newPaymentId)
+      else if (user) {
+        saveCheckoutDraft({
+          userId: user.id, planId, documentType, document, phone, address,
+          acceptedTerms, termsDocumentKey, method, paymentId: newPaymentId,
+        })
+        setPreviousPaymentId(newPaymentId)
+      }
       await openPaymentPage(url, () => {
         takePendingPayment()
         navigate(verifyUrl(newPaymentId), { replace: true })
       })
-      if (native) setBusy(false)
+      if (native) {
+        submitting.current = false
+        setBusy(false)
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo iniciar el pago'
+      submitting.current = false
       setBusy(false)
       if (/Pago en línea desactivado/i.test(message)) {
         setError(onlineOffMessage(deunaEnabled))
@@ -470,7 +498,7 @@ export function PagomediosCheckoutPage() {
           type="button"
           onClick={askToLeave}
           aria-label="Volver"
-          className="rounded-xl p-2 text-ink transition hover:bg-surface"
+          className="rounded-xl p-2.5 text-ink transition hover:bg-surface"
         >
           <ArrowLeft className="h-6 w-6" />
         </button>
@@ -478,7 +506,7 @@ export function PagomediosCheckoutPage() {
           type="button"
           onClick={askToLeave}
           aria-label="Salir del pago"
-          className="rounded-xl p-2 text-ink transition hover:bg-surface"
+          className="rounded-xl p-2.5 text-ink transition hover:bg-surface"
         >
           <X className="h-6 w-6" />
         </button>
@@ -656,24 +684,35 @@ export function PagomediosCheckoutPage() {
           </div>
         </section>
 
-        <label className="flex items-start gap-3 text-sm text-ink-2">
+        {previousPaymentId ? (
+          <p className="text-sm text-ink-2">
+            Si ya completaste el pago,{' '}
+            <Link to={verifyUrl(previousPaymentId)} className="font-semibold text-ink underline">
+              verifica su estado antes de pagar otra vez
+            </Link>.
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-x-1 text-sm text-ink-2">
+        <label htmlFor={termsId} className="flex min-h-11 cursor-pointer items-center gap-3">
           <input
+            id={termsId}
             type="checkbox"
+            aria-label="Acepto los términos y condiciones"
             checked={acceptedTerms}
-            onChange={(e) => setAcceptedTerms(e.target.checked)}
-            className="mt-0.5 h-5 w-5 shrink-0 rounded border-line-strong accent-[var(--color-cta)]"
+            onChange={(e) => setAcceptedTermsKey(e.target.checked ? termsDocumentKey : null)}
+            className="h-6 w-6 shrink-0 rounded border-line-strong accent-[var(--color-cta)]"
           />
-          <span>
-            Acepto los{' '}
+          <span>Acepto los</span>
+        </label>
             <button
               type="button"
               onClick={() => setShowTerms(true)}
-              className="font-semibold text-ink underline underline-offset-2"
+              className="inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-2"
             >
               términos y condiciones
             </button>
-          </span>
-        </label>
+        </div>
 
         {error ? (
           <div
@@ -727,7 +766,7 @@ export function PagomediosCheckoutPage() {
         </div>
       </form>
 
-      {showTerms ? <TermsDialog onClose={() => setShowTerms(false)} /> : null}
+      {showTerms ? <TermsDialog settings={data.settings} onClose={() => setShowTerms(false)} /> : null}
       {confirmLeave ? (
         <LeaveCheckoutSheet onStay={() => setConfirmLeave(false)} onLeave={leaveCheckout} />
       ) : null}
@@ -765,7 +804,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
         <span className="font-medium text-ink-2">{label}</span>
         {children}
       </label>
-      {error ? <p className="text-xs text-danger">{error}</p> : null}
+      <p aria-live="polite" className="min-h-8 text-xs text-danger">{error ?? ''}</p>
     </div>
   )
 }

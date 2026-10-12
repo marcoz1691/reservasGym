@@ -181,6 +181,10 @@ export interface BodyGoal {
 }
 
 export interface GymSettings {
+  /** PDF publicado por el administrador; sin configuración se usa el documento incluido. */
+  termsPdfUrl?: string | null
+  termsVersion?: string | null
+  termsUpdatedAt?: string | null
   name: string
   logoUrl: string | null
   primaryColor: string
