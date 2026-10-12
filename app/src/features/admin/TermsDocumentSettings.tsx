@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import type { GymSettings } from '@/domain/models'
 import type { GymRepository } from '@/data/types'
-import { resolveTermsDocument, validateTermsPdf } from '@/domain/rules/termsDocument'
+import { resolveTermsDocument } from '@/domain/rules/termsDocument'
 import { Button, Card, Input } from '@/ui/primitives'
 
 export function TermsDocumentSettings({ settings, repo, onPublished }: {
@@ -28,7 +28,6 @@ export function TermsDocumentSettings({ settings, repo, onPublished }: {
     setSaving(true)
     setMessage(null)
     try {
-      await validateTermsPdf(file, version)
       if (!repo.publishTermsPdf) throw new Error('La carga de documentos no está disponible.')
       await repo.publishTermsPdf(file, version.trim())
       await onPublished()

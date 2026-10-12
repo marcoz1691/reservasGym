@@ -1,6 +1,7 @@
-import type { BillingDocumentType } from '@/domain/rules/billing'
+import { BILLING_DOCUMENT_TYPES, type BillingDocumentType } from '@/domain/rules/billing'
 
-export type CheckoutMethod = 'card' | 'recurring' | 'cash' | 'transfer' | 'deuna'
+export const CHECKOUT_METHODS = ['card', 'recurring', 'cash', 'transfer', 'deuna'] as const
+export type CheckoutMethod = (typeof CHECKOUT_METHODS)[number]
 export type CheckoutDraft = {
   userId: string
   planId: string
@@ -46,8 +47,8 @@ export function readCheckoutDraft(userId: string | undefined, planId: string | n
     }
     if (!userId || !planId || draft.userId !== userId || draft.planId !== planId) return null
     if (
-      !['04', '05', '06', '08'].includes(draft.documentType) ||
-      !['card', 'recurring', 'cash', 'transfer', 'deuna'].includes(draft.method) ||
+      !BILLING_DOCUMENT_TYPES.some((type) => type.value === draft.documentType) ||
+      !CHECKOUT_METHODS.includes(draft.method) ||
       !['document', 'phone', 'address', 'paymentId'].every((field) => typeof draft[field] === 'string') ||
       typeof draft.acceptedTerms !== 'boolean'
     ) return null

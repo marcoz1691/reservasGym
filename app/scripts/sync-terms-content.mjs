@@ -7,5 +7,5 @@ const sections = source.split(/^## /m).slice(1).map((block) => {
 })
 if (sections.length !== 25) throw new Error('El documento aprobado debe tener 25 secciones.')
 const terms = { title: 'Términos y condiciones', version: '1.0', sections }
-await writeFile('src/features/legal/termsContent.ts', `/** Generado desde el documento de TyC: node scripts/sync-terms-content.mjs */\nexport const TERMS = ${JSON.stringify(terms, null, 2)}\n\nexport const termsArePublished = () => TERMS.sections.length > 0\n`)
+await writeFile('src/features/legal/termsContent.ts', `/** Generado desde el documento de TyC: node scripts/sync-terms-content.mjs */\nexport const TERMS = ${JSON.stringify(terms, null, 2)}\n`)
 console.log('Contenido de TyC sincronizado con el documento aprobado.')

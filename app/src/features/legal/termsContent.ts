@@ -180,5 +180,3 @@ export const TERMS = {
     }
   ]
 }
-
-export const termsArePublished = () => TERMS.sections.length > 0

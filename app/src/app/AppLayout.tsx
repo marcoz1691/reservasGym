@@ -38,6 +38,7 @@ import {
 } from '@/features/memberships/noPlanReminder'
 import { Button } from '@/ui/primitives'
 import { accentTextColor } from '@/lib/format'
+import { clearCheckoutDraft } from '@/features/memberships/checkoutDraft'
 
 const memberDesktopNav = [
   { to: '/', label: 'Inicio', icon: Home, end: true },
@@ -237,6 +238,7 @@ export function AppLayout() {
             className="w-full justify-start text-xs font-medium text-ink-3 hover:text-danger"
             onClick={() => {
               void (async () => {
+                clearCheckoutDraft()
                 await repo.signOut()
                 await refresh()
               })()
@@ -303,6 +305,7 @@ export function AppLayout() {
               className="h-10 w-10 justify-center p-0 text-xs text-ink-3"
               onClick={() => {
                 void (async () => {
+                  clearCheckoutDraft()
                   await repo.signOut()
                   await refresh()
                 })()
