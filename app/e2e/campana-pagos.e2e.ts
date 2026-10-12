@@ -156,6 +156,29 @@ test('F-03 recepción ve ambos cobros en Cobros', async ({ browser }) => {
   await restoreMembership()
 })
 
+test('F-04 el admin enciende y apaga el pago recurrente desde Personalización', async ({ browser }) => {
+  const ctx = await browser.newContext({ baseURL: APP, viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  await login(page, ACCOUNTS.admin, process.env.E2E_ADMIN_PASSWORD)
+  await setFlags({ recurring_payments_enabled: false })
+  await page.goto('/admin/marca')
+  const toggle = page.getByRole('switch', { name: 'Pago recurrente mensual' })
+  await expect(toggle).toHaveAttribute('aria-checked', 'false')
+  await toggle.scrollIntoViewIfNeeded()
+  const ev = [await shot(page, 'F04-1-apagado', false)]
+  const saved = async () => (await sql<{ r: boolean }>(`select recurring_payments_enabled r from gym_settings where id = 1`))[0]!.r
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-checked', 'true')
+  const on = await saved()
+  ev.push(await shot(page, 'F04-2-encendido', false))
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-checked', 'false')
+  const off = await saved()
+  record({ id: 'F-04', tipo: 'Funcional · automatizada', area: 'Pago recurrente', caso: 'El admin enciende y apaga "Pago recurrente mensual" desde Personalización', resultado: on && !off ? 'pasa' : 'falla', detalle: `Guardado en la base: encendido = ${on}, apagado = ${off}`, evidencia: ev })
+  await setFlags({ recurring_payments_enabled: true })
+  await ctx.close()
+})
+
 // ---------------------------------------------------------------- Exploratorias
 test('E exploratorias del checkout', async ({ browser }) => {
   const { ctx, page } = await socioPage(browser)
@@ -308,7 +331,7 @@ test('P rendimiento de la función y de la pantalla', async ({ browser }) => {
     const n = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
     return { dcl: Math.round(n.domContentLoadedEventEnd), load: Math.round(n.loadEventEnd) }
   })
-  record({ id: 'P-02', tipo: 'No funcional · rendimiento', area: 'Ambos', caso: 'Carga del checkout en celular (servidor de desarrollo local)', resultado: ready < 4000 ? 'pasa' : 'observación', detalle: `Checkout listo en ${ready} ms; DOMContentLoaded ${nav.dcl} ms. Build de producción: checkout 28,3 kB (8,9 kB gzip)` })
+  record({ id: 'P-02', tipo: 'No funcional · rendimiento', area: 'Ambos', caso: 'Carga del checkout en celular (servidor de desarrollo local)', resultado: ready < 4000 ? 'pasa' : 'observación', detalle: `Checkout listo en ${ready} ms; DOMContentLoaded ${nav.dcl} ms (servidor de desarrollo)` })
   await ctx.close()
   await restoreMembership()
 })
