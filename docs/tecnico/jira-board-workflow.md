@@ -1,6 +1,6 @@
 # Flujo del Board Jira — Zona Cero
 
-Proyecto: [SCRUM Board](https://marcs-apps-intelligence.atlassian.net/jira/software/projects/SCRUM/boards/1)
+Proyecto: [ZCAPP — Zona Cero Performance Center](https://marcs-apps-intelligence.atlassian.net/jira/software/projects/ZCAPP/boards/1)
 
 ## Columnas
 
@@ -29,7 +29,7 @@ Ver [staging-setup.md](./staging-setup.md).
 ```markdown
 ### Listo para pruebas
 **Comando:** `cd app && npm run dev:staging`
-**Usuario:** socio.staging@zonacero.test / ZonaCero2026!
+**Usuario:** socio.staging@zonacero.test (la contraseña de QA está en las notas del equipo, no en el repositorio)
 
 **Checklist:**
 - [ ] ...
@@ -38,11 +38,18 @@ Ver [staging-setup.md](./staging-setup.md).
 **Evidencia:** (screenshot / video / PR)
 ```
 
+## Etiquetas y sprints
+
+- `sprint-N` indica el sprint del cronograma (`docs/tecnico/cronograma-desarrollo-avanzada.md` §5); `wbs-1.x.y` la actividad del WBS; `bug`, `qa`, `staging`, `pagomedios` el tema.
+- El board solo muestra lo que está en el **sprint activo**: un ticket sin sprint no aparece en las columnas.
+- Cerrar un sprint y crear el siguiente se hace en Jira (Backlog → Completar sprint). Al cerrarlo, los tickets abiertos pasan al siguiente sprint o al backlog.
+- Estados disponibles en las transiciones: Por hacer, En curso, En revisión, Listo para pruebas, Finalizado.
+
 ## JQL útiles
 
 ```
-project = SCRUM AND sprint in openSprints()
-project = SCRUM AND status = "Listo para pruebas"
-project = SCRUM AND labels = ruta-critica
-project = SCRUM AND labels = zona-cero
+project = ZCAPP AND sprint in openSprints()
+project = ZCAPP AND status = "Listo para pruebas"
+project = ZCAPP AND labels = ruta-critica
+project = ZCAPP AND labels = zona-cero
 ```
