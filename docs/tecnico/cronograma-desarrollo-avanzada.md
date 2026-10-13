@@ -173,7 +173,7 @@ Adenda N.º 1, pago recurrente con Pagomedios ($300, IVA incluido): solo si Will
 | Proyecto Supabase | Rol | Plan acordado |
 |---|---|---|
 | `zona-cero` | Staging / QA (pruebas, demos William, Sprint 1–6) | **Free** |
-| `zona-cero-prod` *(por crear, Sprint 7)* | Producción — socios y staff reales | **Pro** (recomendado) |
+| `zona-cero-prod` *(creado el 27 sep 2026, ZCAPP-60)* | Producción — socios y staff reales | Free hoy; **Pro** antes del Go-Live (ZCAPP-59) |
 
 La etiqueta **main / PRODUCTION** en el dashboard de Supabase **no** indica el ambiente del gym: es el nombre de la rama principal de Postgres. Staging y producción se separan por **proyecto Supabase distinto**, no por cambiar ese badge.
 
@@ -189,7 +189,7 @@ El plan Free permite **2 proyectos** — suficiente para staging + prod sin cost
 
 | Trigger | Acción |
 |---|---|
-| **Sprint 6** (29 Oct) | Crear proyecto `zona-cero-prod`; mantener staging en Free |
+| **Sprint 6** (29 Oct) | ~~Crear proyecto `zona-cero-prod`~~ (adelantado y hecho el 27 sep, ZCAPP-60); mantener staging en Free |
 | **1–2 semanas antes Go-Live** (≈ 05 Dic) | Upgrade **Pro** en prod: backups diarios, sin pausa por inactividad |
 | Socios reales operando | Monitorear uso; Pro en prod como baseline operativa |
 
