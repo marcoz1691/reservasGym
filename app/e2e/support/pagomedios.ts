@@ -11,7 +11,9 @@ import type { Page } from '@playwright/test'
  */
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 export const PAGOMEDIOS_API = 'https://api.abitmedia.cloud/pagomedios/v2'
-export const FN_URL = 'http://localhost:8000'
+/** Puerto de la función; `E2E_FN_PORT` permite usar otro si el 8000 está ocupado. */
+export const FN_PORT = process.env.E2E_FN_PORT ?? '8000'
+export const FN_URL = `http://localhost:${FN_PORT}`
 /** El retorno de Pagomedios redirige aquí; la prueba lo intercepta, no hace falta la app. */
 export const APP_URL = 'http://localhost:5173'
 
@@ -121,6 +123,7 @@ export async function startFunction(): Promise<ChildProcess> {
         PAGOMEDIOS_TAX_RATE: env.PAGOMEDIOS_TAX_RATE ?? '0.15',
         APP_URL,
         FUNCTION_PUBLIC_URL: FN_URL,
+        DENO_SERVE_ADDRESS: `tcp:0.0.0.0:${FN_PORT}`,
       },
       stdio: 'ignore',
     },
