@@ -820,6 +820,7 @@ describe('PagomediosCheckoutPage — pago recurrente', () => {
 
     expect(await screen.findByText('¡Pago aprobado!')).toBeInTheDocument()
     expect(screen.getByText(/Tu tarjeta quedó registrada\. Los meses siguientes Zona Cero hará el cobro/)).toBeInTheDocument()
+    expect(screen.getByText(/Cada renovación puede tardar hasta 24 horas en verse en la app/)).toBeInTheDocument()
   })
 
   it('cobrado sin membresía aplicada: no dice que está activa, recepción la confirma', async () => {

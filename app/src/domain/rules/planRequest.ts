@@ -5,6 +5,7 @@ export const MANUAL_PAYMENT_LABELS: Record<ManualPaymentMethod, string> = {
   transfer: 'Transferencia',
   card_pos: 'Tarjeta Datafast',
   deuna: 'Deuna',
+  pagomedios_debit: 'Débito Pagomedios',
 }
 
 export const PAYMENT_VALIDATION_NOTICE =

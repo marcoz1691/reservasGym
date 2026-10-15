@@ -8,6 +8,7 @@ import { LocalRepository } from '@/data/localRepository'
 import { resetRepositoryForTests } from '@/data/repository'
 import { DEMO_PASSWORD, createSeedState } from '@/data/seed'
 import type { GymState } from '@/domain/models'
+import { formatPaymentMethod } from '@/lib/format'
 
 const STORAGE_KEY = 'reservasgym.intermedia.v2'
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -122,6 +123,26 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
       })
 
       expect(payment.reference).toBeNull()
+    })
+
+    it('[ZC17-04b] Débito Pagomedios: renueva el plan y se ve con su propio método', async () => {
+      const repo = new LocalRepository()
+      resetRepositoryForTests(repo)
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+      const { payment, membership } = await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-mensual-full',
+        amountCents: 4500,
+        manualMethod: 'pagomedios_debit',
+        reference: 'PM-883120',
+      })
+
+      expect(payment.status).toBe('approved')
+      expect(payment.manualMethod).toBe('pagomedios_debit')
+      expect(payment.reference).toBe('PM-883120')
+      expect(membership.status).toBe('active')
+      expect(formatPaymentMethod(payment.provider, payment.manualMethod)).toBe('Débito Pagomedios')
     })
   })
 
@@ -481,6 +502,34 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
       await user.click(screen.getByRole('button', { name: 'Deuna' }))
       expect(screen.getByRole('button', { name: 'Deuna' })).toHaveAttribute('aria-pressed', 'true')
       expect(screen.getByText('ZC-ABC123')).toBeInTheDocument()
+      expect(screen.queryByText('TRANSF-00129')).toBeNull()
+    })
+
+    it('[ZC17-19] El débito de Pagomedios se registra en el POS y el historial lo suma y filtra aparte', async () => {
+      const user = userEvent.setup()
+      const repo = new LocalRepository()
+      resetRepositoryForTests(repo)
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-mensual-full',
+        amountCents: 4500,
+        manualMethod: 'pagomedios_debit',
+        reference: 'PM-883120',
+      })
+
+      renderCobros()
+      expect(screen.queryByText(/hasta 24 horas en mostrarlo/)).toBeNull()
+      await user.click(await screen.findByText('Débito recurrente Pagomedios'))
+      expect(screen.getByRole('note')).toHaveTextContent(/panel de Pagomedios.*aprobado.*hasta 24 horas/)
+      await user.click(screen.getByText(/Historial General de Cobros/i))
+
+      const debitMetric = (await screen.findByText('Renovaciones mensuales')).parentElement!
+      expect(debitMetric).toHaveTextContent('$45.00 USD')
+
+      await user.click(screen.getByRole('button', { name: 'Débito Pagomedios' }))
+      expect(screen.getByText('PM-883120')).toBeInTheDocument()
+      expect(screen.queryByText('ZC-ABC123')).toBeNull()
       expect(screen.queryByText('TRANSF-00129')).toBeNull()
     })
   })

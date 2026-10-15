@@ -13,6 +13,7 @@ import {
   PlusCircle,
   QrCode,
   RefreshCw,
+  Repeat,
   Search,
   ShieldCheck,
   UserCheck,
@@ -65,11 +66,17 @@ const POS_METHODS: {
   { value: 'cash', title: 'Efectivo', detail: 'Cobro en caja', icon: Banknote },
   { value: 'transfer', title: 'Transferencia Bancaria', detail: 'Banco / App', icon: Building2 },
   { value: 'deuna', title: MANUAL_PAYMENT_LABELS.deuna, detail: 'QR o código del gym', icon: QrCode },
+  {
+    value: 'pagomedios_debit',
+    title: 'Débito recurrente Pagomedios',
+    detail: 'Cobro mensual automático',
+    icon: Repeat,
+  },
 ]
 
 const HISTORY_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: 'Todos los métodos' },
-  ...(['card_pos', 'cash', 'transfer', 'deuna'] as const).map((method) => ({
+  ...(['card_pos', 'cash', 'transfer', 'deuna', 'pagomedios_debit'] as const).map((method) => ({
     value: method,
     label: formatPaymentMethod('manual', method),
   })),
@@ -334,6 +341,9 @@ export function CobrosPage() {
     const deunaCents = approved
       .filter((p) => p.manualMethod === 'deuna')
       .reduce((sum, p) => sum + p.amountCents, 0)
+    const debitCents = approved
+      .filter((p) => p.manualMethod === 'pagomedios_debit')
+      .reduce((sum, p) => sum + p.amountCents, 0)
     const onlineCents = approved
       .filter((p) => p.provider === 'pagomedios')
       .reduce((sum, p) => sum + p.amountCents, 0)
@@ -344,6 +354,7 @@ export function CobrosPage() {
       transferUsd: transferCents / 100,
       cardPosUsd: cardPosCents / 100,
       deunaUsd: deunaCents / 100,
+      debitUsd: debitCents / 100,
       onlineUsd: onlineCents / 100,
       totalTransactions: approved.length,
     }
@@ -974,6 +985,20 @@ export function CobrosPage() {
                         </button>
                       ))}
                     </div>
+                    {paymentMethod === 'pagomedios_debit' ? (
+                      <div
+                        role="note"
+                        className="flex items-start gap-2 rounded-2xl border border-warn/40 bg-warn-soft p-3 text-xs text-ink-2"
+                      >
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn" aria-hidden />
+                        <span>
+                          Registra este cobro solo cuando el panel de Pagomedios muestre el débito
+                          mensual del socio como <strong>aprobado</strong>. Pagomedios puede tardar
+                          hasta 24 horas en mostrarlo. Usa como referencia el número del cobro en
+                          Pagomedios.
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Amount and Reference */}
@@ -1232,7 +1257,7 @@ export function CobrosPage() {
       {activeTab === 'historial' && (
         <div className="space-y-4">
           {/* Metrics summary cards */}
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid gap-3 sm:grid-cols-4 lg:grid-cols-7">
             <Card>
               <div className="text-xs font-bold uppercase text-ink-3">Total Recaudado</div>
               <div className="mt-1 text-2xl font-black text-acc-dark">
@@ -1273,6 +1298,14 @@ export function CobrosPage() {
                 ${metrics.deunaUsd.toFixed(2)} USD
               </div>
               <div className="text-xs text-ink-3 mt-1">QR o código Deuna</div>
+            </Card>
+
+            <Card>
+              <div className="text-xs font-bold uppercase text-ink-3">Débito Pagomedios</div>
+              <div className="mt-1 text-2xl font-black text-ink">
+                ${metrics.debitUsd.toFixed(2)} USD
+              </div>
+              <div className="text-xs text-ink-3 mt-1">Renovaciones mensuales</div>
             </Card>
 
             <Card>
