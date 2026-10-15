@@ -13,9 +13,14 @@ const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 export const PAGOMEDIOS_API = 'https://api.abitmedia.cloud/pagomedios/v2'
 /** Puerto de la función; `E2E_FN_PORT` permite usar otro si el 8000 está ocupado. */
 export const FN_PORT = process.env.E2E_FN_PORT ?? '8000'
-export const FN_URL = `http://localhost:${FN_PORT}`
-/** El retorno de Pagomedios redirige aquí; la prueba lo intercepta, no hace falta la app. */
-export const APP_URL = 'http://localhost:5173'
+/** `E2E_FN_URL` prueba contra la función desplegada (p. ej. la de QA) en vez de levantarla en local. */
+const DEPLOYED_FN_URL = process.env.E2E_FN_URL
+export const FN_URL = DEPLOYED_FN_URL ?? `http://localhost:${FN_PORT}`
+/**
+ * El retorno de Pagomedios redirige aquí; la prueba lo intercepta, no hace falta la app.
+ * Con la función desplegada, es el APP_URL de sus secrets (`E2E_APP_URL`).
+ */
+export const APP_URL = process.env.E2E_APP_URL ?? 'http://localhost:5173'
 
 function readEnvFile(file: string): Record<string, string> {
   const path = join(APP_DIR, file)
@@ -101,11 +106,12 @@ export async function callFunction(body: Record<string, unknown>, jwt?: string) 
 }
 
 /** Levanta pagomedios-payment con Deno y espera a que responda. */
-export async function startFunction(): Promise<ChildProcess> {
+export async function startFunction(): Promise<ChildProcess | undefined> {
+  if (DEPLOYED_FN_URL) return undefined
   const busy = await fetch(FN_URL, { method: 'OPTIONS' }).then(() => true).catch(() => false)
   if (busy) {
     throw new Error(
-      'El puerto 8000 está ocupado (¿npm run pagomedios:fn corriendo?). Deténlo antes de estas pruebas.',
+      `El puerto ${FN_PORT} está ocupado (¿npm run pagomedios:fn corriendo?). Deténlo o usa E2E_FN_PORT.`,
     )
   }
   const child = spawn(

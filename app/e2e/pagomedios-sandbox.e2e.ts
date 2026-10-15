@@ -277,27 +277,34 @@ test.describe('Edge Function pagomedios-payment + sandbox real', () => {
   test('después del pago la app muestra el plan nuevo, la vigencia y el pago en el historial', async ({ browser }) => {
     test.skip(!approvedPaymentId, 'Depende del pago aprobado con Visa')
     const appUp = await fetch(APP_URL).then((res) => res.ok).catch(() => false)
-    test.skip(!appUp, 'La app no está corriendo en localhost:5173 (npm run dev:staging)')
+    test.skip(!appUp, `La app no responde en ${APP_URL} (npm run dev:staging o E2E_APP_URL)`)
 
-    const [membership] = await sql<{ plan_name: string; ends_at: string; status: string }>(
-      `select pl.name plan_name, m.ends_at, m.status from memberships m
+    const [membership] = await sql<{ plan_name: string; starts_at: string; ends_at: string; status: string }>(
+      `select pl.name plan_name, m.starts_at, m.ends_at, m.status from memberships m
        join membership_plans pl on pl.id = m.plan_id
        where m.user_id = '${socioId}' order by m.ends_at desc limit 1`,
     )
     const [pay] = await sql<{ mp_payment_id: string }>(`select mp_payment_id from payments where id = '${approvedPaymentId}'`)
-    const endsLabel = new Date(membership!.ends_at).toLocaleDateString('es-EC', {
+    const dateLabel = (iso: string) => new Date(iso).toLocaleDateString('es-EC', {
       day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Guayaquil',
     })
+    const endsLabel = dateLabel(membership!.ends_at)
+    // Con otro plan vigente, la compra queda en cola (reglas de planes): empieza al terminar el actual.
+    const queued = new Date(membership!.starts_at).getTime() > Date.now()
 
     const member = await (await browser.newContext({ baseURL: APP_URL })).newPage()
     await login(member, ACCOUNTS.socio)
 
-    await test.step('Mi Plan: plan nuevo, activo y con la vigencia de la base', async () => {
+    await test.step('Mi Plan: plan nuevo (activo o en cola) con la vigencia de la base', async () => {
       await member.goto('/membresia')
       const card = member.getByRole('region', { name: 'Tu membresía' }).or(member.getByLabel('Tu membresía')).first()
-      await expect(card).toContainText(membership!.plan_name)
       await expect(card).toContainText('Membresía activa')
-      await expect(card).toContainText(endsLabel)
+      if (queued) {
+        await expect(card).toContainText(`Próximo plan: ${membership!.plan_name}, empieza el ${dateLabel(membership!.starts_at)}`)
+      } else {
+        await expect(card).toContainText(membership!.plan_name)
+        await expect(card).toContainText(endsLabel)
+      }
       await expect(member.getByText(/Solicitud enviada/i)).toHaveCount(0)
     })
 
@@ -308,9 +315,15 @@ test.describe('Edge Function pagomedios-payment + sandbox real', () => {
       await expect(history).toContainText('Aprobado')
     })
 
+    // La cuenta admin de QA tiene otra contraseña: sin E2E_ADMIN_PASSWORD este paso no corre.
+    const adminPassword = process.env.E2E_ADMIN_PASSWORD
+    if (!adminPassword) {
+      test.info().annotations.push({ type: 'skip-step', description: 'Administración: falta E2E_ADMIN_PASSWORD' })
+      return
+    }
     await test.step('Administración: el cobro en línea aparece con su autorización', async () => {
       const admin = await (await browser.newContext({ baseURL: APP_URL, viewport: { width: 1280, height: 900 } })).newPage()
-      await login(admin, ACCOUNTS.admin)
+      await login(admin, ACCOUNTS.admin, adminPassword)
       await admin.goto('/admin/cobros')
       await admin.getByText(/Historial General de Cobros/i).click()
       await admin.getByRole('button', { name: 'En línea (Pagomedios)' }).click()
