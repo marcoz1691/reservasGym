@@ -25,6 +25,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2"
 import { splitTax } from "./tax.ts"
+import { writeWithAuthCode } from "./authCode.ts"
 import {
   dayPassBlock,
   onlinePaymentsBlock,
@@ -446,13 +447,9 @@ async function approveAndActivate(
       .eq("id", payment.id)
       .in("status", ["pending", "rejected"])
       .select("id")
-  let { data: claimed, error: claimError } = await claim(authCode)
-  // Hasta aplicar quitar-mercadopago-datafast.sql, mp_payment_id es único y los códigos de
-  // autorización del banco se repiten: sin esto el pago cobrado quedaría pendiente y sin membresía.
-  if (claimError?.code === "23505" && authCode) {
-    console.error("código de autorización repetido; se aprueba sin guardarlo", authCode)
-    ;({ data: claimed, error: claimError } = await claim(""))
-  }
+  const { data: claimed, error: claimError } = await writeWithAuthCode(claim, authCode, (code) =>
+    console.error("código de autorización repetido; se aprueba sin guardarlo", code),
+  )
   if (claimError) throw new Error(claimError.message)
   if (!claimed || claimed.length === 0) {
     return { ok: true, status: "approved", receipt: await receiptFor(payment.id, admin) }
@@ -630,11 +627,10 @@ async function verifyRecurring(
     // "Cobrado" y el código de autorización se guardan juntos: si algo falla después,
     // la siguiente verificación activa la membresía sin volver a cobrar ni perder el código.
     const authCode = String(result?.authorizationCode ?? "").slice(0, 120)
-    let { error: chargedError } = await setChargingNote(
-      "charged",
-      authCode ? { mp_payment_id: authCode } : {},
+    const { error: chargedError } = await writeWithAuthCode(
+      (code) => setChargingNote("charged", code ? { mp_payment_id: code } : {}),
+      authCode,
     )
-    if (chargedError?.code === "23505") ({ error: chargedError } = await setChargingNote("charged"))
     if (chargedError) console.error("cobro autorizado sin marcar como cobrado", payment.id, chargedError)
     return await approveAndActivate(payment, "", admin)
   }
