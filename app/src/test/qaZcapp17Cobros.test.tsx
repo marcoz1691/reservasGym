@@ -8,6 +8,7 @@ import { LocalRepository } from '@/data/localRepository'
 import { resetRepositoryForTests } from '@/data/repository'
 import { DEMO_PASSWORD, createSeedState } from '@/data/seed'
 import type { GymState } from '@/domain/models'
+import { formatPaymentMethod } from '@/lib/format'
 
 const STORAGE_KEY = 'reservasgym.intermedia.v2'
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -123,6 +124,26 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
 
       expect(payment.reference).toBeNull()
     })
+
+    it('[ZC17-04b] Pago recurrente: renueva el plan y se ve con su propio método', async () => {
+      const repo = new LocalRepository()
+      resetRepositoryForTests(repo)
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+      const { payment, membership } = await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-mensual-full',
+        amountCents: 4500,
+        manualMethod: 'pagomedios_recurring',
+        reference: 'PM-883120',
+      })
+
+      expect(payment.status).toBe('approved')
+      expect(payment.manualMethod).toBe('pagomedios_recurring')
+      expect(payment.reference).toBe('PM-883120')
+      expect(membership.status).toBe('active')
+      expect(formatPaymentMethod(payment.provider, payment.manualMethod)).toBe('Pago recurrente')
+    })
   })
 
   describe('Extensión de membresía al cobrar', () => {
@@ -180,6 +201,40 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
       expect(endsInDays).toBeLessThan(30.1)
       expect(membership.status).toBe('active')
       expect(membership.id).toBe('mem_grace_qa')
+    })
+
+    it('[ZC17-06b] Pago recurrente en gracia: renueva desde el fin anterior y sigue el ciclo de Pagomedios', async () => {
+      const startsAt = daysFromNow(-31)
+      const endsAt = daysFromNow(-1)
+      seedState((state) => {
+        state.memberships.push({
+          id: 'mem_recurring_qa',
+          userId: 'user_member_2',
+          planId: 'plan-mensual-full',
+          status: 'active',
+          startsAt,
+          endsAt,
+          graceEndsAt: daysFromNow(2),
+          visitsLeft: null,
+        })
+      })
+
+      const repo = new LocalRepository()
+      resetRepositoryForTests(repo)
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+      const { membership } = await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-mensual-full',
+        amountCents: 4500,
+        manualMethod: 'pagomedios_recurring',
+        reference: '904096',
+      })
+
+      expect(membership.id).toBe('mem_recurring_qa')
+      expect(membership.startsAt).toBe(startsAt)
+      expect(Math.round((new Date(membership.endsAt).getTime() - new Date(endsAt).getTime()) / DAY_MS)).toBe(30)
+      expect(membership.status).toBe('active')
     })
 
     it('[ZC17-07] Plan con cupo: renovar a un socio vigente acumula los pases restantes', async () => {
@@ -483,5 +538,128 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
       expect(screen.getByText('ZC-ABC123')).toBeInTheDocument()
       expect(screen.queryByText('TRANSF-00129')).toBeNull()
     })
+
+    it('[ZC17-19] El pago recurrente se registra en el POS y el historial lo suma y filtra aparte', async () => {
+      const user = userEvent.setup()
+      const repo = new LocalRepository()
+      resetRepositoryForTests(repo)
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-mensual-full',
+        amountCents: 4500,
+        manualMethod: 'pagomedios_recurring',
+        reference: 'PM-883120',
+      })
+
+      renderCobros()
+      expect(screen.queryByText(/hasta 24 horas en mostrarlo/)).toBeNull()
+      await user.click(await screen.findByText('Pago recurrente Pagomedios'))
+      expect(screen.getByRole('note')).toHaveTextContent(/panel de Pagomedios.*aprobado.*hasta 24 horas/)
+      await user.click(screen.getByText(/Historial General de Cobros/i))
+
+      const recurringMetric = (await screen.findByText('Renovaciones mensuales')).parentElement!
+      expect(recurringMetric).toHaveTextContent('$45.00 USD')
+
+      await user.click(screen.getByRole('button', { name: 'Pago recurrente' }))
+      expect(screen.getByText('PM-883120')).toBeInTheDocument()
+      expect(screen.queryByText('ZC-ABC123')).toBeNull()
+      expect(screen.queryByText('TRANSF-00129')).toBeNull()
+    })
+  })
+})
+
+describe('[ZCAPP-78] Cobros: plan y medio sugeridos al elegir al socio', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('[ZC78-01] el socio que pagó por transferencia sale con su plan plegado, monto y transferencia', async () => {
+    const user = userEvent.setup()
+    const repo = new LocalRepository()
+    resetRepositoryForTests(repo)
+    await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+    renderCobros()
+    await user.click(await screen.findByText('Ana Socio'))
+
+    expect(screen.getByRole('button', { name: 'Cambiar plan' })).toBeInTheDocument()
+    expect(screen.getAllByText('Plan Mensual Ilimitado').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Plan Trimestral')).toBeNull()
+    expect(screen.getByLabelText(/Monto a Cobrar \(USD\)/i)).toHaveValue('45.00')
+    expect(screen.getByRole('button', { name: /^Transferencia Bancaria/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText(/Ana Socio · Plan Mensual Ilimitado ·/)).toHaveTextContent('Transferencia')
+  })
+
+  it('[ZC78-02] "Cambiar plan" abre la lista y al elegir otro plan se vuelve a plegar', async () => {
+    const user = userEvent.setup()
+    const repo = new LocalRepository()
+    resetRepositoryForTests(repo)
+    await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+    renderCobros()
+    await user.click(await screen.findByText('Ana Socio'))
+    await user.click(screen.getByRole('button', { name: 'Cambiar plan' }))
+    await user.click(screen.getByText('Plan Trimestral'))
+
+    expect(screen.getByRole('button', { name: 'Cambiar plan' })).toBeInTheDocument()
+    expect(screen.queryByText('Pase 10 Visitas')).toBeNull()
+    expect(screen.getByLabelText(/Monto a Cobrar \(USD\)/i)).toHaveValue('120.00')
+  })
+
+  it('[ZC78-03] al cambiar a un socio sin historial no queda el plan ni el medio del anterior', async () => {
+    const user = userEvent.setup()
+    const repo = new LocalRepository()
+    resetRepositoryForTests(repo)
+    await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+    renderCobros()
+    await user.click(await screen.findByText('Ana Socio'))
+    await user.click(screen.getByRole('button', { name: 'Cambiar' }))
+    await user.click(await screen.findByText('Luis Pérez'))
+
+    expect(screen.queryByRole('button', { name: 'Cambiar plan' })).toBeNull()
+    expect(screen.getByText('Plan Trimestral')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Monto a Cobrar \(USD\)/i)).toHaveValue('')
+    expect(screen.getByRole('button', { name: /^Datáfono POS Datafast/ })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('[ZC78-04] con pago recurrente sugiere «Pago recurrente Pagomedios» y su aviso', async () => {
+    seedState((state) => {
+      state.payments!.push({
+        id: 'pay_recurring_first',
+        userId: 'user_member_2',
+        planId: 'plan-mensual-full',
+        membershipId: 'mem_recurring_first',
+        amountCents: 4500,
+        status: 'approved',
+        provider: 'pagomedios',
+        manualMethod: null,
+        notes: 'Pago recurrente (ID 1723456784): primer mes cobrado.',
+        createdAt: new Date(Date.now() - 31 * DAY_MS).toISOString(),
+        approvedAt: new Date(Date.now() - 31 * DAY_MS).toISOString(),
+      })
+      state.memberships.push({
+        id: 'mem_recurring_first',
+        userId: 'user_member_2',
+        planId: 'plan-mensual-full',
+        status: 'active',
+        startsAt: daysFromNow(-31),
+        endsAt: daysFromNow(-1),
+        graceEndsAt: daysFromNow(2),
+        visitsLeft: null,
+      })
+    })
+    const user = userEvent.setup()
+    const repo = new LocalRepository()
+    resetRepositoryForTests(repo)
+    await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+    renderCobros()
+    await user.click(await screen.findByText('Luis Pérez'))
+
+    expect(screen.getAllByText('Plan Mensual Ilimitado').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /^Pago recurrente Pagomedios/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('note')).toHaveTextContent(/hasta 24 horas/)
   })
 })
