@@ -148,7 +148,7 @@ export async function startFunction(): Promise<ChildProcess | undefined> {
  * registro) y lo envía. El número y el CVV viven en iframes que cargan aparte: se espera
  * a que el número quede escrito antes de seguir.
  */
-async function fillCardForm(page: Page, card: TestCard) {
+async function fillCardForm(page: Page, card: TestCard, onFilled?: () => Promise<void>) {
   const number = page.frameLocator('iframe[name="card.number"]').getByRole('textbox')
   for (let attempt = 0; attempt < 3; attempt++) {
     await number.click()
@@ -161,6 +161,7 @@ async function fillCardForm(page: Page, card: TestCard) {
   // Con tarjetas guardadas cada una trae su CVV: el de la tarjeta nueva es el último.
   await page.locator('iframe[name="card.cvv"]').last().contentFrame().getByRole('textbox')
     .pressSequentially(card.cvv, { delay: 20 })
+  await onFilled?.()
   // El botón muestra "Pagar $X" o "Registrar tarjeta"; su nombre accesible es "Pagar".
   // Con tarjetas guardadas hay otro "Pagar" arriba: el de la tarjeta nueva es el último.
   await page.getByRole('button', { name: 'Pagar', exact: true }).last().click()
@@ -195,8 +196,14 @@ export async function payOnPagomedios(page: Page, url: string, brand: 'Visa' | '
  * Registra una tarjeta de prueba en el formulario "Registrar tarjeta" de Pagomedios
  * (POST /cards/register): cobra $1,15 de validación que Pagomedios reversa solo.
  */
-export async function registerCardOnPagomedios(page: Page, url: string, brand: 'Visa' | 'Mastercard', card: TestCard) {
+export async function registerCardOnPagomedios(
+  page: Page,
+  url: string,
+  brand: 'Visa' | 'Mastercard',
+  card: TestCard,
+  onFilled?: () => Promise<void>,
+) {
   await page.goto(url)
   await page.getByRole('button', { name: new RegExp(`^${brand}$`, 'i') }).first().click()
-  await fillCardForm(page, card)
+  await fillCardForm(page, card, onFilled)
 }
