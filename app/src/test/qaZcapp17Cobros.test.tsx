@@ -125,7 +125,7 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
       expect(payment.reference).toBeNull()
     })
 
-    it('[ZC17-04b] Débito Pagomedios: renueva el plan y se ve con su propio método', async () => {
+    it('[ZC17-04b] Pago recurrente: renueva el plan y se ve con su propio método', async () => {
       const repo = new LocalRepository()
       resetRepositoryForTests(repo)
       await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
@@ -134,15 +134,15 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
         userId: 'user_member_2',
         planId: 'plan-mensual-full',
         amountCents: 4500,
-        manualMethod: 'pagomedios_debit',
+        manualMethod: 'pagomedios_recurring',
         reference: 'PM-883120',
       })
 
       expect(payment.status).toBe('approved')
-      expect(payment.manualMethod).toBe('pagomedios_debit')
+      expect(payment.manualMethod).toBe('pagomedios_recurring')
       expect(payment.reference).toBe('PM-883120')
       expect(membership.status).toBe('active')
-      expect(formatPaymentMethod(payment.provider, payment.manualMethod)).toBe('Débito Pagomedios')
+      expect(formatPaymentMethod(payment.provider, payment.manualMethod)).toBe('Pago recurrente')
     })
   })
 
@@ -505,7 +505,7 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
       expect(screen.queryByText('TRANSF-00129')).toBeNull()
     })
 
-    it('[ZC17-19] El débito de Pagomedios se registra en el POS y el historial lo suma y filtra aparte', async () => {
+    it('[ZC17-19] El pago recurrente se registra en el POS y el historial lo suma y filtra aparte', async () => {
       const user = userEvent.setup()
       const repo = new LocalRepository()
       resetRepositoryForTests(repo)
@@ -514,20 +514,20 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
         userId: 'user_member_2',
         planId: 'plan-mensual-full',
         amountCents: 4500,
-        manualMethod: 'pagomedios_debit',
+        manualMethod: 'pagomedios_recurring',
         reference: 'PM-883120',
       })
 
       renderCobros()
       expect(screen.queryByText(/hasta 24 horas en mostrarlo/)).toBeNull()
-      await user.click(await screen.findByText('Débito recurrente Pagomedios'))
+      await user.click(await screen.findByText('Pago recurrente Pagomedios'))
       expect(screen.getByRole('note')).toHaveTextContent(/panel de Pagomedios.*aprobado.*hasta 24 horas/)
       await user.click(screen.getByText(/Historial General de Cobros/i))
 
-      const debitMetric = (await screen.findByText('Renovaciones mensuales')).parentElement!
-      expect(debitMetric).toHaveTextContent('$45.00 USD')
+      const recurringMetric = (await screen.findByText('Renovaciones mensuales')).parentElement!
+      expect(recurringMetric).toHaveTextContent('$45.00 USD')
 
-      await user.click(screen.getByRole('button', { name: 'Débito Pagomedios' }))
+      await user.click(screen.getByRole('button', { name: 'Pago recurrente' }))
       expect(screen.getByText('PM-883120')).toBeInTheDocument()
       expect(screen.queryByText('ZC-ABC123')).toBeNull()
       expect(screen.queryByText('TRANSF-00129')).toBeNull()

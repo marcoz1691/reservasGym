@@ -83,8 +83,8 @@ export function ApprovedReceipt({ receipt }: { receipt?: OnlinePaymentReceipt })
         <p className="flex items-start gap-2">
           <Repeat className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />
           Tu tarjeta quedó registrada para el cobro mensual. Después de cada cobro, tu plan se
-          renueva en la app en un plazo de hasta 24 horas. Para cancelar el débito, avisa en
-          recepción.
+          renueva en la app en un plazo de hasta 24 horas. Para cancelar el pago
+          recurrente, avisa en recepción.
         </p>
       ) : null}
       {rows.length > 0 ? (

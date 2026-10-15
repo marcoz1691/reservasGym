@@ -37,8 +37,8 @@ import {
   PlansShowcase,
 } from './components'
 
-// El débito de Pagomedios lo registra recepción; el socio no lo pide desde Mi Plan.
-type RequestMethod = Exclude<ManualPaymentMethod, 'pagomedios_debit'>
+// El pago recurrente lo registra recepción; el socio no lo pide desde Mi Plan.
+type RequestMethod = Exclude<ManualPaymentMethod, 'pagomedios_recurring'>
 
 const PAYMENT_METHODS: RequestMethod[] = ['cash', 'transfer', 'card_pos', 'deuna']
 
