@@ -20,9 +20,9 @@ import { splitTax } from '../supabase/functions/pagomedios-payment/tax'
  *
  *  - Día 31 (en gracia): el plan venció ayer. Pagomedios cobra el mes 2 (sandbox,
  *    POST /cards/charge con la tarjeta registrada) y recepción lo registra en Cobros
- *    con «Pago recurrente Pagomedios». El plan sigue el mismo ciclo (fin anterior + 30).
+ *    con «Pago recurrente Pagomedios». El plan sigue el ciclo de Pagomedios (fin anterior + 30).
  *  - Día 34 o más (gracia vencida): reservas bloqueadas. Al registrar el mes 3 el plan
- *    cuenta desde el día del registro: el ciclo de la app se corre respecto al de Pagomedios.
+ *    vuelve a quedar activo y también cuenta desde el fin anterior (recurringRenewal.ts).
  *
  * Usa un socio propio (socio.recurrente@zonacero.test) que se crea si no existe.
  * La app de esta rama debe correr contra QA (E2E_BASE_URL, p. ej. vite --mode staging --port 5191).
@@ -239,15 +239,10 @@ test('pago recurrente: día 1, día 31 en gracia y día 34 con la gracia vencida
     expect(pay).toMatchObject({ provider: 'manual', manual_method: 'pagomedios_recurring', reference: code2, status: 'approved', amount_cents: PLAN.cents })
   })
 
-  await test.step('el plan vuelve a quedar activo 30 días desde el registro (en gracia cuenta desde hoy)', async () => {
+  await test.step('el plan sigue el ciclo de Pagomedios: fin anterior + 30 días, sin regalar los días de atraso', async () => {
     const m = await membership()
     expect(m.status).toBe('active')
-    // apply_plan_purchase: greatest(fin anterior, fecha del cobro) + 30. En gracia el fin anterior ya pasó,
-    // así que el ciclo de la app se corre lo que tardó recepción en registrar (aquí, 1 día).
-    expect((ms(m.ends_at) - Date.now()) / DAY).toBeCloseTo(PLAN.days, 1)
-    const drift = (ms(m.ends_at) - ms(endMonth1)) / DAY - PLAN.days
-    test.info().annotations.push({ type: 'corrimiento del ciclo (días)', description: drift.toFixed(2) })
-    expect(drift).toBeCloseTo(1, 1)
+    expect((ms(m.ends_at) - ms(endMonth1)) / DAY).toBeCloseTo(PLAN.days, 3)
     expect(await bannerType(socio)).toBeNull()
     expect(await blockReason()).toBeNull()
   })
@@ -261,10 +256,12 @@ test('pago recurrente: día 1, día 31 en gracia y día 34 con la gracia vencida
 
   // ── Día 34 o más: recepción no renovó a tiempo ──
   let code3 = ''
+  let endMonth2 = ''
   await test.step('día 34 del mes 2: gracia vencida, el socio no puede reservar', async () => {
     // Del día 31 del mes 1 al día 34 del mes 2 pasan 33 días.
     await travel(33)
     const m = await membership()
+    endMonth2 = m.ends_at
     expect(ms(m.grace_ends_at)).toBeLessThan(Date.now())
     expect(await blockReason()).not.toBeNull()
     expect(await bannerType(socio)).toBe('expired')
@@ -275,11 +272,10 @@ test('pago recurrente: día 1, día 31 en gracia y día 34 con la gracia vencida
     await receptionRegisters(admin, code3)
   })
 
-  await test.step('el plan vuelve a estar activo, pero cuenta desde hoy: el ciclo se corre', async () => {
+  await test.step('vuelve a estar activo y también sigue el ciclo: fin anterior + 30 días', async () => {
     const m = await membership()
     expect(m.status).toBe('active')
-    expect((ms(m.ends_at) - Date.now()) / DAY).toBeGreaterThan(PLAN.days - 0.1)
-    expect((ms(m.ends_at) - Date.now()) / DAY).toBeLessThan(PLAN.days + 0.1)
+    expect((ms(m.ends_at) - ms(endMonth2)) / DAY).toBeCloseTo(PLAN.days, 3)
     expect(await blockReason()).toBeNull()
     expect(await bannerType(socio)).toBeNull()
   })

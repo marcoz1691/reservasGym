@@ -203,6 +203,40 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
       expect(membership.id).toBe('mem_grace_qa')
     })
 
+    it('[ZC17-06b] Pago recurrente en gracia: renueva desde el fin anterior y sigue el ciclo de Pagomedios', async () => {
+      const startsAt = daysFromNow(-31)
+      const endsAt = daysFromNow(-1)
+      seedState((state) => {
+        state.memberships.push({
+          id: 'mem_recurring_qa',
+          userId: 'user_member_2',
+          planId: 'plan-mensual-full',
+          status: 'active',
+          startsAt,
+          endsAt,
+          graceEndsAt: daysFromNow(2),
+          visitsLeft: null,
+        })
+      })
+
+      const repo = new LocalRepository()
+      resetRepositoryForTests(repo)
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+      const { membership } = await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-mensual-full',
+        amountCents: 4500,
+        manualMethod: 'pagomedios_recurring',
+        reference: '904096',
+      })
+
+      expect(membership.id).toBe('mem_recurring_qa')
+      expect(membership.startsAt).toBe(startsAt)
+      expect(Math.round((new Date(membership.endsAt).getTime() - new Date(endsAt).getTime()) / DAY_MS)).toBe(30)
+      expect(membership.status).toBe('active')
+    })
+
     it('[ZC17-07] Plan con cupo: renovar a un socio vigente acumula los pases restantes', async () => {
       seedState((state) => {
         state.memberships.push({

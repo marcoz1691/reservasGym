@@ -47,6 +47,7 @@ import {
 } from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
 import { readPdfDataUrl, validateTermsPdf } from '../domain/rules/termsDocument'
+import { recurringRenewalFrom } from '../domain/rules/recurringRenewal'
 import type {
   AuthCredentials,
   GymRepository,
@@ -1225,7 +1226,16 @@ export class LocalRepository implements GymRepository {
     if (!plan) throw new Error('Plan no encontrado')
 
     await this.ensureReady()
-    const membership = this.applyPlanPurchase(params.userId, plan, new Date())
+    const now = new Date()
+    const paidAt =
+      params.manualMethod === 'pagomedios_recurring'
+        ? recurringRenewalFrom(
+            (this.state.memberships ?? []).filter((m) => m.userId === params.userId),
+            plan,
+            now,
+          )
+        : now
+    const membership = this.applyPlanPurchase(params.userId, plan, paidAt)
     if (!this.state.payments) this.state.payments = []
 
     const pendingIdx = this.state.payments.findIndex(
