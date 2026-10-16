@@ -18,6 +18,10 @@ import {
 import { displayFirstName } from '@/domain/rules'
 import { DEMO_PASSWORD } from '@/data/seed'
 import { Button, Card, Input } from '@/ui/primitives'
+import { ConsentCheckbox } from '@/features/legal/ConsentCheckbox'
+import { LegalDocumentDialog } from '@/features/legal/LegalDocumentDialog'
+import { LegalLinks } from '@/features/legal/LegalPage'
+import { PRIVACY, TERMS_DOCUMENT, type LegalDocument } from '@/features/legal/legalDocuments'
 
 // Solo para `npm run dev` con datos locales en memoria. QA y producción son
 // públicos: ahí no se muestran ni se embeben credenciales.
@@ -53,6 +57,10 @@ export function LoginPage() {
   const [registerEmail, setRegisterEmail] = useState('')
   const [registerPassword, setRegisterPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  // LOPDP: términos y privacidad se aceptan en casillas separadas (legal_consents)
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false)
+  const [openDoc, setOpenDoc] = useState<LegalDocument | null>(null)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -162,6 +170,10 @@ export function LoginPage() {
       setError('Las contraseñas no coinciden')
       return
     }
+    if (!acceptTerms || !acceptPrivacy) {
+      setError('Para crear tu cuenta acepta los términos y condiciones y la política de privacidad.')
+      return
+    }
 
     setError('')
     setSuccess('')
@@ -174,6 +186,10 @@ export function LoginPage() {
         email,
         password: registerPassword,
         fullName: fullName.trim(),
+        consents: [
+          { document: 'terms', version: TERMS_DOCUMENT.version },
+          { document: 'privacy', version: PRIVACY.version },
+        ],
       })
       // Flujo esperado: crear cuenta → iniciar sesión → ficha en /bienvenida.
       // Si Supabase dejó sesión abierta, la cerramos para forzar el login.
@@ -212,7 +228,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg p-4 py-10">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-bg p-4 py-10">
       <Card className="w-full max-w-lg space-y-6 p-6 sm:p-8">
         {/* Brand header — imagotipo centrado, como en la maqueta del login */}
         <div className="text-center">
@@ -440,6 +456,27 @@ export function LoginPage() {
               />
             </div>
 
+            <div>
+              <ConsentCheckbox
+                checked={acceptTerms}
+                onChange={setAcceptTerms}
+                label="Acepto los términos y condiciones"
+                linkText="términos y condiciones"
+                onOpen={() => setOpenDoc(TERMS_DOCUMENT)}
+              >
+                Acepto los
+              </ConsentCheckbox>
+              <ConsentCheckbox
+                checked={acceptPrivacy}
+                onChange={setAcceptPrivacy}
+                label="Autorizo el tratamiento de mis datos personales según la política de privacidad"
+                linkText="política de privacidad"
+                onOpen={() => setOpenDoc(PRIVACY)}
+              >
+                Autorizo el tratamiento de mis datos según la
+              </ConsentCheckbox>
+            </div>
+
             {error ? (
               <p className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-xs text-danger font-semibold">
                 {error}
@@ -452,6 +489,8 @@ export function LoginPage() {
           </form>
         )}
       </Card>
+      <LegalLinks className="mt-4 justify-center" />
+      {openDoc ? <LegalDocumentDialog doc={openDoc} onClose={() => setOpenDoc(null)} /> : null}
     </main>
   )
 }

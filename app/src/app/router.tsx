@@ -90,6 +90,11 @@ const WelcomeFichaPage = lazy(() =>
     default: m.WelcomeFichaPage,
   })),
 )
+const LegalPage = lazy(() =>
+  import('@/features/legal/LegalPage').then((m) => ({
+    default: m.LegalPage,
+  })),
+)
 
 function RootRedirect() {
   const user = useCurrentUser()
@@ -116,6 +121,8 @@ export function AppRouter() {
         <Route path="/login" element={<LoginPage />} />
         {/* Pública: se llega desde el enlace del correo, sin sesión iniciada. */}
         <Route path="/recuperar" element={<ForgotPasswordPage />} />
+        {/* Públicas: las tiendas y el registro enlazan aquí sin sesión. */}
+        <Route path="/legal/:slug" element={<LegalPage />} />
         <Route element={<RequireAuth />}>
           <Route path="bienvenida" element={<WelcomeFichaPage />} />
           {/* Pago a pantalla completa (fuera del menú), como en las apps de compra. */}

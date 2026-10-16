@@ -6,6 +6,8 @@ import type {
   ClassTemplate,
   GymSettings,
   GymState,
+  LegalConsentContext,
+  LegalConsentInput,
   ManualPaymentMethod,
   Membership,
   MembershipPlan,
@@ -26,6 +28,8 @@ export type AuthCredentials = {
   initialWeightKg?: number
   goals?: string
   healthNotes?: string
+  /** Documentos aceptados en el registro; la base los guarda al crear la cuenta. */
+  consents?: LegalConsentInput[]
 }
 
 export interface GymRepository {
@@ -34,6 +38,8 @@ export interface GymRepository {
   signIn(creds: AuthCredentials): Promise<User>
   signUp(creds: AuthCredentials): Promise<User>
   signOut(): Promise<void>
+  /** Guarda la aceptación de documentos legales del usuario con sesión (fecha del servidor). */
+  recordLegalConsents?(context: LegalConsentContext, consents: LegalConsentInput[]): Promise<void>
   /** Guarda la sesión actual para volver a entrar con Face ID o huella. */
   rememberBiometricSession?(): Promise<void>
   /** Abre la sesión guardada. Falla si venció o no existe. */

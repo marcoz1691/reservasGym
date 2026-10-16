@@ -6,6 +6,8 @@ import type {
   ClassTemplate,
   GymSettings,
   GymState,
+  LegalConsentContext,
+  LegalConsentInput,
   ManualPaymentMethod,
   Membership,
   MembershipPlan,
@@ -301,6 +303,20 @@ export class LocalRepository implements GymRepository {
     return { ...user }
   }
 
+  private pushConsents(userId: string, context: LegalConsentContext, consents: LegalConsentInput[]) {
+    if (!this.state.legalConsents) this.state.legalConsents = []
+    const acceptedAt = new Date().toISOString()
+    for (const c of consents) {
+      this.state.legalConsents.push({ id: uid('consent'), userId, context, acceptedAt, ...c })
+    }
+  }
+
+  async recordLegalConsents(context: LegalConsentContext, consents: LegalConsentInput[]): Promise<void> {
+    const user = await this.requireUser()
+    this.pushConsents(user.id, context, consents)
+    this.persistState()
+  }
+
   async signUp(creds: AuthCredentials): Promise<User> {
     await this.ensureReady()
     if (!creds.fullName?.trim()) throw new Error('Nombre requerido')
@@ -332,6 +348,7 @@ export class LocalRepository implements GymRepository {
     }
     writeCreds(store)
     this.state.users.push(user)
+    this.pushConsents(user.id, 'signup', creds.consents ?? [])
 
     if (user.initialWeightKg && user.initialWeightKg > 0) {
       this.state.measurements.push({
