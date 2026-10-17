@@ -61,7 +61,8 @@ export interface Membership {
 
 export interface Payment {
   id: string
-  userId: string
+  /** Nulo si el socio eliminó su cuenta: el pago queda anonimizado para la contabilidad. */
+  userId: string | null
   planId: string
   membershipId: string | null
   amountCents: number

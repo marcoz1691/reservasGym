@@ -15,7 +15,9 @@ export type LegalDocument = {
   sections: { title: string; paragraphs: string[] }[]
 }
 
-const CONTACT_EMAIL = 'privacidad@zonacerocenter.com'
+// Contacto del responsable (LOPDP art. 12): el del cliente en el contrato. Confirmar con William antes de publicar.
+const CONTACT_EMAIL = 'wramirezfac@gmail.com'
+const ADDRESS = 'Av. Cacha Oe1-86 y 9 de Agosto, parroquia Calderón, Quito, Ecuador'
 
 export const PRIVACY: LegalDocument = {
   slug: 'privacidad',
@@ -26,8 +28,8 @@ export const PRIVACY: LegalDocument = {
     {
       title: '1. Responsable del tratamiento',
       paragraphs: [
-        'Zona Cero Performance Center, con domicilio en Quito, Ecuador (en adelante, «Zona Cero»), es responsable del tratamiento de los datos personales que se recogen en esta aplicación y en su versión web.',
-        `Para consultas o para ejercer sus derechos, el titular puede escribir a ${CONTACT_EMAIL} o acudir a la recepción del gimnasio.`,
+        `Zona Cero Performance Center, representado por William Ramírez, con domicilio en ${ADDRESS} (en adelante, «Zona Cero»), es responsable del tratamiento de los datos personales que se recogen en esta aplicación y en su versión web.`,
+        `Para consultas o para ejercer sus derechos, el titular puede escribir a ${CONTACT_EMAIL} o acudir a la recepción del gimnasio en esa dirección.`,
       ],
     },
     {
@@ -79,8 +81,8 @@ export const PRIVACY: LegalDocument = {
     {
       title: '7. Cuánto tiempo los conservamos',
       paragraphs: [
-        'Mientras la cuenta esté activa. Si el socio elimina su cuenta, se borran su perfil, ficha, datos de salud, medidas, reservas, pagos asociados a la cuenta y aceptaciones registradas.',
-        'Los comprobantes que el gimnasio deba conservar por obligaciones contables o tributarias se mantienen fuera de la aplicación durante el plazo legal.',
+        'Mientras la cuenta esté activa. Si el socio elimina su cuenta, se borran su perfil, ficha, datos de salud, medidas, reservas, solicitudes de pago pendientes y aceptaciones registradas.',
+        'Los cobros realizados se conservan anonimizados, sin el nombre, el correo ni la identificación del socio, solo con el monto, el plan, la fecha, el medio y la referencia, durante el plazo que exige la normativa contable y tributaria.',
       ],
     },
     {

@@ -23,10 +23,13 @@ Rama: `feat/cumplimiento-legal` (desde `main`). Solo local: **sin push ni deploy
 5. **Pruebas** (Vitest): registro bloqueado sin las dos casillas y consentimientos enviados; `recordLegalConsents` en el repositorio local; páginas `/legal/*` públicas; ficha exige el consentimiento de salud; checkout exige la segunda casilla con tarjeta. Correr `npx tsc -b` y `npx vitest run` (todo verde).
 6. Commit(s) en la rama, sin push.
 
-## Decisiones que quedan para el usuario / cliente (no implementar)
+## Decisiones tomadas (16-oct)
 
-- **Eliminar cuenta borra también los pagos** (`payments.user_id ... on delete cascade`): choca con la conservación contable/tributaria. Opción: anonimizar en vez de borrar (requiere `user_id` nulo y ajustar Cobros).
-- Plazo legal de devolución (art. 45 LODC): las fuentes dicen 3 o 15 días; el texto de reembolsos no fija número. Validar con abogado.
-- Correo de privacidad `privacidad@zonacerocenter.com` y dominio: confirmar con el cliente.
-- Minimización: «Sector/Ciudad de residencia» es obligatorio en la ficha y no parece necesario; proponer que sea opcional.
-- Todos los textos son borrador técnico: debe revisarlos un abogado ecuatoriano.
+- Residencia en la ficha: **opcional**.
+- Eliminar cuenta: **los cobros aprobados y reembolsados se conservan anonimizados** (sin socio, sin membresía, sin la cédula de la nota); pendientes y rechazados se borran. `supabase/anonimizar-pagos-al-eliminar.sql` + `domain/rules/accountDeletion.ts`. En Cobros aparecen como «Cuenta eliminada».
+- No existe correo de privacidad: la LOPDP (art. 12) solo exige informar la identidad y los datos de contacto del responsable. Se usa el contacto del cliente en el contrato (wramirezfac@gmail.com, Av. Cacha Oe1-86 y 9 de Agosto, Calderón). **Confirmar con William antes de publicar.**
+
+## Pendiente antes de publicar
+
+1. Aplicar en QA, en orden: `legal-consents.sql` y `anonimizar-pagos-al-eliminar.sql`; después desplegar la app (sin la RPC, el checkout falla).
+2. Plazo legal de devolución (art. 45 LODC, 3 o 15 días según la fuente) y revisión de todos los textos por un abogado ecuatoriano.

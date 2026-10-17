@@ -602,7 +602,7 @@ export function CobrosPage() {
                         key={payment.id}
                         type="button"
                         onClick={() => {
-                          setSelectedMemberId(payment.userId)
+                          setSelectedMemberId(payment.userId ?? '')
                           setMemberSearchQuery('')
                           handleSelectPlan(payment.planId)
                           if (payment.manualMethod) setPaymentMethod(payment.manualMethod)
@@ -1428,7 +1428,7 @@ export function CobrosPage() {
                         </td>
                         <td className="p-3.5">
                           <div className="font-bold text-ink">
-                            {member ? member.fullName : pay.userId}
+                            {member ? member.fullName : pay.userId ? pay.userId : 'Cuenta eliminada'}
                           </div>
                           <div className="text-[11px] text-ink-3">
                             {member?.email}

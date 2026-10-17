@@ -446,7 +446,7 @@ export function ProfilePage() {
               Privacidad y eliminación de cuenta
             </h3>
             <p className="mt-1 text-xs text-ink-2 max-w-xl leading-relaxed">
-              De acuerdo con las normativas de privacidad (Apple Guideline 5.1.1(v) y Google Data Safety), puedes solicitar la eliminación completa y permanente de tu cuenta, historial de reservas, mediciones corporales y datos de salud en cualquier momento.
+              De acuerdo con las normativas de privacidad (Apple Guideline 5.1.1(v) y Google Data Safety), puedes eliminar en cualquier momento, de forma permanente, tu cuenta, historial de reservas, mediciones corporales y datos de salud. Tus pagos ya realizados se conservan sin tus datos personales, solo para la contabilidad del gimnasio.
             </p>
           </div>
           <Button

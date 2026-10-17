@@ -37,7 +37,7 @@ describe('FichaTecnicaModal (Post-Registration Onboarding & Anthropometrics)', (
     expect(screen.queryByRole('button', { name: /peso/i })).not.toBeInTheDocument()
 
     expect(screen.getByText('Fecha de Nacimiento *')).toBeInTheDocument()
-    expect(screen.getByText('Sector / Ciudad de Residencia *')).toBeInTheDocument()
+    expect(screen.getByText('Sector / Ciudad de Residencia (opcional)')).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByLabelText(/Fecha de Nacimiento/i)).toHaveValue('1995-04-12')
     })

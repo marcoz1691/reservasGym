@@ -539,12 +539,11 @@ export function FichaTecnicaModal({
 
                     <div>
                       <label htmlFor={residenceId} className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-3">
-                        Sector / Ciudad de Residencia *
+                        Sector / Ciudad de Residencia (opcional)
                       </label>
                       <Input
                         id={residenceId}
                         type="text"
-                        required
                         value={residence}
                         onChange={(e) => setResidence(e.target.value)}
                         placeholder="Ej. Quito - Pomasqui, Tumbaco, etc."

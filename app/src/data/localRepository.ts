@@ -48,6 +48,7 @@ import {
   resolveRequestReference,
 } from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
+import { anonymizeDeletedMemberPayments } from '../domain/rules/accountDeletion'
 import { readPdfDataUrl, validateTermsPdf } from '../domain/rules/termsDocument'
 import { recurringRenewalFrom } from '../domain/rules/recurringRenewal'
 import type {
@@ -470,14 +471,16 @@ export class LocalRepository implements GymRepository {
     const actor = await this.requireUser()
     const userId = actor.id
 
-    // Remove user bookings, waitlist, check-ins, measurements, body goals, memberships, payments, and profile (Apple 5.1.1(v) & Google Play)
+    // Remove user bookings, waitlist, check-ins, measurements, body goals, memberships, consents and profile (Apple 5.1.1(v) & Google Play).
+    // Approved payments stay anonymized for accounting (accountDeletion.ts).
     this.state.bookings = this.state.bookings.filter((b) => b.userId !== userId)
     this.state.waitlist = this.state.waitlist.filter((w) => w.userId !== userId)
     this.state.checkIns = this.state.checkIns.filter((c) => c.userId !== userId)
     this.state.measurements = this.state.measurements.filter((m) => m.userId !== userId)
     this.state.bodyGoals = (this.state.bodyGoals ?? []).filter((g) => g.userId !== userId)
     this.state.memberships = (this.state.memberships ?? []).filter((m) => m.userId !== userId)
-    this.state.payments = (this.state.payments ?? []).filter((p) => p.userId !== userId)
+    this.state.payments = anonymizeDeletedMemberPayments(this.state.payments ?? [], userId)
+    this.state.legalConsents = (this.state.legalConsents ?? []).filter((c) => c.userId !== userId)
     this.state.users = this.state.users.filter((u) => u.id !== userId)
 
     const creds = readCreds()
