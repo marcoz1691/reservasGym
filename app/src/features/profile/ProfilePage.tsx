@@ -1,3 +1,7 @@
+import { ConsentCheckbox } from '@/features/legal/ConsentCheckbox'
+import { LegalDocumentDialog } from '@/features/legal/LegalDocumentDialog'
+import { PRIVACY } from '@/features/legal/legalDocuments'
+import { LegalLinks } from '@/features/legal/LegalPage'
 import { useState, useEffect, type FormEvent } from 'react'
 import {
   User as UserIcon,
@@ -31,6 +35,8 @@ export function ProfilePage() {
   const { repo } = useGym()
   const refresh = useRefresh()
 
+  const [acceptedHealth, setAcceptedHealth] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [fichaModalOpen, setFichaModalOpen] = useState(false)
   const [fullName, setFullName] = useState(user?.fullName ?? '')
@@ -39,6 +45,8 @@ export function ProfilePage() {
   const [heightCm, setHeightCm] = useState(user?.heightCm?.toString() ?? '')
   const [goals, setGoals] = useState(user?.goals ?? '')
   const [healthNotes, setHealthNotes] = useState(user?.healthNotes ?? '')
+
+  const healthChanged = heightCm !== (user?.heightCm?.toString() ?? '') || healthNotes !== (user?.healthNotes ?? '')
 
   const [bioActive, setBioActive] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -100,19 +108,22 @@ export function ProfilePage() {
 
   async function handleSave(e: FormEvent) {
     e.preventDefault()
+    if (saving || (healthChanged && !acceptedHealth)) return
     setSaving(true)
     setErrorMsg(null)
     setSuccessMsg(null)
 
     try {
+      if (healthChanged) {
+        await repo.recordLegalConsents?.('ficha', [{ document: 'health_data', version: PRIVACY.version }])
+      }
       if (repo.updateProfile) {
         await repo.updateProfile({
           fullName: fullName.trim(),
           birthDate: birthDate.trim() || undefined,
           residence: residence.trim() || undefined,
-          heightCm: heightCm ? Number(heightCm) : undefined,
+          ...(healthChanged ? { heightCm: heightCm ? Number(heightCm) : undefined, healthNotes: healthNotes.trim() || undefined } : {}),
           goals: goals.trim() || undefined,
-          healthNotes: healthNotes.trim() || undefined,
         })
       }
       await refresh()
@@ -156,6 +167,7 @@ export function ProfilePage() {
                   setHeightCm(user.heightCm?.toString() ?? '')
                   setGoals(user.goals ?? '')
                   setHealthNotes(user.healthNotes ?? '')
+                  setAcceptedHealth(false)
                   setIsEditing(true)
                 }}
               >
@@ -338,6 +350,13 @@ export function ProfilePage() {
               />
             </label>
 
+            {healthChanged && (
+              <ConsentCheckbox checked={acceptedHealth} onChange={setAcceptedHealth}
+                label="Consiento expresamente el tratamiento de mis datos de salud"
+                linkText="política de privacidad" onOpen={() => setShowPrivacy(true)}>
+                Consiento expresamente el tratamiento de mis datos de salud para adaptar mi entrenamiento, según la
+              </ConsentCheckbox>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
@@ -347,7 +366,7 @@ export function ProfilePage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || (healthChanged && !acceptedHealth)}>
                 {saving ? 'Guardando…' : 'Guardar cambios'}
               </Button>
             </div>
@@ -413,6 +432,11 @@ export function ProfilePage() {
         </div>
       )}
 
+      <Card className="space-y-3 p-6">
+        <h2 className="text-base font-bold text-ink">Documentos legales</h2>
+        <LegalLinks />
+      </Card>
+
       {/* Apple 5.1.1(v) & Google Data Safety: Account Deletion UI */}
       <Card className="border-danger/30 bg-danger/5 p-6 space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -436,6 +460,8 @@ export function ProfilePage() {
           </Button>
         </div>
       </Card>
+
+      {showPrivacy && <LegalDocumentDialog doc={PRIVACY} onClose={() => setShowPrivacy(false)} />}
 
       <FichaTecnicaModal
         open={fichaModalOpen}

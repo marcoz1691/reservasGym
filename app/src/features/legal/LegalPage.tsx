@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { formatDateSpanish } from '@/lib/format'
 import { LEGAL_DOCUMENTS, legalPath } from './legalDocuments'
@@ -8,6 +8,8 @@ import { LEGAL_DOCUMENTS, legalPath } from './legalDocuments'
  * almacenamiento local. Las tiendas piden una URL pública de la política de privacidad.
  */
 export function LegalPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { slug } = useParams()
   const doc = LEGAL_DOCUMENTS.find((d) => d.slug === slug)
 
@@ -23,10 +25,10 @@ export function LegalPage() {
   return (
     <main className="min-h-dvh bg-bg">
       <article className="mx-auto max-w-2xl space-y-5 px-4 py-6 sm:py-10">
-        <Link to="/login" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-2 hover:text-ink">
+        <button type="button" onClick={() => { if ((window.history.state?.idx ?? 0) > 0 || location.key !== 'default') navigate(-1); else navigate('/login', { replace: true }) }} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-2 hover:text-ink">
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Volver
-        </Link>
+        </button>
         <header className="space-y-1">
           <p className="text-xs font-bold uppercase tracking-wider text-acc-dark">Zona Cero Performance Center</p>
           <h1 className="text-2xl font-black text-ink sm:text-3xl">{doc.title}</h1>

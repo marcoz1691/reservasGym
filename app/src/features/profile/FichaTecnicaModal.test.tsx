@@ -122,6 +122,9 @@ describe('FichaTecnicaModal (Post-Registration Onboarding & Anthropometrics)', (
     await user.click(screen.getByRole('button', { name: /Siguiente/i }))
     await user.click(screen.getByRole('button', { name: /Siguiente/i }))
 
+    // El consentimiento es obligatorio y se registra antes de guardar.
+    expect(screen.getByRole('button', { name: /Guardar Ficha Técnica/i })).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: /Consiento expresamente/ }))
     // Submit form
     const saveBtn = screen.getByRole('button', { name: /Guardar Ficha Técnica/i })
     await user.click(saveBtn)

@@ -183,6 +183,7 @@ describe('Primer ingreso — ficha técnica', () => {
     await userEvent.click(screen.getByRole('button', { name: /Siguiente/i }))
     await userEvent.type(screen.getByLabelText(/Estatura/i), '180')
     await userEvent.type(screen.getByLabelText(/Masa corporal/i), '72')
+    await userEvent.click(screen.getByRole('checkbox', { name: /Consiento expresamente/ }))
     await userEvent.click(
       screen.getByRole('button', { name: /Guardar Ficha Técnica/i }),
     )
