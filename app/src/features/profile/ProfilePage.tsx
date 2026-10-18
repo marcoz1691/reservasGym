@@ -36,6 +36,7 @@ export function ProfilePage() {
   const [fullName, setFullName] = useState(user?.fullName ?? '')
   const [birthDate, setBirthDate] = useState(user?.birthDate ?? '')
   const [residence, setResidence] = useState(user?.residence ?? '')
+  const [phone, setPhone] = useState(user?.phone ?? '')
   const [heightCm, setHeightCm] = useState(user?.heightCm?.toString() ?? '')
   const [goals, setGoals] = useState(user?.goals ?? '')
   const [healthNotes, setHealthNotes] = useState(user?.healthNotes ?? '')
@@ -110,6 +111,7 @@ export function ProfilePage() {
           fullName: fullName.trim(),
           birthDate: birthDate.trim() || undefined,
           residence: residence.trim() || undefined,
+          phone: phone.trim(),
           heightCm: heightCm ? Number(heightCm) : undefined,
           goals: goals.trim() || undefined,
           healthNotes: healthNotes.trim() || undefined,
@@ -153,6 +155,7 @@ export function ProfilePage() {
                   setFullName(user.fullName)
                   setBirthDate(user.birthDate ?? '')
                   setResidence(user.residence ?? '')
+                  setPhone(user.phone ?? '')
                   setHeightCm(user.heightCm?.toString() ?? '')
                   setGoals(user.goals ?? '')
                   setHealthNotes(user.healthNotes ?? '')
@@ -302,6 +305,14 @@ export function ProfilePage() {
               />
 
               <Input
+                label="Celular (opcional)"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Ej. 0991234567"
+              />
+
+              <Input
                 label="Estatura (cm)"
                 type="number"
                 min="50"
@@ -361,6 +372,10 @@ export function ProfilePage() {
               Datos personales
             </h3>
             <div className="space-y-2.5 text-sm">
+              <div>
+                <span className="text-xs text-ink-3 block">Celular:</span>
+                <span className="font-semibold text-ink">{user.phone || 'No registrado'}</span>
+              </div>
               <div>
                 <span className="text-xs text-ink-3 block">Residencia:</span>
                 <span className="font-semibold text-ink">

@@ -62,6 +62,7 @@ function mapUser(row: {
   created_at: string
   birth_date?: string | null
   residence?: string | null
+  phone?: string | null
   height_cm?: number | string | null
   initial_weight_kg?: number | string | null
   goals?: string | null
@@ -76,6 +77,7 @@ function mapUser(row: {
     createdAt: row.created_at,
     birthDate: row.birth_date ?? undefined,
     residence: row.residence ?? undefined,
+    phone: row.phone ?? undefined,
     heightCm: row.height_cm != null ? Number(row.height_cm) : undefined,
     initialWeightKg:
       row.initial_weight_kg != null ? Number(row.initial_weight_kg) : undefined,
@@ -767,6 +769,7 @@ export class SupabaseRepository implements GymRepository {
       row.birth_date = patch.birthDate.trim() || null
     if (patch.residence !== undefined)
       row.residence = patch.residence.trim() || null
+    if (patch.phone !== undefined) row.phone = patch.phone.trim() || null
     if (patch.heightCm !== undefined)
       row.height_cm = patch.heightCm ? Number(patch.heightCm) : null
     if (patch.initialWeightKg !== undefined) {
