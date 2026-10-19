@@ -111,7 +111,8 @@ export function ProfilePage() {
           fullName: fullName.trim(),
           birthDate: birthDate.trim() || undefined,
           residence: residence.trim() || undefined,
-          phone: phone.trim(),
+          // Solo si cambió: así guardar el resto del perfil no depende de la columna phone.
+          ...(phone.trim() !== (user?.phone ?? '') ? { phone: phone.trim() } : {}),
           heightCm: heightCm ? Number(heightCm) : undefined,
           goals: goals.trim() || undefined,
           healthNotes: healthNotes.trim() || undefined,
