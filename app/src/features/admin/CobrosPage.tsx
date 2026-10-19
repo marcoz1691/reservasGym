@@ -1306,7 +1306,6 @@ export function CobrosPage() {
                             planName: item.planName,
                             endsOn: formatDateShort(item.membership.endsAt),
                             status: item.status,
-                            renewalUrl: `${window.location.origin}/membresia`,
                           })
                         : null
                       return reminderUrl ? (

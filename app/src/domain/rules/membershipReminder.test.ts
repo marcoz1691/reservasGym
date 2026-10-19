@@ -8,7 +8,6 @@ const base = {
   planName: 'Mensual',
   endsOn: '20 oct 2026',
   status: 'active' as const,
-  renewalUrl: 'https://app.test/membresia',
 }
 
 function textOf(url: string | null): string {
@@ -21,12 +20,13 @@ describe('buildMembershipReminderUrl', () => {
     expect(url?.startsWith('https://wa.me/593991234567?text=')).toBe(true)
   })
 
-  it('saluda por el primer nombre e incluye plan, fecha y enlace de pago', () => {
+  it('saluda por el primer nombre e indica plan, fecha y cómo renovar en la app', () => {
     const text = textOf(buildMembershipReminderUrl(base))
     expect(text).toContain('Hola Ana')
     expect(text).toContain('Zona Cero')
-    expect(text).toContain('tu plan Mensual vence el 20 oct 2026')
-    expect(text).toContain('https://app.test/membresia')
+    expect(text).toContain('tu membresía Mensual vence el 20 oct 2026')
+    expect(text).toContain('entra a la app')
+    expect(text).not.toContain('http')
   })
 
   it('distingue gracia y vencida', () => {
