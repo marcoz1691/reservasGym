@@ -512,12 +512,12 @@ export function CobrosPage() {
         title="Cobros"
         action={
           <div className="flex items-center gap-2">
-            <ButtonLink to="/admin" variant="ghost" className="gap-2">
+            <ButtonLink to="/admin" variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4" />
                 Panel Admin
               </ButtonLink>
             {user?.role === 'admin' ? (
-              <ButtonLink to="/admin/planes" variant="secondary" className="gap-2">
+              <ButtonLink to="/admin/planes" variant="secondary" size="sm">
                   <PlusCircle className="h-4 w-4" />
                   Gestionar Planes
                 </ButtonLink>
@@ -527,20 +527,21 @@ export function CobrosPage() {
       />
 
       {/* Tabs Navigation */}
-      <div className="flex flex-wrap gap-2 border-b border-line pb-3">
+      <div className="grid grid-cols-3 gap-2 border-b border-line pb-3 sm:flex sm:flex-wrap">
         <button
           type="button"
           onClick={() => {
             setActiveTab('pos')
           }}
-          className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
+          className={`focus-ring inline-flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs font-bold transition sm:flex-row sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm ${
             activeTab === 'pos'
               ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
           <CreditCard className="h-4 w-4" />
-          Registrar Cobro (POS)
+          <span className="sm:hidden">Cobrar</span>
+          <span className="hidden sm:inline">Registrar Cobro (POS)</span>
         </button>
 
         <button
@@ -548,19 +549,20 @@ export function CobrosPage() {
           onClick={() => {
             setActiveTab('vencimientos')
           }}
-          className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
+          className={`focus-ring inline-flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs font-bold transition sm:flex-row sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm ${
             activeTab === 'vencimientos'
               ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
           <AlertTriangle className="h-4 w-4" />
-          Socios por Vencer y Vencidos
+          <span className="sm:hidden">Vencimientos</span>
+          <span className="hidden sm:inline">Socios por Vencer y Vencidos</span>
           {expiringCount > 0 ? (
             <span
-              className={`ml-1 rounded-full px-2 py-0.5 text-xs font-black ${
+              className={`sm:ml-1 rounded-full px-2 py-0.5 text-xs font-black ${
                 activeTab === 'vencimientos'
-                  ? 'bg-black/15 text-[var(--color-acc-contrast)]'
+                  ? 'bg-cta-contrast/20 text-cta-contrast'
                   : 'bg-warn/20 text-warn'
               }`}
             >
@@ -574,14 +576,15 @@ export function CobrosPage() {
           onClick={() => {
             setActiveTab('historial')
           }}
-          className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
+          className={`focus-ring inline-flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs font-bold transition sm:flex-row sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm ${
             activeTab === 'historial'
               ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
           <History className="h-4 w-4" />
-          Historial General de Cobros
+          <span className="sm:hidden">Historial</span>
+          <span className="hidden sm:inline">Historial General de Cobros</span>
         </button>
       </div>
 
@@ -1168,12 +1171,12 @@ export function CobrosPage() {
       {/* TAB 2: SOCIOS POR VENCER Y VENCIDOS */}
       {activeTab === 'vencimientos' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
               <button
                 type="button"
                 onClick={() => setExpirationFilter('all')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'all'
                     ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
@@ -1184,7 +1187,7 @@ export function CobrosPage() {
               <button
                 type="button"
                 onClick={() => setExpirationFilter('warning')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'warning'
                     ? 'bg-warn text-white'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
@@ -1195,7 +1198,7 @@ export function CobrosPage() {
               <button
                 type="button"
                 onClick={() => setExpirationFilter('grace')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'grace'
                     ? 'bg-warn text-white'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
@@ -1206,7 +1209,7 @@ export function CobrosPage() {
               <button
                 type="button"
                 onClick={() => setExpirationFilter('expired')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'expired'
                     ? 'bg-danger text-white'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
@@ -1405,7 +1408,7 @@ export function CobrosPage() {
                   type="button"
                   aria-pressed={historyMethodFilter === value}
                   onClick={() => setHistoryMethodFilter(value)}
-                  className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                  className={`shrink-0 whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                     historyMethodFilter === value
                       ? 'bg-cta text-cta-contrast'
                       : 'bg-surface text-ink-2 hover:bg-surface/80'
