@@ -479,6 +479,7 @@ export class LocalRepository implements GymRepository {
     if (patch.fullName !== undefined) user.fullName = patch.fullName.trim()
     if (patch.birthDate !== undefined) user.birthDate = patch.birthDate.trim() || undefined
     if (patch.residence !== undefined) user.residence = patch.residence.trim() || undefined
+    if (patch.phone !== undefined) user.phone = patch.phone.trim() || undefined
     if (patch.heightCm !== undefined) user.heightCm = patch.heightCm ? Number(patch.heightCm) : undefined
     if (patch.initialWeightKg !== undefined) {
       user.initialWeightKg = patch.initialWeightKg ? Number(patch.initialWeightKg) : undefined

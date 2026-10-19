@@ -10,6 +10,7 @@ import {
   CreditCard,
   DollarSign,
   History,
+  MessageCircle,
   PlusCircle,
   QrCode,
   RefreshCw,
@@ -20,6 +21,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import {
+  useAppData,
   useCurrentUser,
   useRefresh,
   useRepo,
@@ -37,6 +39,7 @@ import {
   isNearExpiration,
 } from '@/domain/rules/membership'
 import { isDayPassPlan } from '@/domain/rules/membershipPlan'
+import { buildMembershipReminderUrl } from '@/domain/rules/membershipReminder'
 import {
   currentMembership,
   memberMembership,
@@ -87,6 +90,7 @@ export function CobrosPage() {
   const repo = useRepo()
   const user = useCurrentUser()
   const refresh = useRefresh()
+  const { settings } = useAppData()
 
   const [activeTab, setActiveTab] = useState<TabType>('pos')
 
@@ -1213,14 +1217,44 @@ export function CobrosPage() {
                     </div>
                   </div>
 
-                  <Button
-                    variant="primary"
-                    onClick={() => handleQuickRenewal(item.member.id, item.planId)}
-                    className="w-full gap-2 text-xs py-2"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    Cobrar Renovación
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      variant="primary"
+                      onClick={() => handleQuickRenewal(item.member.id, item.planId)}
+                      className="w-full gap-2 text-xs py-2"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Cobrar Renovación
+                    </Button>
+                    {(() => {
+                      const reminderUrl = item.membership
+                        ? buildMembershipReminderUrl({
+                            phone: item.member.phone,
+                            memberName: item.member.fullName,
+                            gymName: settings.name,
+                            planName: item.planName,
+                            endsOn: formatDateShort(item.membership.endsAt),
+                            status: item.status,
+                            renewalUrl: `${window.location.origin}/membresia`,
+                          })
+                        : null
+                      return reminderUrl ? (
+                        <a
+                          href={reminderUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-xs font-semibold text-[#06361F] transition hover:brightness-95"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Recordar por WhatsApp
+                        </a>
+                      ) : (
+                        <p className="text-center text-[11px] text-ink-3">
+                          Sin celular registrado: no se puede enviar el recordatorio.
+                        </p>
+                      )
+                    })()}
+                  </div>
                 </Card>
               ))}
             </div>

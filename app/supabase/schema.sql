@@ -15,6 +15,7 @@ create table if not exists profiles (
   role text not null check (role in ('member', 'staff', 'admin')) default 'member',
   birth_date date,
   residence text,
+  phone text,
   height_cm numeric(5,1),
   initial_weight_kg numeric(5,2),
   goals text,
