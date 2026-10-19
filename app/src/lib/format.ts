@@ -184,6 +184,8 @@ export function formatPaymentMethod(
         return 'Datáfono POS'
       case 'deuna':
         return 'Deuna'
+      case 'pagomedios_recurring':
+        return 'Pago recurrente'
       default:
         return 'Recepción'
     }

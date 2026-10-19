@@ -18,7 +18,7 @@ export type MembershipStatus = 'active' | 'grace' | 'expired' | 'cancelled' | 's
 export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded'
 /** Datáfono físico Datafast en recepción = manual con manual_method 'card_pos'. */
 export type PaymentProvider = 'manual' | 'pagomedios'
-export type ManualPaymentMethod = 'cash' | 'transfer' | 'card_pos' | 'deuna'
+export type ManualPaymentMethod = 'cash' | 'transfer' | 'card_pos' | 'deuna' | 'pagomedios_recurring'
 export type MembershipPlanKind = 'membership' | 'day_pass'
 
 export interface MembershipPlan {

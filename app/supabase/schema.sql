@@ -206,7 +206,7 @@ create table if not exists payments (
   amount_cents int not null,
   status text not null check (status in ('pending', 'approved', 'rejected', 'refunded')),
   provider text not null check (provider in ('manual', 'pagomedios')),
-  manual_method text check (manual_method in ('cash', 'transfer', 'card_pos', 'deuna')),
+  manual_method text check (manual_method in ('cash', 'transfer', 'card_pos', 'deuna', 'pagomedios_recurring')),
   reference text,
   mp_payment_id text,
   notes text,

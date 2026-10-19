@@ -11,9 +11,16 @@ import type { Page } from '@playwright/test'
  */
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 export const PAGOMEDIOS_API = 'https://api.abitmedia.cloud/pagomedios/v2'
-export const FN_URL = 'http://localhost:8000'
-/** El retorno de Pagomedios redirige aquí; la prueba lo intercepta, no hace falta la app. */
-export const APP_URL = 'http://localhost:5173'
+/** Puerto de la función; `E2E_FN_PORT` permite usar otro si el 8000 está ocupado. */
+export const FN_PORT = process.env.E2E_FN_PORT ?? '8000'
+/** `E2E_FN_URL` prueba contra la función desplegada (p. ej. la de QA) en vez de levantarla en local. */
+const DEPLOYED_FN_URL = process.env.E2E_FN_URL
+export const FN_URL = DEPLOYED_FN_URL ?? `http://localhost:${FN_PORT}`
+/**
+ * El retorno de Pagomedios redirige aquí; la prueba lo intercepta, no hace falta la app.
+ * Con la función desplegada, es el APP_URL de sus secrets (`E2E_APP_URL`).
+ */
+export const APP_URL = process.env.E2E_APP_URL ?? 'http://localhost:5173'
 
 function readEnvFile(file: string): Record<string, string> {
   const path = join(APP_DIR, file)
@@ -99,11 +106,12 @@ export async function callFunction(body: Record<string, unknown>, jwt?: string) 
 }
 
 /** Levanta pagomedios-payment con Deno y espera a que responda. */
-export async function startFunction(): Promise<ChildProcess> {
+export async function startFunction(): Promise<ChildProcess | undefined> {
+  if (DEPLOYED_FN_URL) return undefined
   const busy = await fetch(FN_URL, { method: 'OPTIONS' }).then(() => true).catch(() => false)
   if (busy) {
     throw new Error(
-      'El puerto 8000 está ocupado (¿npm run pagomedios:fn corriendo?). Deténlo antes de estas pruebas.',
+      `El puerto ${FN_PORT} está ocupado (¿npm run pagomedios:fn corriendo?). Deténlo o usa E2E_FN_PORT.`,
     )
   }
   const child = spawn(
@@ -121,6 +129,7 @@ export async function startFunction(): Promise<ChildProcess> {
         PAGOMEDIOS_TAX_RATE: env.PAGOMEDIOS_TAX_RATE ?? '0.15',
         APP_URL,
         FUNCTION_PUBLIC_URL: FN_URL,
+        DENO_SERVE_ADDRESS: `tcp:0.0.0.0:${FN_PORT}`,
       },
       stdio: 'ignore',
     },
@@ -139,7 +148,7 @@ export async function startFunction(): Promise<ChildProcess> {
  * registro) y lo envía. El número y el CVV viven en iframes que cargan aparte: se espera
  * a que el número quede escrito antes de seguir.
  */
-async function fillCardForm(page: Page, card: TestCard) {
+async function fillCardForm(page: Page, card: TestCard, onFilled?: () => Promise<void>) {
   const number = page.frameLocator('iframe[name="card.number"]').getByRole('textbox')
   for (let attempt = 0; attempt < 3; attempt++) {
     await number.click()
@@ -152,6 +161,7 @@ async function fillCardForm(page: Page, card: TestCard) {
   // Con tarjetas guardadas cada una trae su CVV: el de la tarjeta nueva es el último.
   await page.locator('iframe[name="card.cvv"]').last().contentFrame().getByRole('textbox')
     .pressSequentially(card.cvv, { delay: 20 })
+  await onFilled?.()
   // El botón muestra "Pagar $X" o "Registrar tarjeta"; su nombre accesible es "Pagar".
   // Con tarjetas guardadas hay otro "Pagar" arriba: el de la tarjeta nueva es el último.
   await page.getByRole('button', { name: 'Pagar', exact: true }).last().click()
@@ -186,8 +196,14 @@ export async function payOnPagomedios(page: Page, url: string, brand: 'Visa' | '
  * Registra una tarjeta de prueba en el formulario "Registrar tarjeta" de Pagomedios
  * (POST /cards/register): cobra $1,15 de validación que Pagomedios reversa solo.
  */
-export async function registerCardOnPagomedios(page: Page, url: string, brand: 'Visa' | 'Mastercard', card: TestCard) {
+export async function registerCardOnPagomedios(
+  page: Page,
+  url: string,
+  brand: 'Visa' | 'Mastercard',
+  card: TestCard,
+  onFilled?: () => Promise<void>,
+) {
   await page.goto(url)
   await page.getByRole('button', { name: new RegExp(`^${brand}$`, 'i') }).first().click()
-  await fillCardForm(page, card)
+  await fillCardForm(page, card, onFilled)
 }

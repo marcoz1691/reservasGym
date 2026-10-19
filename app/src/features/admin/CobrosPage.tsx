@@ -14,6 +14,7 @@ import {
   PlusCircle,
   QrCode,
   RefreshCw,
+  Repeat,
   Search,
   ShieldCheck,
   UserCheck,
@@ -47,6 +48,7 @@ import {
   planPurchaseOutcome,
 } from '@/domain/rules/memberships'
 import { MANUAL_PAYMENT_LABELS } from '@/domain/rules/planRequest'
+import { suggestPosDefaults } from '@/domain/rules/posDefaults'
 import {
   formatCurrency,
   formatDateShort,
@@ -68,11 +70,17 @@ const POS_METHODS: {
   { value: 'cash', title: 'Efectivo', detail: 'Cobro en caja', icon: Banknote },
   { value: 'transfer', title: 'Transferencia Bancaria', detail: 'Banco / App', icon: Building2 },
   { value: 'deuna', title: MANUAL_PAYMENT_LABELS.deuna, detail: 'QR o código del gym', icon: QrCode },
+  {
+    value: 'pagomedios_recurring',
+    title: 'Pago recurrente Pagomedios',
+    detail: 'Cobro mensual automático',
+    icon: Repeat,
+  },
 ]
 
 const HISTORY_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: 'Todos los métodos' },
-  ...(['card_pos', 'cash', 'transfer', 'deuna'] as const).map((method) => ({
+  ...(['card_pos', 'cash', 'transfer', 'deuna', 'pagomedios_recurring'] as const).map((method) => ({
     value: method,
     label: formatPaymentMethod('manual', method),
   })),
@@ -114,6 +122,8 @@ export function CobrosPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<ReceiptData | null>(null)
   const [changeNow, setChangeNow] = useState(false)
+  // Con un plan ya elegido la lista se pliega en una línea; "Cambiar plan" la abre.
+  const [showAllPlans, setShowAllPlans] = useState(false)
 
   // Expiration Filter state
   const [expirationFilter, setExpirationFilter] = useState<'all' | 'grace' | 'expired' | 'warning'>('all')
@@ -151,6 +161,7 @@ export function CobrosPage() {
   const handleSelectPlan = (planId: string) => {
     setSelectedPlanId(planId)
     setChangeNow(false)
+    setShowAllPlans(false)
     const plan = plans.find((p) => p.id === planId)
     if (plan) {
       setAmountUsd((plan.priceCents / 100).toFixed(2))
@@ -338,6 +349,9 @@ export function CobrosPage() {
     const deunaCents = approved
       .filter((p) => p.manualMethod === 'deuna')
       .reduce((sum, p) => sum + p.amountCents, 0)
+    const recurringCents = approved
+      .filter((p) => p.manualMethod === 'pagomedios_recurring')
+      .reduce((sum, p) => sum + p.amountCents, 0)
     const onlineCents = approved
       .filter((p) => p.provider === 'pagomedios')
       .reduce((sum, p) => sum + p.amountCents, 0)
@@ -348,19 +362,38 @@ export function CobrosPage() {
       transferUsd: transferCents / 100,
       cardPosUsd: cardPosCents / 100,
       deunaUsd: deunaCents / 100,
+      recurringUsd: recurringCents / 100,
       onlineUsd: onlineCents / 100,
       totalTransactions: approved.length,
     }
   }, [payments])
 
-  // Quick Action from Expiring list
-  const handleQuickRenewal = (memberId: string, planId?: string) => {
+  // Al elegir al socio se proponen su plan y el medio con el que pagó la última vez (ZCAPP-78)
+  const handleSelectMember = (memberId: string) => {
     setSelectedMemberId(memberId)
     setMemberSearchQuery('')
-    const targetPlan = activePlans.find((p) => p.id === planId) ?? activePlans[0]
-    if (targetPlan) {
-      handleSelectPlan(targetPlan.id)
+    setReference('')
+    setPaymentError(null)
+    const suggested = suggestPosDefaults({
+      memberships: membershipsByUser.get(memberId) ?? [],
+      payments: payments.filter((p) => p.userId === memberId),
+      plans: activePlans,
+    })
+    if (suggested.planId) {
+      handleSelectPlan(suggested.planId)
+    } else {
+      setSelectedPlanId('')
+      setAmountUsd('')
+      setChangeNow(false)
+      setShowAllPlans(false)
     }
+    setPaymentMethod(suggested.method ?? 'card_pos')
+  }
+
+  // Quick Action from Expiring list
+  const handleQuickRenewal = (memberId: string, planId?: string) => {
+    handleSelectMember(memberId)
+    if (planId && activePlans.some((p) => p.id === planId)) handleSelectPlan(planId)
     setReceipt(null)
     setActiveTab('pos')
   }
@@ -439,6 +472,8 @@ export function CobrosPage() {
     setPaymentError(null)
     setReceipt(null)
     setChangeNow(false)
+    setShowAllPlans(false)
+    setPaymentMethod('card_pos')
   }
 
   const handleRefund = async (payment: Payment) => {
@@ -773,16 +808,7 @@ export function CobrosPage() {
                               <button
                                 key={m.id}
                                 type="button"
-                                onClick={() => {
-                                  setSelectedMemberId(m.id)
-                                  setMemberSearchQuery('')
-                                  if (curM && curM.planId) {
-                                    const prevPlan = activePlans.find((p) => p.id === curM.planId)
-                                    if (prevPlan && !selectedPlanId) {
-                                      handleSelectPlan(prevPlan.id)
-                                    }
-                                  }
-                                }}
+                                onClick={() => handleSelectMember(m.id)}
                                 className="w-full flex items-center justify-between p-3 text-left hover:bg-surface/80 transition"
                               >
                                 <div>
@@ -867,6 +893,27 @@ export function CobrosPage() {
                       <Link to="/admin/planes" className="text-acc-dark underline font-bold">
                         Crear un plan
                       </Link>
+                    </div>
+                  ) : selectedPlan && !showAllPlans ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-acc bg-acc/10 p-4">
+                      <div>
+                        <div className="font-bold text-ink text-sm">{selectedPlan.name}</div>
+                        <div className="mt-1 flex flex-wrap gap-2 text-xs text-ink-3">
+                          <span className="font-extrabold text-acc-dark">
+                            {formatCurrency(selectedPlan.priceCents)}
+                          </span>
+                          <span>•</span>
+                          <span>{selectedPlan.durationDays} días</span>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setShowAllPlans(true)}
+                        className="text-xs py-1.5 px-3"
+                      >
+                        Cambiar plan
+                      </Button>
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -978,6 +1025,20 @@ export function CobrosPage() {
                         </button>
                       ))}
                     </div>
+                    {paymentMethod === 'pagomedios_recurring' ? (
+                      <div
+                        role="note"
+                        className="flex items-start gap-2 rounded-2xl border border-warn/40 bg-warn-soft p-3 text-xs text-ink-2"
+                      >
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn" aria-hidden />
+                        <span>
+                          Registra este cobro solo cuando el panel de Pagomedios muestre el pago
+                          mensual del socio como <strong>aprobado</strong>. Pagomedios puede tardar
+                          hasta 24 horas en mostrarlo. Usa como referencia el número del cobro en
+                          Pagomedios.
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Amount and Reference */}
@@ -1000,12 +1061,22 @@ export function CobrosPage() {
                       placeholder="Ej: POS-9482, Lote 03 o Transf #1092"
                     />
                   </div>
+                </Card>
 
+                {/* Confirmar siempre a la vista: queda fijo abajo mientras se baja por el formulario (ZCAPP-78) */}
+                <div className="sticky bottom-0 z-10 space-y-2 rounded-2xl border border-line bg-bg/95 p-2 shadow-lg backdrop-blur">
                   {paymentError ? (
                     <div className="rounded-2xl border border-danger/40 bg-danger/10 p-3 text-xs text-danger font-medium flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 shrink-0" />
                       {paymentError}
                     </div>
+                  ) : null}
+
+                  {selectedMember && selectedPlan ? (
+                    <p className="truncate px-2 text-xs text-ink-2">
+                      {selectedMember.fullName} · {selectedPlan.name} ·{' '}
+                      <strong>{formatPaymentMethod('manual', paymentMethod)}</strong>
+                    </p>
                   ) : null}
 
                   {/* Submit Button */}
@@ -1028,7 +1099,7 @@ export function CobrosPage() {
                       </>
                     )}
                   </Button>
-                </Card>
+                </div>
               </form>
             )}
           </div>
@@ -1266,7 +1337,7 @@ export function CobrosPage() {
       {activeTab === 'historial' && (
         <div className="space-y-4">
           {/* Metrics summary cards */}
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid gap-3 sm:grid-cols-4 lg:grid-cols-7">
             <Card>
               <div className="text-xs font-bold uppercase text-ink-3">Total Recaudado</div>
               <div className="mt-1 text-2xl font-black text-acc-dark">
@@ -1307,6 +1378,14 @@ export function CobrosPage() {
                 ${metrics.deunaUsd.toFixed(2)} USD
               </div>
               <div className="text-xs text-ink-3 mt-1">QR o código Deuna</div>
+            </Card>
+
+            <Card>
+              <div className="text-xs font-bold uppercase text-ink-3">Pago recurrente</div>
+              <div className="mt-1 text-2xl font-black text-ink">
+                ${metrics.recurringUsd.toFixed(2)} USD
+              </div>
+              <div className="text-xs text-ink-3 mt-1">Renovaciones mensuales</div>
             </Card>
 
             <Card>

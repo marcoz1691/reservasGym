@@ -37,7 +37,10 @@ import {
   PlansShowcase,
 } from './components'
 
-const PAYMENT_METHODS: ManualPaymentMethod[] = ['cash', 'transfer', 'card_pos', 'deuna']
+// El pago recurrente lo registra recepción; el socio no lo pide desde Mi Plan.
+type RequestMethod = Exclude<ManualPaymentMethod, 'pagomedios_recurring'>
+
+const PAYMENT_METHODS: RequestMethod[] = ['cash', 'transfer', 'card_pos', 'deuna']
 
 const PAYMENT_ICONS = {
   cash: Banknote,
@@ -46,7 +49,7 @@ const PAYMENT_ICONS = {
   deuna: QrCode,
 } as const
 
-const PAYMENT_HINTS: Record<ManualPaymentMethod, string> = {
+const PAYMENT_HINTS: Record<RequestMethod, string> = {
   cash: 'En caja del counter',
   transfer: 'Bancos locales',
   card_pos: 'Datáfono en recepción',
@@ -62,7 +65,7 @@ export function MiPlanPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [payBanner, setPayBanner] = useState<string | null>(null)
   const [chosenPlanId, setChosenPlanId] = useState<string | null>(null)
-  const [chosenMethod, setChosenMethod] = useState<ManualPaymentMethod | null>(null)
+  const [chosenMethod, setChosenMethod] = useState<RequestMethod | null>(null)
   const [revising, setRevising] = useState(false)
   const [requesting, setRequesting] = useState(false)
   const [requestError, setRequestError] = useState('')
@@ -131,7 +134,7 @@ export function MiPlanPage() {
     document.getElementById('planes-catalogo')?.scrollIntoView({ block: 'start' })
   }
 
-  async function handleRequestPayment(method: ManualPaymentMethod) {
+  async function handleRequestPayment(method: RequestMethod) {
     if (!chosenPlanId) return
     setRequesting(true)
     setRequestError('')

@@ -36,6 +36,7 @@ import {
 } from '@/domain/rules'
 import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
 import { assertPlanSellableInApp } from '@/domain/rules/featureFlags'
+import { recurringRenewalFrom } from '@/domain/rules/recurringRenewal'
 import { resolveRequestReference } from '@/domain/rules/paymentReceipt'
 import type {
   AuthCredentials,
@@ -1419,10 +1420,27 @@ export class SupabaseRepository implements GymRepository {
   }): Promise<{ payment: Payment; membership: Membership }> {
     await this.requireUser()
 
+    // El cobro mensual del pago recurrente cuenta desde el fin anterior (recurringRenewal.ts)
+    let paidAt: string | undefined
+    if (params.manualMethod === 'pagomedios_recurring') {
+      const [planRes, membershipsRes] = await Promise.all([
+        this.client.from('membership_plans').select('id, duration_days').eq('id', params.planId).single(),
+        this.client.from('memberships').select('plan_id, status, ends_at').eq('user_id', params.userId),
+      ])
+      if (planRes.error) throw new Error(planRes.error.message)
+      if (membershipsRes.error) throw new Error(membershipsRes.error.message)
+      paidAt = recurringRenewalFrom(
+        (membershipsRes.data ?? []).map((m) => ({ planId: m.plan_id, status: m.status, endsAt: m.ends_at })),
+        { id: planRes.data.id, durationDays: planRes.data.duration_days },
+        new Date(),
+      ).toISOString()
+    }
+
     // La base decide vigente / en espera / pase del día y bloquea al socio (plan-rules.sql)
     const { data: memData, error: memError } = await this.client.rpc('apply_plan_purchase', {
       p_user_id: params.userId,
       p_plan_id: params.planId,
+      ...(paidAt ? { p_paid_at: paidAt } : {}),
     })
     if (memError) throw new Error(memError.message)
     const membershipRow = mapMembership(memData)
