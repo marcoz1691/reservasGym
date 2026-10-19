@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { SessionsPage } from '@/features/admin/SessionsPage'
@@ -212,6 +212,66 @@ describe('Admin Sessions Management — SessionsPage', () => {
         }),
       )
     })
+  })
+
+  it('programa la misma clase en varios días con fecha final y días elegidos', async () => {
+    const mockRepo = createMockRepo(adminUser, {
+      zones: [gymZone, hyroxZone],
+      trainers: [trainerDiego],
+      sessions: [testSession],
+      templates: [
+        {
+          id: 'tpl-gym-open',
+          zoneId: gymZone.id,
+          title: 'Acceso libre gimnasio',
+          kind: 'open' as const,
+          durationMinutes: 60,
+          capacity: 40,
+          trainerId: null,
+        },
+      ],
+    })
+    resetRepositoryForTests(mockRepo)
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <SessionsPage />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /programar nueva clase/i }),
+    )
+    await userEvent.type(screen.getByLabelText(/título de la clase/i), 'WOD 7am')
+    // 19 oct 2026 es lunes; por defecto se marcan lunes a viernes
+    fireEvent.change(screen.getByLabelText('Fecha de inicio'), { target: { value: '2026-10-19' } })
+    fireEvent.change(screen.getByLabelText(/repetir hasta/i), { target: { value: '2026-10-25' } })
+
+    expect(screen.getByText('Se programarán 5 clases.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Sáb' }))
+    expect(screen.getByText('Se programarán 6 clases.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /programar clase/i }))
+
+    await waitFor(() => {
+      expect(mockRepo.upsertSession).toHaveBeenCalledTimes(6)
+    })
+    const calls = (mockRepo.upsertSession as ReturnType<typeof vi.fn>).mock.calls.map(
+      (c) => c[0] as Session,
+    )
+    // 07:00 en Ecuador (UTC-5) = 12:00 UTC
+    expect(calls.map((c) => c.startsAt.slice(0, 13))).toEqual([
+      '2026-10-19T12',
+      '2026-10-20T12',
+      '2026-10-21T12',
+      '2026-10-22T12',
+      '2026-10-23T12',
+      '2026-10-24T12',
+    ])
+    expect(new Set(calls.map((c) => c.id)).size).toBe(6)
+    expect(await screen.findByText('Se programaron 6 clases.')).toBeInTheDocument()
   })
 
   it('allows deleting a session with confirmation modal', async () => {
