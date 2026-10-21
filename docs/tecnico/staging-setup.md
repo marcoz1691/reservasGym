@@ -223,6 +223,8 @@ Solo compila la rama `production` y solo si tiene `VITE_SUPABASE_URL` / `VITE_SU
 
 **No** aplicar `seed.sql`, `staging-users.sql` ni `qa-mail-hook.sql` en prod.
 
+En una base que ya existía (QA, o prod creada antes del 20 oct), aplicar además, después de `booking-rpc.sql`: `security-hardening.sql` y `plan-request-amount.sql`. Los dos son idempotentes.
+
 **Publicar una versión:** cuando QA valida `main`, abrir un PR `main` → `production` y hacer merge. Vercel despliega prod.
 
 ### Plan Supabase (decisión arquitectura)

@@ -100,9 +100,12 @@ async function handleRequest(req: Request): Promise<Response> {
 
   try {
     const token = Deno.env.get("PAGOMEDIOS_TOKEN")?.trim()
-    const appUrl = (
-      Deno.env.get("APP_URL") ?? "https://zona-cero-qa.vercel.app"
-    ).replace(/\/$/, "")
+    // Sin valor por defecto: en prod, un APP_URL faltante mandaría a los socios a QA.
+    const appUrl = Deno.env.get("APP_URL")?.trim().replace(/\/$/, "")
+    if (!appUrl) {
+      console.error("pagomedios-payment: falta el secret APP_URL")
+      return json({ error: "Pagos en línea no configurados (APP_URL)." }, 500)
+    }
     const taxRate = Number(Deno.env.get("PAGOMEDIOS_TAX_RATE") ?? "0.15")
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!
     const admin = createClient(
