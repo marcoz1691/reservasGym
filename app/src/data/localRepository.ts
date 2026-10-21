@@ -1165,6 +1165,7 @@ export class LocalRepository implements GymRepository {
     planId: string
     manualMethod: ManualPaymentMethod
     reference?: string
+    termsVersion: string
   }): Promise<Payment> {
     const actor = await this.requireUser()
     if (actor.role !== 'member') {

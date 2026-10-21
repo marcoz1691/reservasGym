@@ -482,6 +482,7 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
         planId: 'plan-mensual-full',
         manualMethod: 'deuna',
         reference: 'ZC-4F7A2C',
+        termsVersion: '1.0',
       })
 
       const repo = new LocalRepository()

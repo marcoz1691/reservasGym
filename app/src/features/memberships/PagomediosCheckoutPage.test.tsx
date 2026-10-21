@@ -143,6 +143,7 @@ describe('PagomediosCheckoutPage — pago único', () => {
       documentType: '05',
       phone: '0987569852',
       address: ADDRESS,
+      termsVersion: '1.0',
       native: false,
     })
     expect(assign).toHaveBeenCalledWith('https://payurl.link/ZTR3638000')
@@ -326,7 +327,7 @@ describe('PagomediosCheckoutPage — pago único', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos/ }))
     await userEvent.click(confirm)
 
-    expect(repo.requestPlanPayment).toHaveBeenCalledWith({ planId: 'plan_mensual', manualMethod: 'cash' })
+    expect(repo.requestPlanPayment).toHaveBeenCalledWith({ planId: 'plan_mensual', manualMethod: 'cash', termsVersion: '1.0' })
     expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
     expect(await screen.findByRole('heading', { name: 'Solicitud enviada' })).toBeInTheDocument()
     expect(screen.getByText(/paga \$35\.00 en efectivo/)).toBeInTheDocument()
@@ -351,6 +352,7 @@ describe('PagomediosCheckoutPage — pago único', () => {
       planId: 'plan_mensual',
       manualMethod: 'transfer',
       reference,
+      termsVersion: '1.0',
     })
     expect(await screen.findByRole('heading', { name: 'Solicitud enviada' })).toBeInTheDocument()
     const sent = screen.getByRole('region', { name: 'Datos para pagar' })
@@ -434,6 +436,7 @@ describe('PagomediosCheckoutPage — pago único', () => {
         planId: 'plan_mensual',
         manualMethod: 'deuna',
         reference,
+        termsVersion: '1.0',
       })
       const link = await screen.findByRole('link', { name: 'Enviar comprobante por WhatsApp' })
       expect(link).toHaveAttribute('target', '_blank')
@@ -658,7 +661,7 @@ describe('PagomediosCheckoutPage — pago único', () => {
 
     await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos/ }))
     await userEvent.click(screen.getByRole('button', { name: /Confirmar solicitud/ }))
-    expect(repo.requestPlanPayment).toHaveBeenCalledWith({ planId: 'plan_mensual', manualMethod: 'cash' })
+    expect(repo.requestPlanPayment).toHaveBeenCalledWith({ planId: 'plan_mensual', manualMethod: 'cash', termsVersion: '1.0' })
     expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
   })
 
@@ -782,6 +785,7 @@ describe('PagomediosCheckoutPage — pago recurrente', () => {
       documentType: '05',
       phone: '0987569852',
       address: ADDRESS,
+      termsVersion: '1.0',
       native: false,
       recurring: true,
     })

@@ -193,3 +193,28 @@ describe('SupabaseRepository reservas vía RPC (ZCAPP-53/54)', () => {
     expect(rpc).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('SupabaseRepository evidencia de aceptación de términos', () => {
+  it('envía la versión de los términos a la Edge Function de pago', async () => {
+    const client = clientWithRpc(vi.fn())
+    const invoke = vi.fn().mockResolvedValue({
+      data: { url: 'https://payurl.link/X', paymentId: 'pay_1' },
+      error: null,
+    })
+    Object.assign(client, { functions: { invoke } })
+    const repo = new SupabaseRepository(client)
+
+    await repo.createPagomediosPayment({
+      planId: 'plan_mensual',
+      document: '1710034065',
+      documentType: '05',
+      phone: '0987569852',
+      address: 'Quito',
+      termsVersion: '2.1',
+    })
+
+    expect(invoke).toHaveBeenCalledWith('pagomedios-payment', {
+      body: expect.objectContaining({ action: 'create', termsVersion: '2.1' }),
+    })
+  })
+})

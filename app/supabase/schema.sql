@@ -213,6 +213,9 @@ create table if not exists payments (
   created_at timestamptz not null default now(),
   approved_at timestamptz
 );
+-- Aceptación de términos por pago (trigger y detalle en terms-acceptance.sql)
+alter table payments add column if not exists terms_version text check (terms_version is null or char_length(terms_version) <= 40);
+alter table payments add column if not exists terms_accepted_at timestamptz;
 
 -- Índices de optimización
 create index if not exists idx_memberships_user_id on memberships(user_id);

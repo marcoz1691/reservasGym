@@ -25,6 +25,8 @@ import {
   selectPendingPlanRequest,
 } from '@/domain/rules/planRequest'
 import { plansForAppSale } from '@/domain/rules/featureFlags'
+import { resolveTermsDocument } from '@/domain/rules/termsDocument'
+import { TermsDialog } from '@/features/legal/TermsDialog'
 import { formatCurrency } from '@/lib/format'
 import { Button, PageHeader } from '@/ui/primitives'
 import { isOnlinePayEnabled } from './onlinePay'
@@ -69,6 +71,8 @@ export function MiPlanPage() {
   const [revising, setRevising] = useState(false)
   const [requesting, setRequesting] = useState(false)
   const [requestError, setRequestError] = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
   const paymentStepRef = useRef<HTMLDivElement>(null)
 
   const onlinePayEnabled = isOnlinePayEnabled(data.settings)
@@ -135,13 +139,18 @@ export function MiPlanPage() {
   }
 
   async function handleRequestPayment(method: RequestMethod) {
-    if (!chosenPlanId) return
+    if (!chosenPlanId || !acceptedTerms) return
     setRequesting(true)
     setRequestError('')
     try {
-      await repo.requestPlanPayment({ planId: chosenPlanId, manualMethod: method })
+      await repo.requestPlanPayment({
+        planId: chosenPlanId,
+        manualMethod: method,
+        termsVersion: resolveTermsDocument(data.settings, import.meta.env.BASE_URL).version,
+      })
       setChosenPlanId(null)
       setChosenMethod(null)
+      setAcceptedTerms(false)
       setRevising(false)
       await refresh()
     } catch (err) {
@@ -412,13 +421,33 @@ export function MiPlanPage() {
                 />
               </div>
             ) : null}
+            <div className="mt-5 flex flex-wrap items-center gap-x-1 text-sm text-ink-2">
+              <label className="flex min-h-11 cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  aria-label="Acepto los términos y condiciones"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="h-6 w-6 shrink-0 rounded border-line-strong accent-[var(--color-cta)]"
+                />
+                <span>Acepto los</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowTerms(true)}
+                className="inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-2"
+              >
+                términos y condiciones
+              </button>
+            </div>
+            {showTerms ? <TermsDialog settings={data.settings} onClose={() => setShowTerms(false)} /> : null}
             <button
               type="button"
-              disabled={!chosenMethod || requesting}
+              disabled={!chosenMethod || !acceptedTerms || requesting}
               onClick={() => {
                 if (chosenMethod) void handleRequestPayment(chosenMethod)
               }}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-40 active:scale-[0.99]"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-40 active:scale-[0.99]"
             >
               Enviar solicitud
               <ArrowRight className="h-4 w-4" aria-hidden />
