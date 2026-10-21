@@ -22,6 +22,7 @@ import {
   MANUAL_PAYMENT_LABELS,
   isDeunaConfigured,
   isRemotePaymentMethod,
+  selectDiscardedPlanRequest,
   selectPendingPlanRequest,
 } from '@/domain/rules/planRequest'
 import { plansForAppSale } from '@/domain/rules/featureFlags'
@@ -123,6 +124,12 @@ export function MiPlanPage() {
   const pendingRequest = user
     ? selectPendingPlanRequest(data.payments ?? [], user.id)
     : null
+  const discardedRequest = user
+    ? selectDiscardedPlanRequest(data.payments ?? [], user.id)
+    : null
+  const discardedPlanName = (data.membershipPlans ?? []).find(
+    (plan) => plan.id === discardedRequest?.planId,
+  )?.name
   const pendingPlanName =
     (data.membershipPlans ?? []).find((plan) => plan.id === pendingRequest?.planId)
       ?.name ?? 'Plan solicitado'
@@ -232,6 +239,18 @@ export function MiPlanPage() {
           className="rounded-2xl border border-acc/30 bg-acc/10 px-4 py-3 text-sm text-ink"
         >
           {payBanner}
+        </div>
+      ) : null}
+
+      {discardedRequest && !choosingPayment ? (
+        <div
+          role="status"
+          className="rounded-2xl border border-line bg-bg-2 px-4 py-3 text-sm text-ink"
+        >
+          Recepción descartó tu solicitud{discardedPlanName ? ` de ${discardedPlanName}` : ''}
+          {discardedRequest.reference ? ` (Ref. ${discardedRequest.reference})` : ''}. No se activó
+          ningún plan. Si ya pagaste, escribe al gimnasio con tu comprobante; si no, puedes elegir un
+          plan otra vez.
         </div>
       ) : null}
 

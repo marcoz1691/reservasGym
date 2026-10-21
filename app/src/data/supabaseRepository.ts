@@ -40,6 +40,7 @@ import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
 import { assertPlanSellableInApp } from '@/domain/rules/featureFlags'
 import { recurringRenewalFrom } from '@/domain/rules/recurringRenewal'
 import { resolveRequestReference } from '@/domain/rules/paymentReceipt'
+import { DISCARDED_REQUEST_NOTE } from '@/domain/rules/planRequest'
 import type {
   AuthCredentials,
   GymRepository,
@@ -1578,6 +1579,21 @@ export class SupabaseRepository implements GymRepository {
       payment: mapPayment(data.payment),
       membership: { ...membership, status: computeMembershipStatus(membership) },
     }
+  }
+
+  async discardPlanRequest(paymentId: string): Promise<Payment> {
+    await this.requireUser()
+    const { data, error } = await this.client
+      .from('payments')
+      .update({ status: 'rejected', notes: DISCARDED_REQUEST_NOTE })
+      .eq('id', paymentId)
+      .eq('status', 'pending')
+      .eq('provider', 'manual')
+      .select('*')
+      .maybeSingle()
+    if (error) throw new Error(error.message)
+    if (!data) throw new Error('La solicitud ya no está pendiente.')
+    return mapPayment(data)
   }
 
   async refundPayment(params: { paymentId: string; cancelMembership: boolean }): Promise<Payment> {

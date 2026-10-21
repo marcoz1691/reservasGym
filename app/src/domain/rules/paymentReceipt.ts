@@ -16,6 +16,29 @@ export function normalizeWhatsAppPhone(raw: string | null | undefined): string |
   return digits.length >= 10 && digits.length <= 15 ? digits : null
 }
 
+const MEMBER_PHONE_ERROR =
+  'Ingresa un celular válido: 09 seguido de 8 dígitos (ej. 0991234567) o, si es extranjero, con + y código de país.'
+
+/**
+ * Celular del socio (opcional). Ecuador: móvil 09xxxxxxxx / +5939xxxxxxxx. Extranjero: + y código de país.
+ * Devuelve el mensaje de error o null si es válido o está vacío.
+ */
+export function memberPhoneError(raw: string | null | undefined): string | null {
+  const value = (raw ?? '').trim()
+  if (!value) return null
+  if (!/^\+?[\d\s().-]+$/.test(value)) return MEMBER_PHONE_ERROR
+
+  let digits = value.replace(/\D/g, '')
+  const international = value.startsWith('+') || digits.startsWith('00')
+  if (digits.startsWith('00')) digits = digits.slice(2)
+
+  if (digits.startsWith(ECUADOR_CODE) && (international || digits.length === 12)) {
+    return /^5939\d{8}$/.test(digits) ? null : MEMBER_PHONE_ERROR
+  }
+  if (international) return digits.length >= 8 && digits.length <= 15 ? null : MEMBER_PHONE_ERROR
+  return /^0?9\d{8}$/.test(digits) ? null : MEMBER_PHONE_ERROR
+}
+
 export interface ReceiptMessage {
   phone: string | null | undefined
   memberName: string

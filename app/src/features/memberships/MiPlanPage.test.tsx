@@ -291,6 +291,30 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
     expect(await screen.findByText('Planes disponibles')).toBeInTheDocument()
   })
 
+  it('avisa al socio cuando recepción descartó su solicitud (ZCAPP-84)', async () => {
+    const member = new LocalRepository()
+    await member.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+    const request = await member.requestPlanPayment({
+      planId: 'plan-mensual-full',
+      manualMethod: 'transfer',
+      reference: 'ZC-ABC123',
+      termsVersion: '1.0',
+    })
+    const staff = new LocalRepository()
+    await staff.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+    await staff.discardPlanRequest(request.id)
+
+    const repo = new LocalRepository()
+    await repo.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+    resetRepositoryForTests(repo)
+    renderMiPlan()
+
+    expect(
+      await screen.findByText(/Recepción descartó tu solicitud de Plan Mensual Ilimitado \(Ref\. ZC-ABC123\)/i),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Pendiente de pago en recepción/i)).not.toBeInTheDocument()
+  })
+
   describe('interruptores del admin', () => {
     it('con el pago en línea encendido ofrece pagar desde la tarjeta del plan', async () => {
       await adminSettings({ onlinePaymentsEnabled: true })

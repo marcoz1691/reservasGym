@@ -41,6 +41,7 @@ import {
 } from '@/domain/rules/membership'
 import { isDayPassPlan } from '@/domain/rules/membershipPlan'
 import { buildMembershipReminderUrl } from '@/domain/rules/membershipReminder'
+import { normalizeWhatsAppPhone } from '@/domain/rules/paymentReceipt'
 import {
   currentMembership,
   memberMembership,
@@ -119,6 +120,7 @@ export function CobrosPage() {
   const [amountUsd, setAmountUsd] = useState<string>('')
   const [reference, setReference] = useState<string>('')
   const [processingPayment, setProcessingPayment] = useState(false)
+  const [discardingId, setDiscardingId] = useState<string | null>(null)
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<ReceiptData | null>(null)
   const [changeNow, setChangeNow] = useState(false)
@@ -476,6 +478,27 @@ export function CobrosPage() {
     setPaymentMethod('card_pos')
   }
 
+  const handleDiscardRequest = async (paymentId: string, memberName: string) => {
+    if (!repo.discardPlanRequest) return
+    if (
+      !window.confirm(
+        `¿Descartar la solicitud de ${memberName}? No se activa ningún plan y el socio verá el aviso en Mi Plan.`,
+      )
+    ) {
+      return
+    }
+    setDiscardingId(paymentId)
+    try {
+      await repo.discardPlanRequest(paymentId)
+      await refresh()
+      await loadData()
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'No se pudo descartar la solicitud.')
+    } finally {
+      setDiscardingId(null)
+    }
+  }
+
   const handleRefund = async (payment: Payment) => {
     if (!repo.refundPayment) return
     if (!window.confirm('¿Marcar este pago como reembolsado?')) return
@@ -604,38 +627,52 @@ export function CobrosPage() {
                   .map((payment) => {
                     const member = members.find((m) => m.id === payment.userId)
                     const plan = plans.find((p) => p.id === payment.planId)
+                    const memberName = member?.fullName ?? 'Socio'
                     return (
-                      <button
+                      <div
                         key={payment.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedMemberId(payment.userId ?? '')
-                          setMemberSearchQuery('')
-                          handleSelectPlan(payment.planId)
-                          if (payment.manualMethod) setPaymentMethod(payment.manualMethod)
-                          setReference(payment.reference ?? '')
-                          setReceipt(null)
-                        }}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-bg px-4 py-3 text-left hover:border-acc"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-bg px-4 py-3 hover:border-acc"
                       >
-                        <span>
-                          <span className="block text-sm font-bold text-ink">
-                            {member?.fullName ?? 'Socio'}
-                          </span>
-                          <span className="text-xs text-ink-3">
-                            {plan?.name ?? 'Plan'} ·{' '}
-                            {payment.manualMethod
-                              ? MANUAL_PAYMENT_LABELS[payment.manualMethod]
-                              : 'Recepción'}
-                          </span>
-                          {payment.reference ? (
-                            <span className="block font-mono text-xs font-bold text-ink-2">
-                              Ref. {payment.reference}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedMemberId(payment.userId ?? '')
+                            setMemberSearchQuery('')
+                            handleSelectPlan(payment.planId)
+                            if (payment.manualMethod) setPaymentMethod(payment.manualMethod)
+                            setReference(payment.reference ?? '')
+                            setReceipt(null)
+                          }}
+                          className="flex flex-1 flex-wrap items-center justify-between gap-2 text-left"
+                        >
+                          <span>
+                            <span className="block text-sm font-bold text-ink">{memberName}</span>
+                            <span className="text-xs text-ink-3">
+                              {plan?.name ?? 'Plan'} ·{' '}
+                              {payment.manualMethod
+                                ? MANUAL_PAYMENT_LABELS[payment.manualMethod]
+                                : 'Recepción'}
                             </span>
-                          ) : null}
-                        </span>
-                        <span className="text-sm font-bold text-acc-dark">Cobrar</span>
-                      </button>
+                            {payment.reference ? (
+                              <span className="block font-mono text-xs font-bold text-ink-2">
+                                Ref. {payment.reference}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="text-sm font-bold text-acc-dark">Cobrar</span>
+                        </button>
+                        {repo.discardPlanRequest ? (
+                          <button
+                            type="button"
+                            disabled={discardingId === payment.id}
+                            onClick={() => void handleDiscardRequest(payment.id, memberName)}
+                            aria-label={`Descartar solicitud de ${memberName}`}
+                            className="rounded-xl px-3 py-1.5 text-xs font-semibold text-ink-3 hover:bg-bg-2 hover:text-ink disabled:opacity-50"
+                          >
+                            {discardingId === payment.id ? 'Descartando…' : 'Descartar'}
+                          </button>
+                        ) : null}
+                      </div>
                     )
                   })}
               </div>
@@ -1066,8 +1103,12 @@ export function CobrosPage() {
                   </div>
                 </Card>
 
-                {/* Confirmar siempre a la vista: queda fijo abajo mientras se baja por el formulario (ZCAPP-78) */}
-                <div className="sticky bottom-0 z-10 space-y-2 rounded-2xl border border-line bg-bg/95 p-2 shadow-lg backdrop-blur">
+                {/* Confirmar siempre a la vista: queda fijo abajo mientras se baja por el formulario (ZCAPP-78).
+                    Sin socio elegido no se fija, para no tapar la lista de socios en pantallas bajas (ZCAPP-85). */}
+                <div
+                  data-testid="pos-confirm-bar"
+                  className={`${selectedMember ? 'sticky bottom-0 z-10 shadow-lg backdrop-blur' : ''} space-y-2 rounded-2xl border border-line bg-bg/95 p-2`}
+                >
                   {paymentError ? (
                     <div className="rounded-2xl border border-danger/40 bg-danger/10 p-3 text-xs text-danger font-medium flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -1323,7 +1364,9 @@ export function CobrosPage() {
                         </a>
                       ) : (
                         <p className="text-center text-[11px] text-ink-3">
-                          Sin celular registrado: no se puede enviar el recordatorio.
+                          {item.member.phone?.trim() && !normalizeWhatsAppPhone(item.member.phone)
+                            ? `Celular no válido (${item.member.phone.trim()}): pide al socio que lo corrija en su perfil.`
+                            : 'Sin celular registrado: no se puede enviar el recordatorio.'}
                         </p>
                       )
                     })()}

@@ -3,6 +3,7 @@ import {
   buildReceiptWhatsAppUrl,
   generatePaymentReference,
   isPaymentReference,
+  memberPhoneError,
   normalizeWhatsAppPhone,
   resolveRequestReference,
 } from './paymentReceipt'
@@ -30,6 +31,31 @@ describe('normalizeWhatsAppPhone', () => {
 
   it.each([null, undefined, '', '   ', 'sin número', '0991'])('"%s" no es un número válido', (raw) => {
     expect(normalizeWhatsAppPhone(raw)).toBeNull()
+  })
+})
+
+describe('memberPhoneError (ZCAPP-83)', () => {
+  it.each(['', '   ', null, undefined])('vacío es válido porque el celular es opcional: "%s"', (raw) => {
+    expect(memberPhoneError(raw)).toBeNull()
+  })
+
+  it.each(['0991234567', '099 123 4567', '+593 99 123 4567', '593991234567', '+1 305 555 0123', '+34 612 345 678'])(
+    '%s es un celular válido',
+    (raw) => {
+      expect(memberPhoneError(raw)).toBeNull()
+    },
+  )
+
+  it.each([
+    ['sin número'],
+    ['0991'],
+    ['022345678'],
+    ['02 234 5678'],
+    ['09912345678'],
+    ['+593 2 234 5678'],
+    ['0991234567 ext 2'],
+  ])('%s no es un celular válido', (raw) => {
+    expect(memberPhoneError(raw)).toMatch(/celular/i)
   })
 })
 

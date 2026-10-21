@@ -51,6 +51,7 @@ import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/pas
 import { anonymizeDeletedMemberPayments } from '../domain/rules/accountDeletion'
 import { readPdfDataUrl, validateTermsPdf } from '../domain/rules/termsDocument'
 import { recurringRenewalFrom } from '../domain/rules/recurringRenewal'
+import { DISCARDED_REQUEST_NOTE } from '../domain/rules/planRequest'
 import type {
   AuthCredentials,
   GymRepository,
@@ -1352,6 +1353,21 @@ export class LocalRepository implements GymRepository {
     ;(this.state.payments ??= []).push(payment)
     this.persistState()
     return { payment: { ...payment }, membership: { ...membership } }
+  }
+
+  async discardPlanRequest(paymentId: string): Promise<Payment> {
+    const actor = await this.requireUser()
+    if (actor.role === 'member') throw new Error('Sin permiso')
+    const payments = this.state.payments ?? []
+    const idx = payments.findIndex((p) => p.id === paymentId)
+    const current = payments[idx]
+    if (!current || current.status !== 'pending' || current.provider !== 'manual') {
+      throw new Error('La solicitud ya no está pendiente.')
+    }
+    const payment: Payment = { ...current, status: 'rejected', notes: DISCARDED_REQUEST_NOTE }
+    payments[idx] = payment
+    this.persistState()
+    return { ...payment }
   }
 
   async refundPayment(params: { paymentId: string; cancelMembership: boolean }): Promise<Payment> {
