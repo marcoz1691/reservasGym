@@ -27,7 +27,7 @@ Rama: `feat/cumplimiento-legal` (desde `main`). Solo local: **sin push ni deploy
 
 - Residencia en la ficha: **opcional**.
 - Eliminar cuenta: **los cobros aprobados y reembolsados se conservan anonimizados** (sin socio, sin membresía, sin la cédula de la nota); pendientes y rechazados se borran. `supabase/anonimizar-pagos-al-eliminar.sql` + `domain/rules/accountDeletion.ts`. En Cobros aparecen como «Cuenta eliminada».
-- No existe correo de privacidad: la LOPDP (art. 12) solo exige informar la identidad y los datos de contacto del responsable. Se usa el contacto del cliente en el contrato (wramirezfac@gmail.com, Av. Cacha Oe1-86 y 9 de Agosto, Calderón). **Confirmar con William antes de publicar.**
+- No existe correo de privacidad: la LOPDP (art. 12) solo exige informar la identidad y los datos de contacto del responsable. William confirmó el 17-oct: contacto `zonacerowramirez@gmail.com` y dirección Plaza Comercial Mitad del Mundo (ya aplicado en `legalDocuments.ts`).
 
 ## Pendiente antes de publicar
 

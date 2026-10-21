@@ -16,8 +16,8 @@ export type LegalDocument = {
 }
 
 // Contacto del responsable (LOPDP art. 12): el del cliente en el contrato. Confirmar con William antes de publicar.
-const CONTACT_EMAIL = 'wramirezfac@gmail.com'
-const ADDRESS = 'Av. Cacha Oe1-86 y 9 de Agosto, parroquia Calderón, Quito, Ecuador'
+const CONTACT_EMAIL = 'zonacerowramirez@gmail.com'
+const ADDRESS = 'Plaza Comercial Mitad del Mundo, Quito, Ecuador'
 
 export const PRIVACY: LegalDocument = {
   slug: 'privacidad',
