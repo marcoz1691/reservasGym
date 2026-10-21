@@ -274,6 +274,59 @@ describe('Admin Sessions Management — SessionsPage', () => {
     expect(await screen.findByText('Se programaron 6 clases.')).toBeInTheDocument()
   })
 
+  it('al repetir un rango omite la clase que ya existe aunque la base devuelva la hora con +00:00', async () => {
+    const existing: Session = {
+      ...testSession,
+      id: 'ses_existente',
+      zoneId: gymZone.id,
+      title: 'WOD 7am',
+      startsAt: '2026-10-20T12:00:00+00:00',
+      endsAt: '2026-10-20T13:00:00+00:00',
+    }
+    const mockRepo = createMockRepo(adminUser, {
+      zones: [gymZone, hyroxZone],
+      trainers: [trainerDiego],
+      sessions: [existing],
+      templates: [
+        {
+          id: 'tpl-gym-open',
+          zoneId: gymZone.id,
+          title: 'Acceso libre gimnasio',
+          kind: 'open' as const,
+          durationMinutes: 60,
+          capacity: 40,
+          trainerId: null,
+        },
+      ],
+    })
+    resetRepositoryForTests(mockRepo)
+
+    render(
+      <MemoryRouter>
+        <RepositoryProvider>
+          <SessionsPage />
+        </RepositoryProvider>
+      </MemoryRouter>,
+    )
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /programar nueva clase/i }),
+    )
+    await userEvent.type(screen.getByLabelText(/título de la clase/i), 'WOD 7am')
+    fireEvent.change(screen.getByLabelText('Fecha de inicio'), { target: { value: '2026-10-19' } })
+    fireEvent.change(screen.getByLabelText(/repetir hasta/i), { target: { value: '2026-10-23' } })
+    await userEvent.click(screen.getByRole('button', { name: /programar clase/i }))
+
+    await waitFor(() => {
+      expect(mockRepo.upsertSession).toHaveBeenCalledTimes(4)
+    })
+    const calls = (mockRepo.upsertSession as ReturnType<typeof vi.fn>).mock.calls.map(
+      (c) => (c[0] as Session).startsAt.slice(0, 10),
+    )
+    expect(calls).not.toContain('2026-10-20')
+    expect(await screen.findByText(/Se programaron 4 clases \(1 ya existían/)).toBeInTheDocument()
+  })
+
   it('allows deleting a session with confirmation modal', async () => {
     const mockRepo = createMockRepo(adminUser, {
       zones: [gymZone, hyroxZone],
