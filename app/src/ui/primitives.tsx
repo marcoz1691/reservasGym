@@ -92,7 +92,7 @@ export function Input({
       ) : null}
       <div className="relative">
         <input
-          className={`focus-ring w-full rounded-2xl border bg-surface-elevated px-3.5 py-2.5 text-ink outline-none placeholder:text-ink-3 transition-colors duration-150 ease-[var(--ease-out)] focus-visible:border-acc/60 focus-visible:ring-2 focus-visible:ring-acc/20 ${
+          className={`focus-ring w-full min-w-0 max-w-full appearance-none rounded-2xl border bg-surface-elevated px-3.5 py-2.5 text-ink outline-none placeholder:text-ink-3 transition-colors duration-150 ease-[var(--ease-out)] focus-visible:border-acc/60 focus-visible:ring-2 focus-visible:ring-acc/20 ${
             error ? 'border-danger/80' : 'border-line'
           } ${isPassword ? 'pr-11' : ''} ${className}`}
           type={isNumber || (isPassword && revealed) ? 'text' : type}

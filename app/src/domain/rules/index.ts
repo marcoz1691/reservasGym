@@ -188,6 +188,8 @@ export * from './anthropometrics'
 export * from './profile'
 export * from './planRequest'
 export * from './paymentReceipt'
+export * from './membershipReminder'
+export * from './sessionRange'
 export * from './featureFlags'
 
 export * from './bookingTimeline'

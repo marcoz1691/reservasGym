@@ -151,6 +151,60 @@ describe('Admin Billing & Membership Plans UI', () => {
       expect(screen.getByText(/En Periodo de Gracia \(3 días\)/i)).toBeInTheDocument()
     })
 
+    it('ofrece recordar por WhatsApp a los socios por vencer que tienen celular', async () => {
+      const user = userEvent.setup()
+      await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+      const state = (
+        repo as unknown as {
+          state: {
+            users: { id: string; role: string; phone?: string }[]
+            memberships: { userId: string; endsAt: string }[]
+          }
+        }
+      ).state
+      const expiring = state.memberships[0]!
+      expiring.endsAt = new Date(Date.now() + 3 * 86_400_000).toISOString()
+      const member = state.users.find((u) => u.id === expiring.userId)!
+      member.phone = '0991234567'
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/cobros']}>
+            <Routes>
+              <Route path="/admin/cobros" element={<CobrosPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+      await user.click(await screen.findByText(/Socios por Vencer y Vencidos/i))
+
+      const link = await screen.findByRole('link', { name: /Recordar por WhatsApp/i })
+      expect(link.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/593991234567\?text=/)
+    })
+
+    it('avisa que falta el celular cuando el socio por vencer no lo tiene', async () => {
+      const user = userEvent.setup()
+      await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+      const state = (
+        repo as unknown as { state: { memberships: { endsAt: string }[] } }
+      ).state
+      state.memberships[0]!.endsAt = new Date(Date.now() + 3 * 86_400_000).toISOString()
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/cobros']}>
+            <Routes>
+              <Route path="/admin/cobros" element={<CobrosPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+      await user.click(await screen.findByText(/Socios por Vencer y Vencidos/i))
+
+      expect(await screen.findByText(/Sin celular registrado/i)).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Recordar por WhatsApp/i })).toBeNull()
+    })
+
     it('displays history metrics and table on Historial tab', async () => {
       const user = userEvent.setup()
       await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })

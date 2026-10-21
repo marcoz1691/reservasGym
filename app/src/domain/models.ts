@@ -96,6 +96,8 @@ export interface User {
   createdAt: string
   birthDate?: string
   residence?: string
+  /** Celular del socio (opcional); lo usa el admin para recordatorios por WhatsApp. */
+  phone?: string
   heightCm?: number
   initialWeightKg?: number
   goals?: string

@@ -277,6 +277,8 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
 
     await user.click(screen.getAllByRole('button', { name: 'Elegir este plan' })[0]!)
     await user.click(screen.getByRole('button', { name: 'Efectivo' }))
+    expect(screen.getByRole('button', { name: 'Enviar solicitud' })).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: 'Acepto los términos y condiciones' }))
     expect(screen.getByRole('button', { name: 'Enviar solicitud' })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: 'Enviar solicitud' }))
 
@@ -328,6 +330,7 @@ describe('MiPlanPage (Member UI for Memberships)', () => {
       await user.click((await screen.findAllByRole('button', { name: 'Elegir este plan' }))[0]!)
       await user.click(screen.getByRole('button', { name: 'Deuna' }))
       expect(screen.getByRole('region', { name: 'Datos para pagar' })).toHaveTextContent('ZONACERO01')
+      await user.click(screen.getByRole('checkbox', { name: 'Acepto los términos y condiciones' }))
       await user.click(screen.getByRole('button', { name: 'Enviar solicitud' }))
 
       expect(await screen.findByText('Solicitud enviada')).toBeInTheDocument()

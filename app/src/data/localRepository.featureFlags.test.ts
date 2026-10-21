@@ -119,7 +119,7 @@ describe('LocalRepository: pases diarios apagados en la app', () => {
     await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
 
     await expect(
-      repo.requestPlanPayment({ planId: 'plan-zona-day', manualMethod: 'cash' }),
+      repo.requestPlanPayment({ planId: 'plan-zona-day', manualMethod: 'cash', termsVersion: '1.0' }),
     ).rejects.toThrow(DAY_PASSES_APP_DISABLED_MESSAGE)
   })
 
@@ -128,7 +128,7 @@ describe('LocalRepository: pases diarios apagados en la app', () => {
     await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
 
     await expect(
-      repo.requestPlanPayment({ planId: 'plan-mensual-full', manualMethod: 'cash' }),
+      repo.requestPlanPayment({ planId: 'plan-mensual-full', manualMethod: 'cash', termsVersion: '1.0' }),
     ).resolves.toMatchObject({ status: 'pending' })
   })
 
@@ -137,7 +137,7 @@ describe('LocalRepository: pases diarios apagados en la app', () => {
     await repo.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
 
     await expect(
-      repo.requestPlanPayment({ planId: 'plan-zona-day', manualMethod: 'cash' }),
+      repo.requestPlanPayment({ planId: 'plan-zona-day', manualMethod: 'cash', termsVersion: '1.0' }),
     ).resolves.toMatchObject({ planId: 'plan-zona-day' })
   })
 

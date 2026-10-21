@@ -114,6 +114,8 @@ export interface GymRepository {
     planId: string
     manualMethod: ManualPaymentMethod
     reference?: string
+    /** Versión de los términos que el socio aceptó (queda guardada con la solicitud). */
+    termsVersion: string
   }): Promise<Payment>
   registerManualPayment(params: {
     userId: string
@@ -144,6 +146,8 @@ export interface GymRepository {
     documentType: PagomediosDocumentType
     phone: string
     address: string
+    /** Versión de los términos que el socio aceptó (la Edge Function la exige). */
+    termsVersion: string
     /** App nativa: el retorno muestra "cierra esta ventana" en vez de volver a la web. */
     native?: boolean
     /**
