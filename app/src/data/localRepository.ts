@@ -206,7 +206,18 @@ export class LocalRepository implements GymRepository {
   }
 
   private persistState() {
+    this.assignReceiptNumbers()
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state))
+  }
+
+  /** Igual que la secuencia de la base: por fecha de creación, sin repetir números. */
+  private assignReceiptNumbers() {
+    const payments = this.state.payments ?? []
+    let last = payments.reduce((max, p) => Math.max(max, p.receiptNumber ?? 0), 0)
+    const missing = payments
+      .filter((p) => p.receiptNumber == null)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    for (const payment of missing) payment.receiptNumber = ++last
   }
 
   private persistSession() {
@@ -1145,6 +1156,7 @@ export class LocalRepository implements GymRepository {
 
   async getMemberPayments(userId: string): Promise<Payment[]> {
     await this.ensureReady()
+    this.assignReceiptNumbers()
     return (this.state.payments ?? [])
       .filter((p) => p.userId === userId)
       .map((p) => ({ ...p }))
@@ -1170,6 +1182,7 @@ export class LocalRepository implements GymRepository {
 
   async listPayments(): Promise<Payment[]> {
     await this.ensureReady()
+    this.assignReceiptNumbers()
     const actor = this.currentUserId
       ? (this.state.users.find((u) => u.id === this.currentUserId) ?? null)
       : null
@@ -1223,6 +1236,7 @@ export class LocalRepository implements GymRepository {
       provider: 'manual',
       manualMethod: params.manualMethod,
       reference: resolveRequestReference(existing?.reference, params.reference),
+      receiptNumber: existing?.receiptNumber,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       approvedAt: null,
     }
@@ -1279,6 +1293,7 @@ export class LocalRepository implements GymRepository {
       provider: 'manual',
       manualMethod: params.manualMethod,
       reference: params.reference ?? pending?.reference ?? null,
+      receiptNumber: pending?.receiptNumber,
       createdAt: pending?.createdAt ?? new Date().toISOString(),
       approvedAt: new Date().toISOString(),
     }

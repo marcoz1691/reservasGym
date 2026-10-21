@@ -217,6 +217,11 @@ create table if not exists payments (
 -- Aceptación de términos por pago (trigger y detalle en terms-acceptance.sql)
 alter table payments add column if not exists terms_version text check (terms_version is null or char_length(terms_version) <= 40);
 alter table payments add column if not exists terms_accepted_at timestamptz;
+-- Número de comprobante corto que se muestra (ZCAPP-77); en bases existentes: payment-receipt-number.sql.
+create sequence if not exists payment_receipt_seq;
+alter table payments add column if not exists receipt_number bigint not null default nextval('payment_receipt_seq');
+alter sequence payment_receipt_seq owned by payments.receipt_number;
+create unique index if not exists payments_receipt_number_key on payments (receipt_number);
 
 -- Índices de optimización
 create index if not exists idx_memberships_user_id on memberships(user_id);

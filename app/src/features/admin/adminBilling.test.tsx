@@ -147,6 +147,43 @@ describe('Admin Billing & Membership Plans UI', () => {
       ).toBeInTheDocument()
       expect(screen.getByText(/POS-TX-998811/i)).toBeInTheDocument()
       expect(screen.getAllByText(/\$45\.00 USD/i).length).toBeGreaterThan(0)
+
+      // ZCAPP-77: comprobante con número corto, sin el id interno
+      const [saved] = (await repo.listPayments()).filter((p) => p.reference === 'POS-TX-998811')
+      expect(screen.getByText(/^N\.º \d{6}$/)).toHaveTextContent(
+        `N.º ${String(saved!.receiptNumber).padStart(6, '0')}`,
+      )
+      expect(screen.queryByText(saved!.id, { exact: false })).toBeNull()
+    })
+
+    it('busca un cobro del historial por su número de comprobante (ZCAPP-77)', async () => {
+      const user = userEvent.setup()
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      const { payment } = await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-trimestral',
+        amountCents: 12000,
+        manualMethod: 'cash',
+        reference: 'CAJA-77',
+      })
+      const number = String(payment.receiptNumber).padStart(6, '0')
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/cobros']}>
+            <Routes>
+              <Route path="/admin/cobros" element={<CobrosPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+      await user.click(await screen.findByText(/Historial General de Cobros/i))
+      await user.type(screen.getByPlaceholderText(/Buscar por socio/i), number)
+
+      const rows = screen.getAllByRole('row').slice(1)
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toHaveTextContent(number)
+      expect(rows[0]).toHaveTextContent('CAJA-77')
     })
 
     it('navigates to expiring members tab and allows quick renewal', async () => {
