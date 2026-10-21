@@ -474,6 +474,33 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
       expect(screen.getAllByText(/\$120\.00/).length).toBeGreaterThan(0)
     })
 
+    it('[ZCAPP-77] Al cobrar una solicitud se conserva su número de comprobante y es único', async () => {
+      const member = new LocalRepository()
+      await member.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+      const request = await member.requestPlanPayment({
+        planId: 'plan-mensual-full',
+        manualMethod: 'transfer',
+        reference: 'ZC-ABC777',
+        termsVersion: '1.0',
+      })
+      expect(request.receiptNumber).toBeGreaterThan(0)
+
+      const repo = new LocalRepository()
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      const { payment } = await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-mensual-full',
+        amountCents: 4500,
+        manualMethod: 'transfer',
+      })
+
+      expect(payment.id).toBe(request.id)
+      expect(payment.receiptNumber).toBe(request.receiptNumber)
+      const numbers = (await repo.listPayments()).map((p) => p.receiptNumber)
+      expect(numbers.every((n) => typeof n === 'number' && n > 0)).toBe(true)
+      expect(new Set(numbers).size).toBe(numbers.length)
+    })
+
     it('[ZCAPP-84] Recepción descarta una solicitud pendiente sin activar ningún plan', async () => {
       const user = userEvent.setup()
       const member = new LocalRepository()

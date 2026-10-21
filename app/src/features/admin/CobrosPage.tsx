@@ -41,7 +41,11 @@ import {
 } from '@/domain/rules/membership'
 import { isDayPassPlan } from '@/domain/rules/membershipPlan'
 import { buildMembershipReminderUrl } from '@/domain/rules/membershipReminder'
-import { normalizeWhatsAppPhone } from '@/domain/rules/paymentReceipt'
+import {
+  formatReceiptNumber,
+  matchesReceiptNumber,
+  normalizeWhatsAppPhone,
+} from '@/domain/rules/paymentReceipt'
 import {
   currentMembership,
   memberMembership,
@@ -329,7 +333,7 @@ export function CobrosPage() {
         plan?.name.toLowerCase().includes(q) ||
         p.reference?.toLowerCase().includes(q) ||
         p.authorizationCode?.toLowerCase().includes(q) ||
-        p.id.toLowerCase().includes(q)
+        matchesReceiptNumber(historySearch, p.receiptNumber)
       )
     })
   }, [payments, members, plans, historyMethodFilter, historySearch])
@@ -702,9 +706,11 @@ export function CobrosPage() {
                       <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
                         Comprobante de Pago
                       </span>
-                      <div className="text-sm font-mono font-bold text-acc-dark">
-                        ID: {receipt.payment.id}
-                      </div>
+                      {formatReceiptNumber(receipt.payment.receiptNumber) ? (
+                        <div className="text-sm font-mono font-bold text-acc-dark">
+                          N.º {formatReceiptNumber(receipt.payment.receiptNumber)}
+                        </div>
+                      ) : null}
                     </div>
                     <Badge tone="ok">
                       {receipt.payment.status === 'approved' ? 'Aprobado' : receipt.payment.status}
@@ -1465,7 +1471,7 @@ export function CobrosPage() {
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-3" />
               <Input
-                placeholder="Buscar por socio, plan, ref..."
+                placeholder="Buscar por socio, plan, ref. o N.º..."
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
                 className="pl-9 py-1.5 text-xs"
@@ -1484,6 +1490,7 @@ export function CobrosPage() {
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-line bg-surface/50 text-xs uppercase tracking-wider text-ink-3 font-bold">
                   <tr>
+                    <th className="p-3.5">N.º</th>
                     <th className="p-3.5">Fecha</th>
                     <th className="p-3.5">Socio</th>
                     <th className="p-3.5">Plan</th>
@@ -1502,6 +1509,9 @@ export function CobrosPage() {
                     const plan = plans.find((p) => p.id === pay.planId)
                     return (
                       <tr key={pay.id} className="hover:bg-surface/40 transition">
+                        <td className="p-3.5 whitespace-nowrap font-mono font-bold text-ink">
+                          {formatReceiptNumber(pay.receiptNumber) ?? '—'}
+                        </td>
                         <td className="p-3.5 whitespace-nowrap text-ink-3 font-mono">
                           {formatDateShort(pay.createdAt)}
                         </td>

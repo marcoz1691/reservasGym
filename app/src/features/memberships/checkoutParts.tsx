@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Repeat } from 'lucide-react'
 import type { OnlinePaymentReceipt } from '@/data/types'
+import { formatReceiptNumber } from '@/domain/rules/paymentReceipt'
 import { formatCurrency, formatDateSpanish } from '@/lib/format'
 
 /** Piezas de presentación del pago: formulario, resumen, comprobante y volver. */
@@ -52,6 +53,9 @@ export function SummaryRow({ label, value, strong = false }: { label: string; va
 export function ApprovedReceipt({ receipt }: { receipt?: OnlinePaymentReceipt }) {
   const rows: [string, string][] = receipt
     ? [
+        ...(formatReceiptNumber(receipt.receiptNumber)
+          ? [['Comprobante N.º', formatReceiptNumber(receipt.receiptNumber)!] as [string, string]]
+          : []),
         ['Plan', receipt.planName ?? '—'],
         ['Monto', formatCurrency(receipt.amountCents)],
         ['Código de autorización', receipt.authorizationCode ?? '—'],

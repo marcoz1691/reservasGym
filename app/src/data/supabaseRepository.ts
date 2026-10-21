@@ -396,6 +396,7 @@ function mapPayment(row: {
   reference?: string | null
   mp_payment_id?: string | null
   notes?: string | null
+  receipt_number?: number | string | null
   created_at: string
   approved_at: string | null
 }): Payment {
@@ -411,6 +412,7 @@ function mapPayment(row: {
     reference: row.reference,
     authorizationCode: row.provider === 'pagomedios' ? (row.mp_payment_id ?? null) : null,
     notes: row.notes ?? null,
+    receiptNumber: row.receipt_number == null ? null : Number(row.receipt_number),
     createdAt: row.created_at,
     approvedAt: row.approved_at,
   }

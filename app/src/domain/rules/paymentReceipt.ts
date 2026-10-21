@@ -16,6 +16,19 @@ export function normalizeWhatsAppPhone(raw: string | null | undefined): string |
   return digits.length >= 10 && digits.length <= 15 ? digits : null
 }
 
+/** Número de comprobante para mostrar: solo dígitos, mínimo 6 con ceros a la izquierda (000123). */
+export function formatReceiptNumber(n: number | null | undefined): string | null {
+  if (typeof n !== 'number' || !Number.isInteger(n) || n <= 0) return null
+  return String(n).padStart(6, '0')
+}
+
+/** Búsqueda por número de comprobante: acepta «000123», «123» o «N.º 000123». */
+export function matchesReceiptNumber(query: string, n: number | null | undefined): boolean {
+  if (formatReceiptNumber(n) === null) return false
+  const match = /^\s*(?:n\.?\s*º?|#)?\s*(\d+)\s*$/i.exec(query)
+  return match !== null && Number(match[1]) === n
+}
+
 const MEMBER_PHONE_ERROR =
   'Ingresa un celular válido: 09 seguido de 8 dígitos (ej. 0991234567) o, si es extranjero, con + y código de país.'
 

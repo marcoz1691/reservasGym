@@ -158,6 +158,8 @@ export interface GymRepository {
 
 /** Comprobante de un pago en línea aprobado. */
 export interface OnlinePaymentReceipt {
+  /** Número de comprobante corto (ZCAPP-77). */
+  receiptNumber?: number | null
   planName: string | null
   amountCents: number
   authorizationCode: string | null

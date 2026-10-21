@@ -60,6 +60,8 @@ export interface Payment {
   authorizationCode?: string | null
   /** Detalle que deja recepción, p. ej. el crédito aplicado en un cambio de plan. */
   notes?: string | null
+  /** Número de comprobante corto y único que ven recepción y el socio (ZCAPP-77). */
+  receiptNumber?: number | null
   createdAt: string
   approvedAt: string | null
 }
