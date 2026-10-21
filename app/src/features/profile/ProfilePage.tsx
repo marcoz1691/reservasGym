@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react'
 import { useCurrentUser, useGym, useRefresh } from '@/data/RepositoryProvider'
+import { memberPhoneError } from '@/domain/rules/paymentReceipt'
 import { isBiometricAccessEnabled } from '@/lib/biometricAccess'
 import {
   disableBiometrics,
@@ -37,6 +38,7 @@ export function ProfilePage() {
   const [birthDate, setBirthDate] = useState(user?.birthDate ?? '')
   const [residence, setResidence] = useState(user?.residence ?? '')
   const [phone, setPhone] = useState(user?.phone ?? '')
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   const [heightCm, setHeightCm] = useState(user?.heightCm?.toString() ?? '')
   const [goals, setGoals] = useState(user?.goals ?? '')
   const [healthNotes, setHealthNotes] = useState(user?.healthNotes ?? '')
@@ -101,9 +103,12 @@ export function ProfilePage() {
 
   async function handleSave(e: FormEvent) {
     e.preventDefault()
-    setSaving(true)
     setErrorMsg(null)
     setSuccessMsg(null)
+    const phoneProblem = memberPhoneError(phone)
+    setPhoneError(phoneProblem)
+    if (phoneProblem) return
+    setSaving(true)
 
     try {
       if (repo.updateProfile) {
@@ -157,6 +162,7 @@ export function ProfilePage() {
                   setBirthDate(user.birthDate ?? '')
                   setResidence(user.residence ?? '')
                   setPhone(user.phone ?? '')
+                  setPhoneError(null)
                   setHeightCm(user.heightCm?.toString() ?? '')
                   setGoals(user.goals ?? '')
                   setHealthNotes(user.healthNotes ?? '')
@@ -309,7 +315,11 @@ export function ProfilePage() {
                 label="Celular (opcional)"
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  setPhone(e.target.value)
+                  if (phoneError) setPhoneError(null)
+                }}
+                error={phoneError ?? undefined}
                 placeholder="Ej. 0991234567"
               />
 

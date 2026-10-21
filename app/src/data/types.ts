@@ -128,6 +128,8 @@ export interface GymRepository {
     amountCents: number
     manualMethod: ManualPaymentMethod
   }): Promise<{ payment: Payment; membership: Membership }>
+  /** Recepción: descarta una solicitud manual pendiente (queda `rejected`; el socio ve el aviso). */
+  discardPlanRequest?(paymentId: string): Promise<Payment>
   /** Recepción: marca un pago aprobado como reembolsado y, si se pide, cancela su membresía. */
   refundPayment?(params: { paymentId: string; cancelMembership: boolean }): Promise<Payment>
   /**
