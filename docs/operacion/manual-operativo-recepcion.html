@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Manual operativo de recepción · Zona Cero</title>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color: #1c1917; font-size: 10pt; line-height: 1.36; margin: 0; }
+  header { border-bottom: 3px solid #c2410c; padding-bottom: 6px; margin-bottom: 8px; }
+  h1 { font-size: 16pt; margin: 0; }
+  .sub { color: #57534e; margin: 3px 0 0; }
+  .why { background: #fff7ed; border-left: 4px solid #c2410c; padding: 6px 10px; margin: 8px 0 10px; }
+  section { margin: 0 0 8px; break-inside: avoid; }
+  h2 { font-size: 11.5pt; margin: 0 0 3px; display: flex; gap: 8px; align-items: baseline; }
+  h2 .n { background: #1c1917; color: #fff; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 9.5pt; flex: none; }
+  ol, ul { margin: 2px 0 0 0; padding-left: 20px; }
+  li { margin: 1px 0; }
+  .path { font-weight: 600; }
+  .tip { background: #f5f5f4; border-radius: 6px; padding: 5px 9px; margin-top: 4px; }
+  .warn { background: #fef2f2; border-left: 4px solid #b91c1c; border-radius: 0 6px 6px 0; padding: 5px 9px; margin-top: 4px; }
+  .q { font-style: italic; }
+  table { border-collapse: collapse; width: 100%; margin-top: 3px; font-size: 9.5pt; }
+  th, td { border: 1px solid #d6d3d1; padding: 3px 6px; text-align: left; vertical-align: top; }
+  th { background: #f5f5f4; }
+  .page-break { break-before: page; }
+  .sheet td { height: 30px; }
+  footer { border-top: 1px solid #d6d3d1; margin-top: 8px; padding-top: 4px; color: #78716c; font-size: 8.5pt; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Manual operativo de recepción</h1>
+  <p class="sub">Zona Cero Performance Center · Panel web de la app · Para el personal de recepción</p>
+</header>
+
+<div class="why">
+  El panel reemplaza el cuaderno de cobros y la lista de asistencia. Lo importante es que <strong>todo cobro y todo ingreso a clase quede en la app</strong>:
+  de eso depende que el socio pueda reservar, que no le lleguen avisos de vencido por error y que la caja del día cuadre.
+</div>
+
+<section>
+  <h2><span class="n">1</span>Entrar al panel</h2>
+  <ol>
+    <li>Abre la app en el navegador, pestaña <span class="path">Iniciar sesión</span>, escribe tu correo y contraseña y toca <span class="path">Entrar</span>.</li>
+    <li>Llegas al <span class="path">Dashboard</span>: clases de hoy, reservas activas y el botón <span class="path">Reservar socio</span> en cada clase.</li>
+    <li>Menú: <span class="path">Cobros POS</span>, <span class="path">Sesiones</span>, <span class="path">Escanear Check-In</span>, <span class="path">Reservar clases</span>, <span class="path">Mi Perfil</span>. En el celular están abajo.</li>
+  </ol>
+  <div class="tip">Usa siempre <strong>tu propia cuenta</strong>, no la del administrador. Al terminar el turno: <span class="path">Cerrar sesión</span>. Si olvidaste la clave: <span class="path">¿Olvidaste tu contraseña?</span></div>
+</section>
+
+<section>
+  <h2><span class="n">2</span>Cobrar una membresía</h2>
+  <ol>
+    <li><span class="path">Cobros POS → Registrar Cobro (POS)</span>. Busca al socio por nombre o correo. Su estado aparece al lado: <strong>Activa</strong>, <strong>En gracia</strong>, <strong>Vencida</strong> o <strong>Sin plan</strong>.</li>
+    <li>Elige el plan. La app sugiere el último que tuvo. Si todavía tiene plan vigente, el nuevo <strong>empieza cuando termine el actual</strong>; no se pierden días.</li>
+    <li>Elige el medio de pago: <strong>Datáfono POS Datafast</strong>, <strong>Efectivo</strong>, <strong>Transferencia Bancaria</strong>, <strong>Deuna</strong> o <strong>Pago recurrente Pagomedios</strong>.</li>
+    <li>Revisa el <strong>monto</strong> y llena la <strong>Referencia</strong>: número de voucher o lote del datáfono, o número de transferencia. En efectivo puede quedar vacía.</li>
+    <li>Toca <span class="path">Confirmar Cobro y Activar Membresía</span>. Sale el comprobante con su <strong>N.º</strong>, la nueva vigencia y la fecha de fin de gracia. Díctale al socio la fecha de vencimiento.</li>
+  </ol>
+  <div class="tip"><strong>Cambio de plan el mismo día:</strong> marca <span class="path">Cambiar plan hoy</span>. Cierra el plan actual y descuenta los días no usados del monto sugerido. <strong>Pase del día:</strong> vale solo hoy hasta las 23:59 y no cambia la membresía.</div>
+  <div class="warn">Primero cobra (datáfono, efectivo o transferencia ya acreditada) y <strong>después</strong> confirma en la app. Si confirmas sin haber cobrado, la membresía queda activa igual.</div>
+</section>
+
+<section>
+  <h2><span class="n">3</span>Solicitudes de socios (eligieron plan desde su celular)</h2>
+  <ul>
+    <li>Arriba en Cobros aparece <span class="path">Solicitudes de socios</span>: el socio ya eligió plan y forma de pago desde la app.</li>
+    <li><span class="path">Cobrar</span>: llena el formulario con sus datos. Recibe el pago y confirma como en el paso 2.</li>
+    <li><span class="path">Descartar</span>: úsalo si el socio no vino, se equivocó o no va a pagar. No se activa nada y el socio ve el aviso en <em>Mi Plan</em>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">4</span>Vencimientos y recordatorio por WhatsApp (revisar cada mañana)</h2>
+  <ul>
+    <li><span class="path">Cobros → Socios por Vencer y Vencidos</span>. Filtros: <strong>Por Vencer (≤ 7 días)</strong>, <strong>En Periodo de Gracia (3 días)</strong>, <strong>Vencidos</strong>.</li>
+    <li><span class="path">Recordar por WhatsApp</span> abre WhatsApp con el mensaje listo; solo toca enviar. Si dice <em>«Sin celular registrado»</em> o <em>«Celular no válido»</em>, pídele al socio que lo corrija en su perfil cuando venga.</li>
+    <li><span class="path">Cobrar Renovación</span> te lleva al cobro con el socio y su plan ya elegidos.</li>
+  </ul>
+  <div class="tip"><strong>Gracia:</strong> al vencer, el socio tiene <strong>3 días</strong> para renovar. Pasado ese plazo, la app no le deja reservar desde su celular.</div>
+</section>
+
+<section class="page-break">
+  <h2><span class="n">5</span>Check-in: registrar que el socio llegó a su clase</h2>
+  <ol>
+    <li><span class="path">Escanear Check-In</span>. Escribe el código que el socio muestra en su app (empieza con <strong>QR-</strong>) o tócalo en la lista <span class="path">Próximos socios para check-in</span>.</li>
+    <li>Mira la etiqueta del socio: <strong>Vigente</strong>, <strong>En Gracia</strong>, <strong>Vencido</strong> o <strong>Sin Plan</strong>.</li>
+    <li>Toca <span class="path">Validar check-in</span>. Debe salir <em>«Check-in registrado con éxito»</em>.</li>
+  </ol>
+  <table>
+    <tr><th>Mensaje</th><th>Qué hacer</th></tr>
+    <tr><td>Fuera de la ventana de check-in</td><td>El check-in abre <strong>15 minutos antes</strong> de la clase y cierra <strong>10 minutos después</strong> del inicio. Fuera de ese horario no se puede.</td></tr>
+    <tr><td>Código QR inválido</td><td>Revisa que el código esté bien escrito o búscalo en la lista.</td></tr>
+    <tr><td>La reserva no está activa</td><td>La reserva fue cancelada. Si hay cupo, resérvale de nuevo (paso 6).</td></tr>
+  </table>
+  <div class="warn">La app <strong>no bloquea</strong> el check-in de un socio <strong>Vencido</strong> o <strong>Sin Plan</strong>. Si ves esa etiqueta, cóbrale la renovación o un pase del día <strong>antes</strong> de dejarlo pasar.</div>
+</section>
+
+<section>
+  <h2><span class="n">6</span>Reservar una clase para un socio (en persona o por teléfono)</h2>
+  <ol>
+    <li>En la clase (desde <span class="path">Dashboard</span> o <span class="path">Sesiones</span>) toca <span class="path">Reservar socio</span>. En <span class="path">Reservar clases</span> es <span class="path">Por socio</span>.</li>
+    <li>Busca al socio. Si sale <strong>Advertencia de Acceso</strong> (vencido, en gracia, sin plan o su plan no incluye esa área), cóbrale primero. Si el administrador lo autoriza, marca <span class="path">¿Deseas proceder y autorizar esta reserva desde recepción?</span></li>
+    <li><span class="path">Confirmar Reserva en Recepción</span>. Si la clase está llena: <span class="path">Registrar en Lista de Espera</span>.</li>
+    <li>Dale al socio el <strong>código de check-in</strong> (botón <span class="path">Copiar</span>).</li>
+  </ol>
+  <div class="tip"><strong>Cancelar una reserva:</strong> el socio la cancela desde su app, en <em>Mis clases</em>. Recepción no tiene ese botón; si el socio no puede, avisa al administrador.</div>
+</section>
+
+<section>
+  <h2><span class="n">7</span>Historial y cierre de caja (al final del turno)</h2>
+  <ul>
+    <li><span class="path">Cobros → Historial General de Cobros</span>: total del día por medio de pago (Datáfono, Efectivo, Transferencias, Deuna, Pago recurrente, En línea).</li>
+    <li>Compara <strong>Efectivo</strong> con la caja y <strong>Datáfono POS</strong> con el cierre de lote de Datafast.</li>
+    <li>Para encontrar un cobro, busca por socio, plan, referencia o <strong>N.º de comprobante</strong>.</li>
+    <li><span class="path">Marcar reembolsado</span> es <strong>solo con autorización del administrador</strong>. Al final pregunta si también se cancela la membresía.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">8</span>Si se cae el internet en recepción</h2>
+  <ol>
+    <li><strong>No se pierde nada de lo ya registrado</strong>: los datos están en la nube. Prueba con los datos móviles del celular de recepción, ya que el panel funciona en el celular.</li>
+    <li>Si no hay ninguna conexión, anota cada cobro en la <strong>hoja de contingencia</strong>: hora, socio (nombre y cédula), plan, monto, medio de pago y voucher o número de transferencia.</li>
+    <li>Deja pasar a los socios con reserva y anota su nombre y clase. El check-in no se puede registrar después.</li>
+    <li>Al volver la conexión, registra <strong>ese mismo día</strong> cada cobro de la hoja (paso 2). En Referencia escribe el voucher y <em>«diferido HH:MM»</em>. Tacha cada línea al registrarla.</li>
+  </ol>
+  <div class="tip">Entrega la hoja al administrador al cierre del día. No se puede cobrar con tarjeta en línea (Pagomedios) sin internet; usa el datáfono físico.</div>
+</section>
+
+<section>
+  <h2><span class="n">9</span>Lo hace el administrador, no recepción</h2>
+  <ul>
+    <li>Crear o cambiar <strong>planes y precios</strong>: la opción <span class="path">Planes</span> del menú muestra «Acceso exclusivo para Administradores».</li>
+    <li>Reembolsos, cancelar el pago recurrente o la tarjeta en Pagomedios, y cancelar reservas de socios que no pueden hacerlo.</li>
+    <li>Pago recurrente con tarjeta: sigue el <strong>Instructivo de recepción: pago recurrente</strong> (hoja aparte).</li>
+  </ul>
+</section>
+
+<footer>
+  <span>Dudas: administrador del gimnasio.</span>
+  <span>Versión 1.0 · octubre 2026</span>
+</footer>
+
+<div class="page-break">
+  <header>
+    <h1>Hoja de contingencia: cobros sin internet</h1>
+    <p class="sub">Fecha: ____________ · Recepcionista: ______________________ · Registrar en la app el mismo día (manual, paso 8)</p>
+  </header>
+  <table class="sheet">
+    <tr><th style="width:9%">Hora</th><th style="width:27%">Socio (nombre y cédula)</th><th style="width:16%">Plan</th><th style="width:9%">Monto</th><th style="width:14%">Medio de pago</th><th style="width:17%">Voucher / N.º transf.</th><th style="width:8%">En app ✓</th></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <h2 style="margin-top:12px">Socios que ingresaron a clase sin check-in</h2>
+  <table class="sheet">
+    <tr><th style="width:12%">Hora</th><th style="width:45%">Socio</th><th style="width:43%">Clase</th></tr>
+    <tr><td>&nbsp;</td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td></tr>
+  </table>
+</div>
+</body>
+</html>
