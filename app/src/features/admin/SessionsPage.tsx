@@ -264,14 +264,15 @@ export function SessionsPage() {
       }
 
       // Programación en bloque: se omiten las clases que ya existen (misma área, hora y título).
-      const existingKeys = new Set(
-        data.sessions.map((s) => `${s.zoneId}|${s.startsAt}|${s.title.trim().toLowerCase()}`),
-      )
+      // Supabase devuelve la hora como «…+00:00» y la nueva sale como «….000Z»: se compara el instante.
+      const sessionKey = (zoneId: string, startsAt: string, sessionTitle: string) =>
+        `${zoneId}|${new Date(startsAt).getTime()}|${sessionTitle.trim().toLowerCase()}`
+      const existingKeys = new Set(data.sessions.map((s) => sessionKey(s.zoneId, s.startsAt, s.title)))
       let created = 0
       let skipped = 0
       for (const ymd of dates) {
         const payload = buildPayload(ymd, createId('ses'), 0)
-        if (existingKeys.has(`${payload.zoneId}|${payload.startsAt}|${title.toLowerCase()}`)) {
+        if (existingKeys.has(sessionKey(payload.zoneId, payload.startsAt, title))) {
           skipped += 1
           continue
         }
