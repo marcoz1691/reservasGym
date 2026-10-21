@@ -101,6 +101,8 @@ For testing, please use the provided demo accounts below.
 
 Configurar en **App Review Information -> Sign-in required**:
 
+> **Pendiente:** `@gym.local` / `demo1234` solo existen en el modo demo local. Antes de enviar a revisión, crear en **producción** una cuenta socio y una staff exclusivas para los revisores (Apple y Google) y poner aquí solo su correo; la clave va en Play Console / App Store Connect, no en el repo.
+
 - **Usuario Socio (Member Demo)**:
   - **Email**: `socio@gym.local`
   - **Contraseña**: `demo1234`
@@ -146,8 +148,8 @@ En la sección **Contenido de la aplicación -> Seguridad de los datos**, respon
 ---
 
 ### 3.3. Requisitos Técnicos de Android
-- **Target SDK**: Android 14 / 15 (API level 34 o 35 según requerimiento vigente de Google Play).
-- **Min SDK**: API level 22 (Android 5.1 Lollipop) o superior.
+- **Target SDK**: Android 16 (API 36). Es obligatorio para apps nuevas desde el 31-ago-2026 y requiere Capacitor 8.
+- **Min SDK**: API 24 (Android 7.0).
 - **Formato de Entrega**: Android App Bundle (`.aab`) firmado con clave de producción (Play App Signing).
 
 ---
@@ -183,12 +185,27 @@ npm run build
 # 4. Sincronizar activos web y plugins nativos a las carpetas android/ e ios/
 npm run cap:sync
 
-# 5. Para abrir en Android Studio (generar AAB firmado):
-npm run cap:android
+# 5. Generar el AAB firmado para Google Play (Android 16 / API 36, Capacitor 8, JDK 21):
+cd android && ./gradlew bundleRelease
+# -> android/app/build/outputs/bundle/release/app-release.aab
 
 # 6. Para abrir en Xcode (macOS - generar Archive para App Store Connect):
 npm run cap:ios
 ```
+
+---
+
+### 5.1. Firma de Android (clave de subida)
+
+- La clave de subida **no está en el repo**. Vive en `~/.zonacero-android/upload-keystore.jks`, y sus datos (ruta, alias, contraseñas) en `~/.zonacero-android/keystore.properties`. Para otra ruta: variable `ZONACERO_KEYSTORE_PROPERTIES`.
+- Sin ese archivo, `bundleRelease` genera un AAB **sin firmar** que Play Console rechaza.
+- Play App Signing guarda la clave final de la app. Si se pierde la clave de subida, se pide un reseteo en Play Console; aun así, **respaldar ambos archivos** en un gestor de contraseñas o bóveda.
+- Cada build que se sube a Play necesita un `versionCode` mayor en `android/app/build.gradle`.
+
+### 5.2. Entorno del build
+
+- `npm run build:capacitor` usa `.env.capacitor.local` (ignorado por git). Para pruebas internas apunta a **QA**; para producción, a `zona-cero-prod`.
+- Íconos y splash: `node scripts/generate-app-assets.mjs && npx capacitor-assets generate --android --ios` (fuente: `public/brand/`). Las imágenes de la ficha de Play quedan en `assets/store/`.
 
 ---
 

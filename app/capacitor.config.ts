@@ -7,10 +7,14 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
   },
-  android: {
-    // Android 15 dibuja la app detrás de la barra de estado y la de gestos; el
-    // WebView no informa esos márgenes, así que Capacitor los aplica.
-    adjustMarginsForEdgeToEdge: 'auto',
+  plugins: {
+    // Android 16 dibuja la app detrás de la barra de estado y la de gestos. En
+    // WebViews viejos Capacitor rellena esos márgenes; en los nuevos los informa
+    // por env(safe-area-inset-*), que ya usa index.css.
+    SystemBars: {
+      insetsHandling: 'css',
+      initialViewportFitValueHint: 'cover',
+    },
   },
 }
 

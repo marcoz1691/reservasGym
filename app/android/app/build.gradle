@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+// La clave de subida vive fuera del repo. Ruta por defecto: ~/.zonacero-android/keystore.properties
+// (storeFile, storePassword, keyAlias, keyPassword); se puede cambiar con ZONACERO_KEYSTORE_PROPERTIES.
+def keystorePropsFile = file(System.getenv('ZONACERO_KEYSTORE_PROPERTIES') ?: "${System.getProperty('user.home')}/.zonacero-android/keystore.properties")
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
 android {
     namespace "com.reservasgym.app"
     compileSdk rootProject.ext.compileSdkVersion
@@ -16,8 +24,21 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keystoreProps['storeFile']) {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (keystoreProps['storeFile']) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
