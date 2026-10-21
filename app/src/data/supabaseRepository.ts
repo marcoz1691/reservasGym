@@ -1360,6 +1360,7 @@ export class SupabaseRepository implements GymRepository {
     planId: string
     manualMethod: ManualPaymentMethod
     reference?: string
+    termsVersion: string
   }): Promise<Payment> {
     const user = await this.requireUser()
     if (user.role !== 'member') {
@@ -1402,6 +1403,7 @@ export class SupabaseRepository implements GymRepository {
       provider: 'manual',
       manual_method: params.manualMethod,
       reference: resolveRequestReference(existing?.reference, params.reference),
+      terms_version: params.termsVersion,
     }
     const query = existing
       ? this.client.from('payments').update(payload).eq('id', existing.id)
@@ -1518,6 +1520,7 @@ export class SupabaseRepository implements GymRepository {
     documentType: PagomediosDocumentType
     phone: string
     address: string
+    termsVersion: string
     native?: boolean
     recurring?: boolean
   }): Promise<{ url: string; paymentId: string }> {

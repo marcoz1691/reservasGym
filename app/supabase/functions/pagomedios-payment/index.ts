@@ -51,9 +51,36 @@ const PAGOMEDIOS_API = (
 const DOCUMENT_TYPES = ["04", "05", "06", "08"] as const
 
 const corsHeaders: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+}
+
+// Orígenes de la app: web (APP_URL), WebView de Capacitor y desarrollo local.
+// ALLOWED_ORIGINS (separados por coma) agrega orígenes extra, p. ej. dominios propios.
+const STATIC_ORIGINS = [
+  "capacitor://localhost",
+  "https://localhost",
+  "http://localhost",
+  "http://localhost:5173",
+]
+
+function allowedOrigins(): string[] {
+  const appUrl = Deno.env.get("APP_URL")?.trim().replace(/\/$/, "")
+  const extra = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
+    .split(",")
+    .map((o) => o.trim().replace(/\/$/, ""))
+    .filter(Boolean)
+  return [...STATIC_ORIGINS, ...(appUrl ? [appUrl] : []), ...extra]
+}
+
+/** Agrega CORS solo si el origen de la petición está permitido (antes era `*`). */
+function withCors(req: Request, res: Response): Response {
+  const origin = req.headers.get("Origin")
+  res.headers.set("Vary", "Origin")
+  if (origin && allowedOrigins().includes(origin)) {
+    res.headers.set("Access-Control-Allow-Origin", origin)
+  }
+  return res
 }
 
 type Env = {
@@ -64,7 +91,9 @@ type Env = {
   admin: SupabaseClient
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(async (req: Request) => withCors(req, await handleRequest(req)))
+
+async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
   }
@@ -142,7 +171,7 @@ Deno.serve(async (req: Request) => {
       500,
     )
   }
-})
+}
 
 async function handleCreate(
   body: Record<string, unknown>,
@@ -156,6 +185,14 @@ async function handleCreate(
   const address = String(body.address ?? "").trim() || "Quito"
   const native = body.native === true
   const recurring = body.recurring === true
+  // Evidencia de aceptación: la app envía la versión de los términos que el socio aceptó.
+  const termsVersion = String(body.termsVersion ?? "").trim()
+  if (!termsVersion || termsVersion.length > 40) {
+    return json(
+      { error: "Debes aceptar los términos y condiciones para pagar.", code: "TERMS_REQUIRED" },
+      400,
+    )
+  }
 
   const { admin } = env
   const { data: settings } = await admin
@@ -247,6 +284,7 @@ async function handleCreate(
       manual_method: null,
       reference: null,
       notes: recurring ? recurringNote("registering", document) : null,
+      terms_version: termsVersion,
       created_at: new Date().toISOString(),
     })
     .select("id")

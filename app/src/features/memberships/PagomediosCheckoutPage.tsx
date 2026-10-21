@@ -137,7 +137,8 @@ export function PagomediosCheckoutPage() {
   )
 
   const [draft] = useState(() => readCheckoutDraft(user?.id, planId))
-  const termsDocumentKey = resolveTermsDocument(data.settings, import.meta.env.BASE_URL).key
+  const termsDocument = resolveTermsDocument(data.settings, import.meta.env.BASE_URL)
+  const termsDocumentKey = termsDocument.key
   const [previousPaymentId, setPreviousPaymentId] = useState(draft?.paymentId ?? null)
   const [documentType, setDocumentType] = useState<BillingDocumentType>(draft?.documentType ?? '05')
   const [document, setDocument] = useState(draft?.document ?? '')
@@ -282,8 +283,8 @@ export function PagomediosCheckoutPage() {
       try {
         const request = await repo.requestPlanPayment(
           isRemotePaymentMethod(method)
-            ? { planId, manualMethod: method, reference }
-            : { planId, manualMethod: method },
+            ? { planId, manualMethod: method, reference, termsVersion: termsDocument.version }
+            : { planId, manualMethod: method, termsVersion: termsDocument.version },
         )
         await refresh()
         clearCheckoutDraft()
@@ -316,6 +317,7 @@ export function PagomediosCheckoutPage() {
         documentType,
         phone: phone.trim(),
         address: address.trim(),
+        termsVersion: termsDocument.version,
         native,
         ...(recurring ? { recurring: true } : {}),
       })

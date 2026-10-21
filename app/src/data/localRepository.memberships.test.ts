@@ -233,6 +233,7 @@ describe('LocalRepository memberships and billing', () => {
     const request = await memberRepo.requestPlanPayment({
       planId: plan.id,
       manualMethod: 'transfer',
+      termsVersion: '1.0',
     })
 
     expect(request.status).toBe('pending')
@@ -246,6 +247,7 @@ describe('LocalRepository memberships and billing', () => {
     const replaced = await memberRepo.requestPlanPayment({
       planId: plan.id,
       manualMethod: 'cash',
+      termsVersion: '1.0',
     })
     expect(replaced.id).toBe(request.id)
     expect(replaced.manualMethod).toBe('cash')
@@ -277,12 +279,13 @@ describe('LocalRepository memberships and billing', () => {
     const request = await memberRepo.requestPlanPayment({
       planId: plan.id,
       manualMethod: 'deuna',
+      termsVersion: '1.0',
       reference: 'ZC-4F7A2C',
     })
     expect(request.manualMethod).toBe('deuna')
     expect(request.reference).toBe('ZC-4F7A2C')
 
-    const changed = await memberRepo.requestPlanPayment({ planId: plan.id, manualMethod: 'transfer' })
+    const changed = await memberRepo.requestPlanPayment({ planId: plan.id, manualMethod: 'transfer', termsVersion: '1.0' })
     expect(changed.reference).toBe('ZC-4F7A2C')
 
     const staff = new LocalRepository()
@@ -302,7 +305,7 @@ describe('LocalRepository memberships and billing', () => {
     await memberRepo.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
     const plan = (await memberRepo.getMembershipPlans()).find((p) => p.active)!
 
-    const request = await memberRepo.requestPlanPayment({ planId: plan.id, manualMethod: 'cash' })
+    const request = await memberRepo.requestPlanPayment({ planId: plan.id, manualMethod: 'cash', termsVersion: '1.0' })
     expect(request.reference).toMatch(/^ZC-[0-9A-F]{6}$/)
   })
 })
@@ -365,9 +368,9 @@ describe('LocalRepository reglas de planes (en espera, pase del día, cambio, re
     const member = new LocalRepository()
     await member.signIn({ email: 'socio@gym.local', password: DEMO_PASSWORD })
     await expect(
-      member.requestPlanPayment({ planId: 'plan-dragon-fit', manualMethod: 'cash' }),
+      member.requestPlanPayment({ planId: 'plan-dragon-fit', manualMethod: 'cash', termsVersion: '1.0' }),
     ).rejects.toThrow(/plan en espera/i)
-    const same = await member.requestPlanPayment({ planId: 'plan-trimestral', manualMethod: 'cash' })
+    const same = await member.requestPlanPayment({ planId: 'plan-trimestral', manualMethod: 'cash', termsVersion: '1.0' })
     expect(same.status).toBe('pending')
   })
 
