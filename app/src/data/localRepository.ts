@@ -6,6 +6,8 @@ import type {
   ClassTemplate,
   GymSettings,
   GymState,
+  LegalConsentContext,
+  LegalConsentInput,
   ManualPaymentMethod,
   Membership,
   MembershipPlan,
@@ -46,6 +48,7 @@ import {
   resolveRequestReference,
 } from '../domain/rules'
 import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
+import { anonymizeDeletedMemberPayments } from '../domain/rules/accountDeletion'
 import { readPdfDataUrl, validateTermsPdf } from '../domain/rules/termsDocument'
 import { recurringRenewalFrom } from '../domain/rules/recurringRenewal'
 import type {
@@ -301,6 +304,20 @@ export class LocalRepository implements GymRepository {
     return { ...user }
   }
 
+  private pushConsents(userId: string, context: LegalConsentContext, consents: LegalConsentInput[]) {
+    if (!this.state.legalConsents) this.state.legalConsents = []
+    const acceptedAt = new Date().toISOString()
+    for (const c of consents) {
+      this.state.legalConsents.push({ id: uid('consent'), userId, context, acceptedAt, ...c })
+    }
+  }
+
+  async recordLegalConsents(context: LegalConsentContext, consents: LegalConsentInput[]): Promise<void> {
+    const user = await this.requireUser()
+    this.pushConsents(user.id, context, consents)
+    this.persistState()
+  }
+
   async signUp(creds: AuthCredentials): Promise<User> {
     await this.ensureReady()
     if (!creds.fullName?.trim()) throw new Error('Nombre requerido')
@@ -332,6 +349,7 @@ export class LocalRepository implements GymRepository {
     }
     writeCreds(store)
     this.state.users.push(user)
+    this.pushConsents(user.id, 'signup', creds.consents ?? [])
 
     if (user.initialWeightKg && user.initialWeightKg > 0) {
       this.state.measurements.push({
@@ -453,14 +471,16 @@ export class LocalRepository implements GymRepository {
     const actor = await this.requireUser()
     const userId = actor.id
 
-    // Remove user bookings, waitlist, check-ins, measurements, body goals, memberships, payments, and profile (Apple 5.1.1(v) & Google Play)
+    // Remove user bookings, waitlist, check-ins, measurements, body goals, memberships, consents and profile (Apple 5.1.1(v) & Google Play).
+    // Approved payments stay anonymized for accounting (accountDeletion.ts).
     this.state.bookings = this.state.bookings.filter((b) => b.userId !== userId)
     this.state.waitlist = this.state.waitlist.filter((w) => w.userId !== userId)
     this.state.checkIns = this.state.checkIns.filter((c) => c.userId !== userId)
     this.state.measurements = this.state.measurements.filter((m) => m.userId !== userId)
     this.state.bodyGoals = (this.state.bodyGoals ?? []).filter((g) => g.userId !== userId)
     this.state.memberships = (this.state.memberships ?? []).filter((m) => m.userId !== userId)
-    this.state.payments = (this.state.payments ?? []).filter((p) => p.userId !== userId)
+    this.state.payments = anonymizeDeletedMemberPayments(this.state.payments ?? [], userId)
+    this.state.legalConsents = (this.state.legalConsents ?? []).filter((c) => c.userId !== userId)
     this.state.users = this.state.users.filter((u) => u.id !== userId)
 
     const creds = readCreds()

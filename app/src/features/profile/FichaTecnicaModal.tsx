@@ -17,6 +17,10 @@ import { isBiometricAccessEnabled } from '@/lib/biometricAccess'
 import { disableBiometrics, registerBiometrics } from '@/lib/biometrics'
 import { Badge, Button, Card, Input } from '@/ui/primitives'
 
+import { ConsentCheckbox } from '@/features/legal/ConsentCheckbox'
+import { LegalDocumentDialog } from '@/features/legal/LegalDocumentDialog'
+import { PRIVACY } from '@/features/legal/legalDocuments'
+
 interface FichaTecnicaModalProps {
   open: boolean
   onClose: () => void
@@ -44,6 +48,9 @@ export function FichaTecnicaModal({
   const { repo } = useGym()
   const refresh = useRefresh()
 
+  const [acceptedHealth, setAcceptedHealth] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
+  useEffect(() => { setAcceptedHealth(false); setShowPrivacy(false) }, [open, user?.id])
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [nowMs] = useState(() => Date.now())
   const [saving, setSaving] = useState(false)
@@ -111,7 +118,12 @@ export function FichaTecnicaModal({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!user) return
+    if (!user || saving) return
+    if (!acceptedHealth) {
+      setStep(lastStep)
+      setFormError('Autoriza el tratamiento de tus datos de salud para guardar la ficha.')
+      return
+    }
     if (isInitialOnboarding && (hNum <= 0 || wNum <= 0)) {
       setStep(3)
       setFormError('Ingresa tu estatura y masa corporal para terminar la ficha.')
@@ -125,6 +137,8 @@ export function FichaTecnicaModal({
         ...selectedGoals,
         ...(customGoal.trim() ? [customGoal.trim()] : []),
       ].join(', ')
+
+      await repo.recordLegalConsents?.('ficha', [{ document: 'health_data', version: PRIVACY.version }])
 
       // 1. Update user profile
       if (repo.updateProfile) {
@@ -197,7 +211,7 @@ export function FichaTecnicaModal({
         }, 1500)
       }
     } catch (err) {
-      console.error(err)
+      setFormError(err instanceof Error ? err.message : 'No se pudo guardar la ficha. Intenta nuevamente.')
     } finally {
       setSaving(false)
     }
@@ -525,12 +539,11 @@ export function FichaTecnicaModal({
 
                     <div>
                       <label htmlFor={residenceId} className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-3">
-                        Sector / Ciudad de Residencia *
+                        Sector / Ciudad de Residencia (opcional)
                       </label>
                       <Input
                         id={residenceId}
                         type="text"
-                        required
                         value={residence}
                         onChange={(e) => setResidence(e.target.value)}
                         placeholder="Ej. Quito - Pomasqui, Tumbaco, etc."
@@ -544,8 +557,9 @@ export function FichaTecnicaModal({
                       🔒 Privacidad y protección de datos (LOPDP Ecuador)
                     </p>
                     <p className="mt-1">
-                      Tus datos personales son de uso exclusivo para tu ficha de entrenamiento
-                      y no son compartidos con terceros ni comercializados.
+                      Usamos tus datos para tu ficha de entrenamiento. Se alojan en Supabase,
+                      nuestro proveedor de almacenamiento en São Paulo, Brasil, lo que implica
+                      una transferencia internacional. No comercializamos tus datos.
                     </p>
                   </div>
                 </div>
@@ -659,6 +673,14 @@ export function FichaTecnicaModal({
                 </div>
               )}
 
+              {step === lastStep && (
+                <ConsentCheckbox checked={acceptedHealth} onChange={setAcceptedHealth}
+                  label="Consiento expresamente el tratamiento de mis datos de salud"
+                  linkText="política de privacidad" onOpen={() => setShowPrivacy(true)}>
+                  Consiento expresamente el tratamiento de mis datos de salud (peso, medidas
+                  corporales y dolencias) para adaptar mi entrenamiento, según la
+                </ConsentCheckbox>
+              )}
               {/* Action Buttons */}
               <div className="mt-6 flex items-center justify-between border-t border-line pt-4">
                 {step > 1 ? (
@@ -699,7 +721,7 @@ export function FichaTecnicaModal({
                 ) : (
                   <Button
                     type="submit"
-                    disabled={saving}
+                    disabled={saving || !acceptedHealth}
                     className="flex items-center gap-2 font-bold"
                   >
                     <Sparkles className="h-4 w-4" />
@@ -711,6 +733,7 @@ export function FichaTecnicaModal({
           )}
         </form>
       </Card>
+      {showPrivacy && <LegalDocumentDialog doc={PRIVACY} onClose={() => setShowPrivacy(false)} />}
     </div>
   )
 }

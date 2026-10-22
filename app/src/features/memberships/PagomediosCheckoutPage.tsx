@@ -1,3 +1,6 @@
+import { ConsentCheckbox } from '@/features/legal/ConsentCheckbox'
+import { LegalDocumentDialog } from '@/features/legal/LegalDocumentDialog'
+import { PRIVACY, REFUND, legalPath } from '@/features/legal/legalDocuments'
 import type { FormEvent } from 'react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -147,6 +150,8 @@ export function PagomediosCheckoutPage() {
   const [touched, setTouched] = useState<Partial<Record<keyof BillingErrors, boolean>>>({})
   const [acceptedTermsKey, setAcceptedTermsKey] = useState<string | null>(draft?.acceptedTerms && draft.termsDocumentKey === termsDocumentKey ? termsDocumentKey : null)
   const acceptedTerms = acceptedTermsKey === termsDocumentKey
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(draft?.acceptedPrivacy === true && draft.privacyVersion === PRIVACY.version)
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [payerOpen, setPayerOpen] = useState(true)
   const [chosenMethod, setMethod] = useState<CheckoutMethod>(draft?.method ?? (wantsRecurring ? 'recurring' : 'card'))
@@ -281,6 +286,9 @@ export function PagomediosCheckoutPage() {
       setBusy(true)
       setError(null)
       try {
+        await repo.recordLegalConsents?.('checkout', [
+          { document: 'terms', version: resolveTermsDocument(data.settings, import.meta.env.BASE_URL).version },
+        ])
         const request = await repo.requestPlanPayment(
           isRemotePaymentMethod(method)
             ? { planId, manualMethod: method, reference, termsVersion: termsDocument.version }
@@ -301,7 +309,7 @@ export function PagomediosCheckoutPage() {
       return
     }
     if (!repo.createPagomediosPayment) return
-    if (Object.keys(billingErrors).length > 0 || !acceptedTerms) {
+    if (Object.keys(billingErrors).length > 0 || !acceptedTerms || !acceptedPrivacy) {
       setTouched({ document: true, phone: true, address: true })
       setPayerOpen(true)
       return
@@ -310,6 +318,10 @@ export function PagomediosCheckoutPage() {
     setBusy(true)
     setError(null)
     try {
+      await repo.recordLegalConsents?.('checkout', [
+        { document: 'terms', version: resolveTermsDocument(data.settings, import.meta.env.BASE_URL).version },
+        { document: 'privacy', version: PRIVACY.version },
+      ])
       const native = isNativeApp()
       const { url, paymentId: newPaymentId } = await repo.createPagomediosPayment({
         planId,
@@ -325,7 +337,7 @@ export function PagomediosCheckoutPage() {
       else if (user) {
         saveCheckoutDraft({
           userId: user.id, planId, documentType, document, phone, address,
-          acceptedTerms, termsDocumentKey, method, paymentId: newPaymentId,
+          acceptedTerms, termsDocumentKey, acceptedPrivacy, privacyVersion: PRIVACY.version, method, paymentId: newPaymentId,
         })
         setPreviousPaymentId(newPaymentId)
       }
@@ -487,7 +499,7 @@ export function PagomediosCheckoutPage() {
   const cents = (value: number) => Math.round(value * 100)
   const payingByCard = method === 'card' || recurring
   const formValid =
-    acceptedTerms && (!payingByCard || Object.keys(billingErrors).length === 0)
+    acceptedTerms && (!payingByCard || (acceptedPrivacy && Object.keys(billingErrors).length === 0))
   const docLabel = BILLING_DOCUMENT_TYPES.find((t) => t.value === documentType)?.label ?? 'ID'
   const payerSummary =
     Object.keys(billingErrors).length === 0
@@ -684,6 +696,7 @@ export function PagomediosCheckoutPage() {
           <SummaryRow label={`IVA ${Math.round(ONLINE_PAYMENT_TAX_RATE * 100)}%`} value={formatCurrency(cents(amounts.tax_value))} />
           <div className="border-t border-dashed border-line-strong pt-2">
             <SummaryRow label="Total" value={formatCurrency(plan.priceCents)} strong />
+            <Link to={legalPath(REFUND)} className="inline-flex min-h-11 items-center underline">Política de reembolsos</Link>
           </div>
         </section>
 
@@ -716,6 +729,14 @@ export function PagomediosCheckoutPage() {
               términos y condiciones
             </button>
         </div>
+
+        {payingByCard && (
+          <ConsentCheckbox checked={acceptedPrivacy} onChange={setAcceptedPrivacy}
+            label="Acepto la política de privacidad" linkText="política de privacidad"
+            onOpen={() => setShowPrivacy(true)}>
+            Autorizo el tratamiento de mis datos de pago (identificación, celular y dirección) y su envío a Pagomedios según la
+          </ConsentCheckbox>
+        )}
 
         {error ? (
           <div
@@ -769,6 +790,7 @@ export function PagomediosCheckoutPage() {
         </div>
       </form>
 
+      {showPrivacy && <LegalDocumentDialog doc={PRIVACY} onClose={() => setShowPrivacy(false)} />}
       {showTerms ? <TermsDialog settings={data.settings} onClose={() => setShowTerms(false)} /> : null}
       {confirmLeave ? (
         <LeaveCheckoutSheet onStay={() => setConfirmLeave(false)} onLeave={leaveCheckout} />

@@ -32,9 +32,11 @@ async function fillBilling() {
   await userEvent.type(screen.getByLabelText('Celular'), '0987569852')
   await userEvent.type(screen.getByLabelText('Dirección'), ADDRESS)
   await userEvent.click(screen.getByRole('checkbox', { name: /Acepto los términos y condiciones/ }))
+  await userEvent.click(screen.getByRole('checkbox', { name: /Acepto la política de privacidad/ }))
 }
 
 const repo = {
+  recordLegalConsents: vi.fn().mockResolvedValue(undefined),
   createPagomediosPayment: vi.fn(),
   verifyPagomediosPayment: vi.fn(),
   requestPlanPayment: vi.fn(),
@@ -265,6 +267,34 @@ describe('PagomediosCheckoutPage — pago único', () => {
     await userEvent.type(screen.getByLabelText('Número de identificación'), '1723358400')
     await userEvent.tab()
     expect(screen.getByText('La cédula no es válida.')).toBeInTheDocument()
+  })
+
+  it('exige privacidad por separado y registra ambas aceptaciones antes del pago', async () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    await fillBilling()
+    const privacy = screen.getByRole('checkbox', { name: /Acepto la política de privacidad/ })
+    await userEvent.click(privacy)
+    expect(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ })).toBeDisabled()
+    expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'política de privacidad' }))
+    expect(screen.getByRole('dialog', { name: 'Política de privacidad' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Entendido' }))
+    await userEvent.click(privacy)
+    repo.createPagomediosPayment.mockResolvedValue({ url: 'https://payurl.link/X', paymentId: 'pay_consent' })
+    await userEvent.click(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ }))
+    expect(repo.recordLegalConsents).toHaveBeenCalledWith('checkout', [
+      { document: 'terms', version: '1.0' }, { document: 'privacy', version: '1.0' },
+    ])
+    expect(repo.recordLegalConsents.mock.invocationCallOrder[0]).toBeLessThan(repo.createPagomediosPayment.mock.invocationCallOrder[0]!)
+  })
+
+  it('no inicia el pago si falla el registro del consentimiento', async () => {
+    renderAt('/membresia/pago?planId=plan_mensual')
+    await fillBilling()
+    repo.recordLegalConsents.mockRejectedValueOnce(new Error('No se pudo registrar el consentimiento'))
+    await userEvent.click(screen.getByRole('button', { name: /Pagar\s*\$35\.00/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo registrar el consentimiento')
+    expect(repo.createPagomediosPayment).not.toHaveBeenCalled()
   })
 
   it('sin aceptar los términos no deja pagar; se leen sin perder lo escrito', async () => {

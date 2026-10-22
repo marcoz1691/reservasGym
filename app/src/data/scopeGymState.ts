@@ -19,6 +19,7 @@ export function scopeGymState(state: GymState, actor: User | null): GymState {
       membershipPlans: (next.membershipPlans ?? []).filter((p) => p.active),
       memberships: [],
       payments: [],
+      legalConsents: [],
     }
   }
   if (actor.role === 'staff' || actor.role === 'admin') {
@@ -39,6 +40,7 @@ export function scopeGymState(state: GymState, actor: User | null): GymState {
       (p) => p.active || heldPlanIds.has(p.id),
     ),
     memberships,
+    legalConsents: (next.legalConsents ?? []).filter((c) => c.userId === actor.id),
     payments: (next.payments ?? []).filter((p) => p.userId === actor.id),
   }
 }

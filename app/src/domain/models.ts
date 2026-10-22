@@ -20,6 +20,19 @@ export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded'
 export type PaymentProvider = 'manual' | 'pagomedios'
 export type ManualPaymentMethod = 'cash' | 'transfer' | 'card_pos' | 'deuna' | 'pagomedios_recurring'
 export type MembershipPlanKind = 'membership' | 'day_pass'
+/** Documento aceptado y dónde (tabla legal_consents, LOPDP). */
+export type LegalConsentDocument = 'terms' | 'privacy' | 'health_data' | 'refund'
+export type LegalConsentContext = 'signup' | 'checkout' | 'ficha'
+export interface LegalConsentInput {
+  document: LegalConsentDocument
+  version: string
+}
+export interface LegalConsent extends LegalConsentInput {
+  id: string
+  userId: string
+  context: LegalConsentContext
+  acceptedAt: string
+}
 
 export interface MembershipPlan {
   id: string
@@ -48,7 +61,8 @@ export interface Membership {
 
 export interface Payment {
   id: string
-  userId: string
+  /** Nulo si el socio eliminó su cuenta: el pago queda anonimizado para la contabilidad. */
+  userId: string | null
   planId: string
   membershipId: string | null
   amountCents: number
@@ -228,6 +242,7 @@ export interface GymState {
   membershipPlans: MembershipPlan[]
   memberships: Membership[]
   payments: Payment[]
+  legalConsents?: LegalConsent[]
 }
 
 export const ZONE_TYPE_LABELS: Record<ZoneType, string> = {

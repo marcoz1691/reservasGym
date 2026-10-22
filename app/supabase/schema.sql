@@ -200,7 +200,8 @@ create table if not exists memberships (
 
 create table if not exists payments (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references profiles(id) on delete cascade not null,
+  -- Nulo si el socio eliminó su cuenta: el cobro queda anonimizado (anonimizar-pagos-al-eliminar.sql)
+  user_id uuid references profiles(id) on delete set null,
   plan_id uuid references membership_plans(id) not null,
   membership_id uuid references memberships(id) on delete set null,
   amount_cents int not null,

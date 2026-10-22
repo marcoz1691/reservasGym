@@ -143,10 +143,12 @@ export function MiPlanPage() {
     setRequesting(true)
     setRequestError('')
     try {
+      const termsVersion = resolveTermsDocument(data.settings, import.meta.env.BASE_URL).version
+      await repo.recordLegalConsents?.('checkout', [{ document: 'terms', version: termsVersion }])
       await repo.requestPlanPayment({
         planId: chosenPlanId,
         manualMethod: method,
-        termsVersion: resolveTermsDocument(data.settings, import.meta.env.BASE_URL).version,
+        termsVersion,
       })
       setChosenPlanId(null)
       setChosenMethod(null)

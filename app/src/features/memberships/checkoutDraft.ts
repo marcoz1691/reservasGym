@@ -9,6 +9,8 @@ export type CheckoutDraft = {
   document: string
   phone: string
   address: string
+  acceptedPrivacy?: boolean
+  privacyVersion?: string
   acceptedTerms: boolean
   termsDocumentKey?: string
   method: CheckoutMethod

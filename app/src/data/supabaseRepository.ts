@@ -10,6 +10,8 @@ import type {
   ClassTemplate,
   GymSettings,
   GymState,
+  LegalConsentContext,
+  LegalConsentInput,
   ManualPaymentMethod,
   Membership,
   MembershipPlan,
@@ -603,6 +605,17 @@ export class SupabaseRepository implements GymRepository {
     return user
   }
 
+  async recordLegalConsents(context: LegalConsentContext, consents: LegalConsentInput[]): Promise<void> {
+    for (const consent of consents) {
+      const { error } = await this.client.rpc('record_legal_consent', {
+        p_document: consent.document,
+        p_version: consent.version,
+        p_context: context,
+      })
+      if (error) throw new Error(error.message)
+    }
+  }
+
   async signUp(creds: AuthCredentials): Promise<User> {
     if (!creds.fullName?.trim()) throw new Error('Nombre requerido')
     if (!creds.password || creds.password.length < 8) {
@@ -622,6 +635,9 @@ export class SupabaseRepository implements GymRepository {
             : null,
           goals: creds.goals?.trim() || null,
           health_notes: creds.healthNotes?.trim() || null,
+          // handle_new_user las guarda en legal_consents al crear la cuenta (legal-consents.sql)
+          consents: creds.consents ?? [],
+          user_agent: typeof navigator === 'undefined' ? null : navigator.userAgent.slice(0, 400),
         },
       },
     })
