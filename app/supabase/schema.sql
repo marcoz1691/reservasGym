@@ -400,10 +400,8 @@ create policy "profiles read self or staff" on profiles for select using (
 
 create policy "profiles update self or staff" on profiles for update
   using (id = auth.uid() or public.is_staff())
-  with check (
-    (id = auth.uid() and role = (select p.role from profiles p where p.id = auth.uid()))
-    or public.is_staff()
-  );
+  -- Sin subconsulta a profiles (recursión 42P17): el rol lo protege profiles_guard_role.
+  with check (id = auth.uid() or public.is_staff());
 
 -- Settings: todos leen (incluye los interruptores de la app); solo admin escribe
 create policy "settings read all auth" on gym_settings for select to authenticated using (true);

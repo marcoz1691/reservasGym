@@ -122,9 +122,8 @@ alter policy "profiles read self or staff" on public.profiles
 
 alter policy "profiles update self or staff" on public.profiles
   using (((id = (select auth.uid())) OR (select is_staff())))
-  with check ((((id = (select auth.uid())) AND (role = ( SELECT p.role
-   FROM profiles p
-  WHERE (p.id = (select auth.uid()))))) OR (select is_staff())));
+  -- Sin subconsulta a profiles (recursión 42P17): el rol lo protege profiles_guard_role. Ver fix-profiles-update-rls.sql.
+  with check (((id = (select auth.uid())) OR (select is_staff())));
 
 alter policy "sessions write" on public.sessions
   using ((select is_staff()));
