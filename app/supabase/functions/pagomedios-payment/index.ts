@@ -49,6 +49,15 @@ const PAGOMEDIOS_API = (
   Deno.env.get("PAGOMEDIOS_API_URL") ?? "https://api.abitmedia.cloud/pagomedios/v2"
 ).replace(/\/$/, "")
 const DOCUMENT_TYPES = ["04", "05", "06", "08"] as const
+const QA_PROJECT_REF = "kqhmclbexnnsbzbgerbx"
+const QA_APP_URL = "https://zona-cero-qa.vercel.app"
+
+// Toda llamada a Pagomedios lleva timeout: si la pasarela se cuelga, la función responde con error
+// en vez de quedarse esperando. El cobro con tarjeta trata el timeout como "en revisión", sin reintentar.
+const PAGOMEDIOS_TIMEOUT_MS = Number(Deno.env.get("PAGOMEDIOS_TIMEOUT_MS") ?? "20000")
+function pmFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(input, { ...init, signal: AbortSignal.timeout(PAGOMEDIOS_TIMEOUT_MS) })
+}
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers":
@@ -100,11 +109,18 @@ async function handleRequest(req: Request): Promise<Response> {
 
   try {
     const token = Deno.env.get("PAGOMEDIOS_TOKEN")?.trim()
-    const appUrl = (
-      Deno.env.get("APP_URL") ?? "https://zona-cero-qa.vercel.app"
-    ).replace(/\/$/, "")
     const taxRate = Number(Deno.env.get("PAGOMEDIOS_TAX_RATE") ?? "0.15")
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+    // Sin APP_URL solo se usa el valor por defecto en el proyecto de QA: en prod mandaría a los socios a QA.
+    const appUrl = (
+      Deno.env.get("APP_URL")?.trim() || (supabaseUrl.includes(QA_PROJECT_REF) ? QA_APP_URL : "")
+    ).replace(/\/$/, "")
+    if (!appUrl) {
+      return json(
+        { error: "Falta el secret APP_URL de la función de pagos.", code: "APP_URL_NOT_CONFIGURED" },
+        503,
+      )
+    }
     const admin = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -319,7 +335,7 @@ async function handleCreate(
   }
   // El registro de tarjeta cobra $1,15 de validación (Pagomedios lo reversa); el plan
   // se cobra después con el token, en verifyRecurring.
-  const pmRes = await fetch(
+  const pmRes = await pmFetch(
     `${PAGOMEDIOS_API}/${recurring ? "cards/register" : "payment-requests"}`,
     {
       method: "POST",
@@ -421,7 +437,7 @@ async function verifyPayment(
   }
 
   const query = new URLSearchParams({ integration: "true", uuid: payment.reference })
-  const pmRes = await fetch(`${PAGOMEDIOS_API}/payment-requests?${query}`, {
+  const pmRes = await pmFetch(`${PAGOMEDIOS_API}/payment-requests?${query}`, {
     headers: { Authorization: `Bearer ${env.token}`, Accept: "application/json" },
   })
   const pmBody = await pmRes.json().catch(() => null)
@@ -568,7 +584,7 @@ async function verifyRecurring(
   }
 
   const query = new URLSearchParams({ integration: "true", uuid: payment.reference })
-  const reqRes = await fetch(`${PAGOMEDIOS_API}/payment-requests?${query}`, {
+  const reqRes = await pmFetch(`${PAGOMEDIOS_API}/payment-requests?${query}`, {
     headers: { Authorization: `Bearer ${env.token}`, Accept: "application/json" },
   }).catch(() => null)
   const reqBody = await reqRes?.json().catch(() => null)
@@ -594,7 +610,7 @@ async function verifyRecurring(
   }
 
   const cardsQuery = new URLSearchParams({ integration: "true", document: state.document })
-  const cardsRes = await fetch(`${PAGOMEDIOS_API}/cards?${cardsQuery}`, {
+  const cardsRes = await pmFetch(`${PAGOMEDIOS_API}/cards?${cardsQuery}`, {
     headers: { Authorization: `Bearer ${env.token}`, Accept: "application/json" },
   }).catch(() => null)
   const cardsBody = await cardsRes?.json().catch(() => null)
@@ -636,7 +652,7 @@ async function verifyRecurring(
     .maybeSingle()
   let result: { status?: number | string; authorizationCode?: string } | null = null
   try {
-    const chargeRes = await fetch(`${PAGOMEDIOS_API}/cards/charge`, {
+    const chargeRes = await pmFetch(`${PAGOMEDIOS_API}/cards/charge`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${env.token}`,
@@ -674,7 +690,7 @@ async function verifyRecurring(
   }
   if (chargeStatus === 2) {
     // La tarjeta no queda registrada para débitos si el primer mes no se cobró.
-    const deleted = await fetch(`${PAGOMEDIOS_API}/cards/${encodeURIComponent(card.token)}`, {
+    const deleted = await pmFetch(`${PAGOMEDIOS_API}/cards/${encodeURIComponent(card.token)}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${env.token}`, Accept: "application/json" },
     })
