@@ -83,13 +83,13 @@ async function main() {
   const timings = {}
 
   console.log(doDelete ? '=== LIMPIEZA DE CARGA (BORRADO REAL, --yes) ===' : '=== LIMPIEZA DE CARGA (DRY-RUN: no se borra nada; usa --yes para borrar) ===')
-  console.log(`Proyecto: QA (${new URL(env.url).hostname})`)
+  console.log(`Proyecto: ${env.label} (${new URL(env.url).hostname})`)
 
   // --- Selección de usuarios -------------------------------------------------
   let ts = Date.now()
   const allUsers = await auth.listUsers()
   timings.listar_usuarios_ms = Date.now() - ts
-  console.log(`Usuarios Auth totales en QA: ${allUsers.length}`)
+  console.log(`Usuarios Auth totales en ${env.label}: ${allUsers.length}`)
 
   const targets = []
   const sinMarca = []

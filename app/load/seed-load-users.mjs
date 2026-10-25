@@ -16,6 +16,7 @@
 import {
   loadEnv,
   createClient,
+  assertNoRealUsers,
   parseArgs,
   intArg,
   fail,
@@ -47,6 +48,7 @@ const userCount = intArg(args.users, env.userCount, { min: 1, max: MAX_LOAD_USER
 const sessionCount = intArg(args.sessions, env.sessionCount, { min: 1, max: 999, name: '--sessions' })
 const marginMin = intArg(args['margin-min'], 30, { min: 0, max: 600, name: '--margin-min' })
 const { rest, auth } = createClient(env)
+await assertNoRealUsers(auth, env)
 
 const t0 = Date.now()
 const log = (msg) => console.log(msg)
@@ -424,7 +426,7 @@ async function ensureSessions(tpl) {
 // --------------------------------------------------------------------------
 
 async function main() {
-  log(`Seed de carga en QA — ${userCount} socios + staff, ${sessionCount} sesiones + load-popular (capacidad ${env.popularCapacity}).`)
+  log(`Seed de carga en ${env.label} —${userCount} socios + staff, ${sessionCount} sesiones + load-popular (capacidad ${env.popularCapacity}).`)
   const tpl = await pickTemplate()
   const plan = await pickPlan(tpl.zone_id)
   log(`  plantilla: ${tpl.id} (zona ${tpl.zone_id}, kind ${tpl.kind}); plan: "${plan.name}" (${plan.duration_days} días${plan.visit_quota != null ? `, cupo ${plan.visit_quota}` : ''}).`)

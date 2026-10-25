@@ -26,13 +26,13 @@ import {
   emailForN,
   META_PATH,
   TOKENS_PATH,
-  QA_ORIGIN,
-  QA_REF,
+  assertNoRealUsers,
 } from './lib/env.mjs'
 
 const args = parseArgs()
 const env = loadEnv({ anon: true, password: true })
-const { signInWithPassword } = createClient(env)
+const { auth, signInWithPassword } = createClient(env)
+await assertNoRealUsers(auth, env)
 
 const concurrency = intArg(args.concurrency, 2, { min: 1, max: 10, name: '--concurrency' })
 const maxRetries = intArg(args.retries, 8, { min: 1, max: 50, name: '--retries' })
@@ -57,8 +57,8 @@ function validateJwt(token, { userId, email, minExp }) {
     const parts = String(token).split('.')
     if (parts.length !== 3) return null
     const p = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
-    if (p.ref !== undefined && p.ref !== QA_REF) return null
-    if (p.iss !== undefined && p.iss !== `${QA_ORIGIN}/auth/v1`) return null
+    if (p.ref !== undefined && p.ref !== env.ref) return null
+    if (p.iss !== undefined && p.iss !== `${env.origin}/auth/v1`) return null
     if (p.ref === undefined && p.iss === undefined) return null // sin forma de verificar el proyecto
     if (userId && p.sub !== userId) return null
     if (!userId && !p.sub) return null

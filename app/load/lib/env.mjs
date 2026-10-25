@@ -2,7 +2,8 @@
  * Utilidades compartidas del harness de carga (agente B, datos).
  *
  * - Carga y valida las variables de entorno del contrato (.env.load.local).
- * - Guard QA/prod: aborta si la URL apunta a producción o no apunta a QA. Sin override.
+ * - Guard QA/prod: aborta si la URL no es la de QA. Prod solo con LOAD_TARGET=prod + LOAD_PROD_CONFIRM
+ *   y sin usuarios reales (assertNoRealUsers), para la prueba previa al lanzamiento.
  * - Cliente mínimo con fetch para PostgREST (service role) y Auth Admin API, con
  *   reintentos con backoff en 429/5xx/errores de red y un limitador de concurrencia.
  *
@@ -16,6 +17,13 @@ export const QA_REF = 'kqhmclbexnnsbzbgerbx'
 export const PROD_REF = 'gvgqlmoulgcickxognto'
 /** Único origen permitido: https, sin credenciales, puerto, ruta, query ni fragmento. */
 export const QA_ORIGIN = `https://${QA_REF}.supabase.co`
+export const PROD_ORIGIN = `https://${PROD_REF}.supabase.co`
+/**
+ * Destino: QA por defecto. Prod solo para la prueba previa al lanzamiento, con LOAD_TARGET=prod y
+ * LOAD_PROD_CONFIRM=<este valor> en la línea de comandos, y solo mientras prod no tenga usuarios reales.
+ */
+export const PROD_CONFIRM = `${PROD_REF}-sin-usuarios-reales`
+export const TARGET = process.env.LOAD_TARGET === 'prod' ? 'prod' : 'qa'
 /** Prefijo obligatorio en el título de toda sesión creada por el seed (marca de propiedad). */
 export const LOAD_SESSION_TITLE_PREFIX = 'LOAD TEST · '
 /** Tope de socios de carga (seed, mint, check y cleanup). */
@@ -23,7 +31,8 @@ export const MAX_LOAD_USERS = 5000
 
 const here = dirname(fileURLToPath(import.meta.url))
 export const LOAD_DIR = join(here, '..')
-export const TMP_DIR = join(LOAD_DIR, '.tmp')
+// Prod usa su propia carpeta: meta y tokens de QA y prod nunca se mezclan.
+export const TMP_DIR = join(LOAD_DIR, TARGET === 'prod' ? '.tmp-prod' : '.tmp')
 export const REPORTS_DIR = join(LOAD_DIR, 'reports')
 export const META_PATH = join(TMP_DIR, 'load-meta.json')
 export const TOKENS_PATH = join(TMP_DIR, 'tokens.json')
@@ -136,9 +145,20 @@ export function loadEnv({ service = false, anon = false, password = false } = {}
     fail('Falta SUPABASE_URL. Corre con: node --env-file=.env.load.local load/<script>.mjs (desde app/)')
   }
 
-  // Guard QA/prod: sin override. Origen canónico exacto (https, sin credenciales/puerto/ruta/query/fragmento).
-  if (url.includes(PROD_REF)) {
-    fail('SUPABASE_URL apunta a PRODUCCIÓN. El harness de carga solo corre contra QA. Abortado.')
+  const prod = TARGET === 'prod'
+  const expectedRef = prod ? PROD_REF : QA_REF
+  const expectedOrigin = prod ? PROD_ORIGIN : QA_ORIGIN
+  if (prod) {
+    if ((e.LOAD_PROD_CONFIRM ?? '') !== PROD_CONFIRM) {
+      fail(`LOAD_TARGET=prod exige LOAD_PROD_CONFIRM=${PROD_CONFIRM} (prueba previa al lanzamiento, prod sin usuarios reales). Abortado.`)
+    }
+    // En prod todo script necesita la service key para revisar que no haya usuarios reales.
+    service = true
+  }
+
+  // Guard QA/prod. Origen canónico exacto (https, sin credenciales/puerto/ruta/query/fragmento).
+  if (!prod && url.includes(PROD_REF)) {
+    fail('SUPABASE_URL apunta a PRODUCCIÓN. El harness de carga solo corre contra QA (salvo LOAD_TARGET=prod). Abortado.')
   }
   let parsed
   try {
@@ -154,9 +174,9 @@ export function loadEnv({ service = false, anon = false, password = false } = {}
     parsed.pathname === '/' &&
     !parsed.search &&
     !parsed.hash &&
-    url === QA_ORIGIN
+    url === expectedOrigin
   if (!canonical) {
-    fail(`SUPABASE_URL debe ser exactamente ${QA_ORIGIN} (https, sin credenciales, puerto, ruta, query ni fragmento). Abortado.`)
+    fail(`SUPABASE_URL debe ser exactamente ${expectedOrigin} (https, sin credenciales, puerto, ruta, query ni fragmento). Abortado.`)
   }
 
   const serviceKey = (e.SUPABASE_SERVICE_ROLE_KEY ?? '').trim()
@@ -166,12 +186,12 @@ export function loadEnv({ service = false, anon = false, password = false } = {}
   if (anon && !anonKey) fail('Falta SUPABASE_ANON_KEY.')
   if (password && loadPassword.length < 8) fail('Falta LOAD_PASSWORD (mínimo 8 caracteres).')
 
-  // Segunda defensa: si las claves son JWT con claim `ref`, debe ser el de QA.
+  // Segunda defensa: si las claves son JWT con claim `ref`, debe ser el del destino.
   for (const [name, key] of [['SUPABASE_SERVICE_ROLE_KEY', serviceKey], ['SUPABASE_ANON_KEY', anonKey]]) {
     if (!key) continue
-    if (key.includes(PROD_REF)) fail(`${name} parece de PRODUCCIÓN. Abortado.`)
+    if (!prod && key.includes(PROD_REF)) fail(`${name} parece de PRODUCCIÓN. Abortado.`)
     const ref = jwtRef(key)
-    if (ref && ref !== QA_REF) fail(`${name} no pertenece al proyecto QA (ref distinto). Abortado.`)
+    if (ref && ref !== expectedRef) fail(`${name} no pertenece al proyecto ${prod ? 'PROD' : 'QA'} (ref distinto). Abortado.`)
   }
 
   const num = (v, d, name, max = Number.MAX_SAFE_INTEGER) => {
@@ -183,6 +203,10 @@ export function loadEnv({ service = false, anon = false, password = false } = {}
 
   const env = {
     url,
+    target: TARGET,
+    label: prod ? 'PROD' : 'QA',
+    ref: expectedRef,
+    origin: expectedOrigin,
     serviceKey,
     anonKey,
     password: loadPassword,
@@ -431,6 +455,18 @@ export function createClient(env) {
   }
 
   return { rest, auth, signInWithPassword }
+}
+
+/**
+ * Freno de prod: aborta si hay algún usuario Auth que no sea de carga. La prueba en prod solo
+ * se corre antes del lanzamiento, con la base vacía. En QA no hace nada.
+ */
+export async function assertNoRealUsers(auth, env) {
+  if (env.target !== 'prod') return
+  const real = (await auth.listUsers()).filter((u) => !LOAD_EMAIL_RE.test(u.email ?? ''))
+  if (real.length) {
+    fail(`PRODUCCIÓN tiene ${real.length} usuario(s) que no son de carga. La prueba en prod solo corre sin usuarios reales. Abortado.`)
+  }
 }
 
 /** Filtro PostgREST `in.(a,b,c)` con valores validados (solo ids/uuids/emails seguros). */

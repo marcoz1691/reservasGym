@@ -14,9 +14,22 @@ Documentos relacionados: `inventory.md` (hot paths y gaps de índices), `slo.md`
 
 ## Ambiente
 
-- **Solo QA:** proyecto `kqhmclbexnnsbzbgerbx` (plan Free).
-- **Nunca producción** (`gvgqlmoulgcickxognto`). Todos los scripts abortan si `SUPABASE_URL` contiene el ref de prod o no contiene el de QA. No hay flag para saltarse esa regla.
-- Un APROBADO en Free no demuestra capacidad en Pro. El go-live sigue bloqueado hasta tener plan Pro y backups activos en prod.
+- **QA por defecto:** proyecto `kqhmclbexnnsbzbgerbx` (plan Free). Todos los scripts abortan si `SUPABASE_URL` no es exactamente el origen de QA.
+- **Prod solo antes del lanzamiento** (`gvgqlmoulgcickxognto`, Pro), para medir la capacidad real con la base vacía. Exige las tres cosas:
+  1. `app/.env.load.prod.local` (mismas variables que el de QA, con las claves de prod; git lo ignora).
+  2. `LOAD_TARGET=prod` y `LOAD_PROD_CONFIRM=gvgqlmoulgcickxognto-sin-usuarios-reales` **en la línea de comandos**.
+  3. Prod sin usuarios reales: seed, mint, check y `run-k6.sh` abortan si hay un solo usuario Auth fuera de `load.*@zonacero.test`. Una vez lanzada la app, este modo deja de servir.
+
+  Meta y tokens van a `load/.tmp-prod/`, separados de QA. Ejemplo:
+  ```
+  export LOAD_TARGET=prod LOAD_PROD_CONFIRM=gvgqlmoulgcickxognto-sin-usuarios-reales
+  node --env-file=.env.load.prod.local load/seed-load-users.mjs
+  node --env-file=.env.load.prod.local load/mint-tokens.mjs --limit 300
+  SMOKE=1 FETCH_MODE=rpc bash load/run-k6.sh a <run>-smoke
+  node --env-file=.env.load.prod.local load/check-integrity.mjs --run <run>
+  node --env-file=.env.load.prod.local load/cleanup-load-users.mjs        # dry-run, luego --yes
+  ```
+- Un APROBADO en Free no demuestra capacidad en Pro.
 
 ## Requisitos
 
@@ -104,8 +117,8 @@ Se evalúa en ese orden; vale la primera regla que se cumpla. El veredicto final
 
 ## Qué NO hacer
 
-- No apuntar a producción, ni siquiera "solo lectura". No existe override y no se debe añadir.
-- No hacer commit de `app/.env.load.local`, `load/.tmp/` (tokens y meta) ni `load/reports/<run>/` (solo se versiona `reports/report-template.md`).
+- No apuntar a producción fuera de la prueba previa al lanzamiento, ni siquiera "solo lectura". No se debe quitar ni debilitar el freno de usuarios reales.
+- No hacer commit de `app/.env.load.local`, `app/.env.load.prod.local`, `load/.tmp/`, `load/.tmp-prod/` (tokens y meta) ni `load/reports/<run>/` (solo se versiona `reports/report-template.md`).
 - No imprimir ni compartir `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY` ni `LOAD_PASSWORD` en logs o informes.
 - No ejecutar `load:cleanup -- --yes` sin revisar antes el dry-run.
 - No lanzar una corrida completa sin que el SMOKE haya pasado.
