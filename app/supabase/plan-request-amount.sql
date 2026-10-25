@@ -5,7 +5,10 @@
 -- Las políticas "payments insert/update own plan request" dejan al socio escribir su
 -- solicitud pendiente; este trigger fija lo que recepción luego ve al cobrar:
 -- monto = precio del plan, sin aprobación, sin notas ni id de pasarela.
--- Staff, admin y service_role (Edge Functions) no pasan por aquí.
+-- Staff, admin y service_role (Edge Functions) no pasan por aquí. Tampoco las filas que no son
+-- una solicitud pendiente: la RLS no deja al socio escribirlas, así que solo llegan desde
+-- funciones SECURITY DEFINER como delete_user_account(), que anonimiza cobros aprobados y no
+-- debe tocar su monto ni su fecha de aprobación.
 
 create or replace function public.guard_member_plan_request()
 returns trigger
@@ -15,6 +18,9 @@ set search_path = public
 as $$
 begin
   if auth.uid() is null or public.is_staff() then
+    return new;
+  end if;
+  if not (new.status = 'pending' and new.provider = 'manual' and new.membership_id is null) then
     return new;
   end if;
   select price_cents into new.amount_cents from membership_plans where id = new.plan_id;

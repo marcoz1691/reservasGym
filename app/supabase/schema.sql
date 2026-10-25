@@ -529,6 +529,10 @@ begin
   if auth.uid() is null or public.is_staff() then
     return new;
   end if;
+  -- Solo solicitudes pendientes: delete_user_account() anonimiza cobros aprobados sin tocar el monto.
+  if not (new.status = 'pending' and new.provider = 'manual' and new.membership_id is null) then
+    return new;
+  end if;
   select price_cents into new.amount_cents from membership_plans where id = new.plan_id;
   if new.amount_cents is null then
     raise exception 'Plan no encontrado';
