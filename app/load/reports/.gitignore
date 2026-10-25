@@ -1,0 +1,4 @@
+# Los reportes de corridas no se versionan; solo la plantilla.
+*
+!.gitignore
+!report-template.md
