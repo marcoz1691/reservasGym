@@ -7,7 +7,7 @@
 #   <run> = nombre libre de la corrida, p. ej. 2026-10-22-smoke
 #
 # Variables opcionales: SMOKE=1 (humo corto), TOKENS_FILE, LOGIN_FRACTION, LOAD_MIX, REFRESH_PROB.
-# Nunca imprime claves. Nunca corre contra producción.
+# Nunca imprime claves. Prod solo con LOAD_TARGET=prod + LOAD_PROD_CONFIRM y sin usuarios reales.
 set -euo pipefail
 
 QA_REF="kqhmclbexnnsbzbgerbx"
@@ -40,9 +40,27 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$APP_DIR"
 
-# --- Cargar .env.load.local sin imprimirlo ----------------------------------
-ENV_FILE="$APP_DIR/.env.load.local"
-[ -f "$ENV_FILE" ] || die "No existe app/.env.load.local (ver load/README.md)."
+# --- Destino: QA por defecto; prod solo con LOAD_TARGET=prod + LOAD_PROD_CONFIRM ------
+PROD_CONFIRM="${PROD_REF}-sin-usuarios-reales"
+if [ "${LOAD_TARGET:-}" = "prod" ]; then
+  [ "${LOAD_PROD_CONFIRM:-}" = "$PROD_CONFIRM" ] || die "LOAD_TARGET=prod exige LOAD_PROD_CONFIRM=$PROD_CONFIRM. Abortado."
+  TARGET_REF="$PROD_REF"
+  ENV_FILE="$APP_DIR/.env.load.prod.local"
+  DEFAULT_TOKENS="load/.tmp-prod/tokens.json"
+  # Freno: aborta si prod tiene usuarios que no son de carga (mismo chequeo que el seed).
+  (cd "$APP_DIR" && node --env-file="$ENV_FILE" --input-type=module -e "
+    const m = await import('./load/lib/env.mjs');
+    const env = m.loadEnv({ service: true });
+    await m.assertNoRealUsers(m.createClient(env).auth, env);
+  ") || die "Freno de prod: no se corre k6."
+else
+  TARGET_REF="$QA_REF"
+  ENV_FILE="$APP_DIR/.env.load.local"
+  DEFAULT_TOKENS="load/.tmp/tokens.json"
+fi
+
+# --- Cargar el .env sin imprimirlo ------------------------------------------
+[ -f "$ENV_FILE" ] || die "No existe app/$(basename "$ENV_FILE") (ver load/README.md)."
 set -a
 # shellcheck disable=SC1090
 . "$ENV_FILE"
@@ -53,18 +71,14 @@ set +a
 [ -n "${SUPABASE_ANON_KEY:-}" ] || die "Falta SUPABASE_ANON_KEY en .env.load.local."
 [ -n "${LOAD_PASSWORD:-}" ]     || die "Falta LOAD_PASSWORD en .env.load.local."
 
-# --- Guard QA / producción (sin override) -----------------------------------
-case "$SUPABASE_URL" in
-  *"$PROD_REF"*) die "SUPABASE_URL apunta a PRODUCCION. El harness solo corre contra QA. Abortado." ;;
-esac
-case "$SUPABASE_URL" in
-  *"$QA_REF"*) ;;
-  *) die "SUPABASE_URL no es el proyecto QA ($QA_REF). Abortado." ;;
-esac
-# Defensa extra: las claves tampoco pueden mencionar el ref de producción.
-case "${SUPABASE_ANON_KEY}${SUPABASE_SERVICE_ROLE_KEY:-}" in
-  *"$PROD_REF"*) die "Una clave del .env parece de PRODUCCION. Abortado." ;;
-esac
+# --- Guard QA / producción ---------------------------------------------------
+[ "$SUPABASE_URL" = "https://$TARGET_REF.supabase.co" ] || die "SUPABASE_URL debe ser https://$TARGET_REF.supabase.co. Abortado."
+if [ "$TARGET_REF" = "$QA_REF" ]; then
+  # Defensa extra: en QA las claves tampoco pueden mencionar el ref de producción.
+  case "${SUPABASE_ANON_KEY}${SUPABASE_SERVICE_ROLE_KEY:-}" in
+    *"$PROD_REF"*) die "Una clave del .env parece de PRODUCCION. Abortado." ;;
+  esac
+fi
 
 # --- k6 ----------------------------------------------------------------------
 if [ -x "$HOME/.local/bin/k6" ]; then
@@ -78,7 +92,7 @@ fi
 [ -f "$APP_DIR/$SCRIPT_REL" ] || die "No existe $SCRIPT_REL."
 
 # --- Tokens pregenerados -----------------------------------------------------
-TOKENS_PATH="${TOKENS_FILE:-load/.tmp/tokens.json}"
+TOKENS_PATH="${TOKENS_FILE:-$DEFAULT_TOKENS}"
 # k6 resuelve open() respecto a la carpeta del módulo, no del cwd: se pasa SIEMPRE ruta absoluta.
 case "$TOKENS_PATH" in
   /*) TOKENS_ABS="$TOKENS_PATH" ;;
@@ -108,6 +122,7 @@ K6_ENV=(
   -e "LOAD_SESSION_COUNT=${LOAD_SESSION_COUNT:-40}"
   -e "RUN=$RUN_NAME"
 )
+[ "$TARGET_REF" = "$PROD_REF" ] && K6_ENV+=(-e "LOAD_TARGET=prod" -e "LOAD_PROD_CONFIRM=$LOAD_PROD_CONFIRM")
 [ -n "${SMOKE:-}" ]          && K6_ENV+=(-e "SMOKE=$SMOKE")
 [ -f "$TOKENS_ABS" ]         && K6_ENV+=(-e "TOKENS_FILE=$TOKENS_ABS")
 [ -n "${LOGIN_FRACTION:-}" ] && K6_ENV+=(-e "LOGIN_FRACTION=$LOGIN_FRACTION")

@@ -31,14 +31,16 @@ export function envNumber(name, fallback) {
 export const LOAD_USER_COUNT = Math.max(1, Math.floor(envNumber('LOAD_USER_COUNT', 1000)));
 export const LOAD_SESSION_COUNT = Math.max(1, Math.floor(envNumber('LOAD_SESSION_COUNT', 40)));
 
-// Guard QA/prod (contrato regla 4). Se llama desde setup(); lanza si el destino no es QA.
+// Prod solo para la prueba previa al lanzamiento (ver load/lib/env.mjs: PROD_CONFIRM).
+const PROD_TARGET =
+  __ENV.LOAD_TARGET === 'prod' && __ENV.LOAD_PROD_CONFIRM === PROD_REF + '-sin-usuarios-reales';
+
+// Guard QA/prod (contrato regla 4). Se llama desde setup(); lanza si el destino no es el esperado.
 export function assertQaTarget() {
   if (!SUPABASE_URL) throw new Error('Falta SUPABASE_URL');
-  if (SUPABASE_URL.includes(PROD_REF)) {
-    throw new Error('ABORTADO: SUPABASE_URL apunta a PRODUCCION. El harness solo corre contra QA.');
-  }
-  if (!SUPABASE_URL.includes(QA_REF)) {
-    throw new Error('ABORTADO: SUPABASE_URL no corresponde al proyecto QA (' + QA_REF + ').');
+  const expected = 'https://' + (PROD_TARGET ? PROD_REF : QA_REF) + '.supabase.co';
+  if (SUPABASE_URL !== expected) {
+    throw new Error('ABORTADO: SUPABASE_URL debe ser ' + expected + (PROD_TARGET ? '' : ' (el harness solo corre contra QA salvo LOAD_TARGET=prod)') + '.');
   }
   if (!SUPABASE_ANON_KEY) throw new Error('Falta SUPABASE_ANON_KEY');
 }

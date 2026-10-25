@@ -24,7 +24,7 @@
 import { join } from 'node:path'
 import {
   REPORTS_DIR, TOKENS_PATH, META_PATH, LOAD_SESSION_ID_RE, LOAD_EMAIL_RE, STAFF_EMAIL, POPULAR_SESSION_ID,
-  loadEnv, createClient, parseArgs, fail, readJson, writeJson, chunk, inList,
+  loadEnv, createClient, assertNoRealUsers, parseArgs, fail, readJson, writeJson, chunk, inList,
 } from './lib/env.mjs'
 
 /** Estados que ocupan cupo: los mismos que cuenta el trigger sync_session_booked_count. */
@@ -105,6 +105,7 @@ async function main() {
 
   const env = loadEnv({ service: true })
   const { rest, auth } = createClient(env)
+  await assertNoRealUsers(auth, env)
   const t0 = Date.now()
   const now = new Date()
   const outPath = join(REPORTS_DIR, run, 'integrity.json')
