@@ -51,6 +51,7 @@ import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/pas
 import { anonymizeDeletedMemberPayments } from '../domain/rules/accountDeletion'
 import { readPdfDataUrl, validateTermsPdf } from '../domain/rules/termsDocument'
 import { recurringRenewalFrom } from '../domain/rules/recurringRenewal'
+import { DISCARDED_REQUEST_NOTE } from '../domain/rules/planRequest'
 import type {
   AuthCredentials,
   GymRepository,
@@ -205,7 +206,18 @@ export class LocalRepository implements GymRepository {
   }
 
   private persistState() {
+    this.assignReceiptNumbers()
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state))
+  }
+
+  /** Igual que la secuencia de la base: por fecha de creación, sin repetir números. */
+  private assignReceiptNumbers() {
+    const payments = this.state.payments ?? []
+    let last = payments.reduce((max, p) => Math.max(max, p.receiptNumber ?? 0), 0)
+    const missing = payments
+      .filter((p) => p.receiptNumber == null)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    for (const payment of missing) payment.receiptNumber = ++last
   }
 
   private persistSession() {
@@ -1144,6 +1156,7 @@ export class LocalRepository implements GymRepository {
 
   async getMemberPayments(userId: string): Promise<Payment[]> {
     await this.ensureReady()
+    this.assignReceiptNumbers()
     return (this.state.payments ?? [])
       .filter((p) => p.userId === userId)
       .map((p) => ({ ...p }))
@@ -1169,6 +1182,7 @@ export class LocalRepository implements GymRepository {
 
   async listPayments(): Promise<Payment[]> {
     await this.ensureReady()
+    this.assignReceiptNumbers()
     const actor = this.currentUserId
       ? (this.state.users.find((u) => u.id === this.currentUserId) ?? null)
       : null
@@ -1222,6 +1236,7 @@ export class LocalRepository implements GymRepository {
       provider: 'manual',
       manualMethod: params.manualMethod,
       reference: resolveRequestReference(existing?.reference, params.reference),
+      receiptNumber: existing?.receiptNumber,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       approvedAt: null,
     }
@@ -1278,6 +1293,7 @@ export class LocalRepository implements GymRepository {
       provider: 'manual',
       manualMethod: params.manualMethod,
       reference: params.reference ?? pending?.reference ?? null,
+      receiptNumber: pending?.receiptNumber,
       createdAt: pending?.createdAt ?? new Date().toISOString(),
       approvedAt: new Date().toISOString(),
     }
@@ -1352,6 +1368,21 @@ export class LocalRepository implements GymRepository {
     ;(this.state.payments ??= []).push(payment)
     this.persistState()
     return { payment: { ...payment }, membership: { ...membership } }
+  }
+
+  async discardPlanRequest(paymentId: string): Promise<Payment> {
+    const actor = await this.requireUser()
+    if (actor.role === 'member') throw new Error('Sin permiso')
+    const payments = this.state.payments ?? []
+    const idx = payments.findIndex((p) => p.id === paymentId)
+    const current = payments[idx]
+    if (!current || current.status !== 'pending' || current.provider !== 'manual') {
+      throw new Error('La solicitud ya no está pendiente.')
+    }
+    const payment: Payment = { ...current, status: 'rejected', notes: DISCARDED_REQUEST_NOTE }
+    payments[idx] = payment
+    this.persistState()
+    return { ...payment }
   }
 
   async refundPayment(params: { paymentId: string; cancelMembership: boolean }): Promise<Payment> {

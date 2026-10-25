@@ -217,6 +217,11 @@ create table if not exists payments (
 -- Aceptación de términos por pago (trigger y detalle en terms-acceptance.sql)
 alter table payments add column if not exists terms_version text check (terms_version is null or char_length(terms_version) <= 40);
 alter table payments add column if not exists terms_accepted_at timestamptz;
+-- Número de comprobante corto que se muestra (ZCAPP-77); en bases existentes: payment-receipt-number.sql.
+create sequence if not exists payment_receipt_seq;
+alter table payments add column if not exists receipt_number bigint not null default nextval('payment_receipt_seq');
+alter sequence payment_receipt_seq owned by payments.receipt_number;
+create unique index if not exists payments_receipt_number_key on payments (receipt_number);
 
 -- Índices de optimización
 create index if not exists idx_memberships_user_id on memberships(user_id);
@@ -512,3 +517,35 @@ create policy "payments update own plan request" on payments for update using (
   and provider = 'manual'
   and membership_id is null
 );
+
+-- El socio no decide el monto ni los campos de servidor de su solicitud (plan-request-amount.sql).
+create or replace function public.guard_member_plan_request()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or public.is_staff() then
+    return new;
+  end if;
+  -- Solo solicitudes pendientes: delete_user_account() anonimiza cobros aprobados sin tocar el monto.
+  if not (new.status = 'pending' and new.provider = 'manual' and new.membership_id is null) then
+    return new;
+  end if;
+  select price_cents into new.amount_cents from membership_plans where id = new.plan_id;
+  if new.amount_cents is null then
+    raise exception 'Plan no encontrado';
+  end if;
+  new.approved_at := null;
+  new.mp_payment_id := null;
+  new.notes := null;
+  return new;
+end;
+$$;
+revoke all on function public.guard_member_plan_request() from public, anon, authenticated;
+
+drop trigger if exists payments_guard_member_request on payments;
+create trigger payments_guard_member_request
+before insert or update on payments
+for each row execute function public.guard_member_plan_request();

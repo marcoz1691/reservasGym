@@ -394,6 +394,8 @@ async function handleNotify(req: Request, url: URL, env: Env) {
 
 /** Comprobante que ve el socio al volver: qué compró, desde cuándo y hasta cuándo. */
 type Receipt = {
+  /** Número de comprobante (payment-receipt-number.sql); null si la columna aún no existe. */
+  receiptNumber: number | null
   planName: string | null
   amountCents: number
   authorizationCode: string | null
@@ -711,7 +713,7 @@ async function verifyRecurring(
 async function receiptFor(paymentId: string, admin: SupabaseClient): Promise<Receipt | undefined> {
   const { data: payment } = await admin
     .from("payments")
-    .select("plan_id, membership_id, amount_cents, mp_payment_id, notes")
+    .select("*")
     .eq("id", paymentId)
     .maybeSingle()
   if (!payment) return undefined
@@ -726,6 +728,7 @@ async function receiptFor(paymentId: string, admin: SupabaseClient): Promise<Rec
       : Promise.resolve({ data: null }),
   ])
   return {
+    receiptNumber: payment.receipt_number == null ? null : Number(payment.receipt_number),
     planName: plan?.name ?? null,
     amountCents: payment.amount_cents,
     authorizationCode: payment.mp_payment_id ?? null,

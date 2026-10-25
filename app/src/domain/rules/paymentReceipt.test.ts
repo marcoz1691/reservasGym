@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildReceiptWhatsAppUrl,
+  formatReceiptNumber,
   generatePaymentReference,
+  matchesReceiptNumber,
   isPaymentReference,
+  memberPhoneError,
   normalizeWhatsAppPhone,
   resolveRequestReference,
 } from './paymentReceipt'
@@ -30,6 +33,66 @@ describe('normalizeWhatsAppPhone', () => {
 
   it.each([null, undefined, '', '   ', 'sin número', '0991'])('"%s" no es un número válido', (raw) => {
     expect(normalizeWhatsAppPhone(raw)).toBeNull()
+  })
+})
+
+describe('número de comprobante (ZCAPP-77)', () => {
+  it.each([
+    [1, '000001'],
+    [123, '000123'],
+    [999999, '999999'],
+    [1234567, '1234567'],
+  ])('%s se muestra como %s', (n, expected) => {
+    expect(formatReceiptNumber(n)).toBe(expected)
+  })
+
+  it.each([null, undefined, 0, -3, 1.5])('sin número válido (%s) no se muestra', (n) => {
+    expect(formatReceiptNumber(n)).toBeNull()
+  })
+
+  it.each([
+    ['000123', 123],
+    ['123', 123],
+    [' 0123 ', 123],
+    ['N.º 000123', 123],
+  ])('la búsqueda "%s" encuentra el comprobante %s', (query, n) => {
+    expect(matchesReceiptNumber(query, n)).toBe(true)
+  })
+
+  it.each([
+    ['000124', 123],
+    ['ana', 123],
+    ['ZC-4F7A2C', 472],
+    ['Ana 2', 2],
+    ['', 123],
+    ['123', null],
+  ])('la búsqueda "%s" no encuentra el comprobante %s', (query, n) => {
+    expect(matchesReceiptNumber(query, n)).toBe(false)
+  })
+})
+
+describe('memberPhoneError (ZCAPP-83)', () => {
+  it.each(['', '   ', null, undefined])('vacío es válido porque el celular es opcional: "%s"', (raw) => {
+    expect(memberPhoneError(raw)).toBeNull()
+  })
+
+  it.each(['0991234567', '099 123 4567', '+593 99 123 4567', '593991234567', '+1 305 555 0123', '+34 612 345 678'])(
+    '%s es un celular válido',
+    (raw) => {
+      expect(memberPhoneError(raw)).toBeNull()
+    },
+  )
+
+  it.each([
+    ['sin número'],
+    ['0991'],
+    ['022345678'],
+    ['02 234 5678'],
+    ['09912345678'],
+    ['+593 2 234 5678'],
+    ['0991234567 ext 2'],
+  ])('%s no es un celular válido', (raw) => {
+    expect(memberPhoneError(raw)).toMatch(/celular/i)
   })
 })
 

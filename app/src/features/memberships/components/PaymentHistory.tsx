@@ -36,6 +36,7 @@ export function PaymentHistory({ payments, plans }: PaymentHistoryProps) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-line bg-surface/60 text-xs font-bold uppercase tracking-wider text-ink-3">
+                  <th className="py-3 px-4">N.º</th>
                   <th className="py-3 px-4">Fecha</th>
                   <th className="py-3 px-4">Plan / Concepto</th>
                   <th className="py-3 px-4">Monto</th>

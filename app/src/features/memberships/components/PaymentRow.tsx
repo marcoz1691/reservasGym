@@ -1,5 +1,6 @@
 import { Calendar, CreditCard, Hash } from 'lucide-react'
 import type { Payment, PaymentStatus } from '@/domain/models'
+import { formatReceiptNumber } from '@/domain/rules/paymentReceipt'
 import { formatCurrency, formatDateShort, formatPaymentMethod } from '@/lib/format'
 
 interface PaymentItemProps {
@@ -44,6 +45,9 @@ export function PaymentRow({ payment, planName }: PaymentItemProps) {
 
   return (
     <tr className="border-b border-line/40 hover:bg-surface/30 transition-colors">
+      <td className="py-3.5 px-4 text-xs font-mono font-bold text-ink">
+        {formatReceiptNumber(payment.receiptNumber) ?? '—'}
+      </td>
       <td className="py-3.5 px-4 text-xs font-semibold text-ink">
         <div className="flex items-center gap-2">
           <Calendar className="h-3.5 w-3.5 text-acc-dark" />
@@ -87,6 +91,9 @@ export function PaymentMobileCard({ payment, planName }: PaymentItemProps) {
         <div className="space-y-0.5">
           <span className="text-[11px] font-bold uppercase tracking-wider text-ink-3 block">
             {formatDateShort(payment.createdAt)}
+            {formatReceiptNumber(payment.receiptNumber)
+              ? ` · N.º ${formatReceiptNumber(payment.receiptNumber)}`
+              : ''}
           </span>
           <p className="text-sm font-bold text-ink">{planName ?? 'Plan de Membresía'}</p>
         </div>

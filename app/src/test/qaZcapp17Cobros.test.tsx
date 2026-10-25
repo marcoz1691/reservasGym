@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { CobrosPage } from '@/features/admin/CobrosPage'
@@ -472,6 +472,63 @@ describe('QA ZCAPP-17 — Panel de Cobros Recepción', () => {
 
       expect(await screen.findByText('POS-HIST-77')).toBeInTheDocument()
       expect(screen.getAllByText(/\$120\.00/).length).toBeGreaterThan(0)
+    })
+
+    it('[ZCAPP-77] Al cobrar una solicitud se conserva su número de comprobante y es único', async () => {
+      const member = new LocalRepository()
+      await member.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+      const request = await member.requestPlanPayment({
+        planId: 'plan-mensual-full',
+        manualMethod: 'transfer',
+        reference: 'ZC-ABC777',
+        termsVersion: '1.0',
+      })
+      expect(request.receiptNumber).toBeGreaterThan(0)
+
+      const repo = new LocalRepository()
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      const { payment } = await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-mensual-full',
+        amountCents: 4500,
+        manualMethod: 'transfer',
+      })
+
+      expect(payment.id).toBe(request.id)
+      expect(payment.receiptNumber).toBe(request.receiptNumber)
+      const numbers = (await repo.listPayments()).map((p) => p.receiptNumber)
+      expect(numbers.every((n) => typeof n === 'number' && n > 0)).toBe(true)
+      expect(new Set(numbers).size).toBe(numbers.length)
+    })
+
+    it('[ZCAPP-84] Recepción descarta una solicitud pendiente sin activar ningún plan', async () => {
+      const user = userEvent.setup()
+      const member = new LocalRepository()
+      await member.signIn({ email: 'luis@gym.local', password: DEMO_PASSWORD })
+      const request = await member.requestPlanPayment({
+        planId: 'plan-mensual-full',
+        manualMethod: 'transfer',
+        reference: 'ZC-ABC123',
+        termsVersion: '1.0',
+      })
+
+      const repo = new LocalRepository()
+      resetRepositoryForTests(repo)
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+      renderCobros()
+
+      await user.click(
+        await screen.findByRole('button', { name: /Descartar solicitud de Luis Pérez/i }),
+      )
+
+      await waitFor(() =>
+        expect(screen.queryByRole('heading', { name: 'Solicitudes de socios' })).toBeNull(),
+      )
+      expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Luis Pérez/))
+      const discarded = (await repo.listPayments()).find((p) => p.id === request.id)
+      expect(discarded).toMatchObject({ status: 'rejected', membershipId: null })
+      confirm.mockRestore()
     })
 
     it('[ZC17-17] Una solicitud de Deuna muestra su etiqueta y su referencia, y el cobro la conserva', async () => {
