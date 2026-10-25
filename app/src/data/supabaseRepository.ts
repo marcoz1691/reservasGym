@@ -442,6 +442,49 @@ export function createSupabaseClient(): SupabaseClient {
   })
 }
 
+/** Filas por tabla tal como llegan de PostgREST o de get_member_state (mismas columnas, misma RLS). */
+interface StateRows {
+  gym_settings: Parameters<typeof mapSettings>[0] | null
+  profiles: Parameters<typeof mapUser>[0][]
+  trainers: Parameters<typeof mapTrainer>[0][]
+  zones: Parameters<typeof mapZone>[0][]
+  class_templates: Parameters<typeof mapTemplate>[0][]
+  sessions: Parameters<typeof mapSession>[0][]
+  bookings: Parameters<typeof mapBooking>[0][]
+  waitlist_entries: Parameters<typeof mapWaitlist>[0][]
+  check_ins: Parameters<typeof mapCheckIn>[0][]
+  body_measurements: Parameters<typeof mapMeasurement>[0][]
+  body_goals: Parameters<typeof mapBodyGoal>[0][]
+  membership_plans: Parameters<typeof mapMembershipPlan>[0][]
+  memberships: Parameters<typeof mapMembership>[0][]
+  payments: Parameters<typeof mapPayment>[0][]
+}
+
+function mapStateRows(rows: StateRows): GymState {
+  if (!rows.gym_settings) throw new Error('Faltan gym_settings en Supabase')
+  return {
+    settings: mapSettings(rows.gym_settings),
+    users: (rows.profiles ?? []).map(mapUser),
+    trainers: (rows.trainers ?? []).map(mapTrainer),
+    zones: (rows.zones ?? []).map(mapZone),
+    templates: (rows.class_templates ?? []).map(mapTemplate),
+    sessions: (rows.sessions ?? []).map(mapSession),
+    bookings: (rows.bookings ?? []).map(mapBooking),
+    waitlist: (rows.waitlist_entries ?? []).map(mapWaitlist),
+    checkIns: (rows.check_ins ?? []).map(mapCheckIn),
+    measurements: (rows.body_measurements ?? []).map(mapMeasurement),
+    bodyGoals: (rows.body_goals ?? []).map(mapBodyGoal),
+    membershipPlans: (rows.membership_plans ?? []).map(mapMembershipPlan),
+    memberships: (rows.memberships ?? []).map(mapMembership),
+    payments: (rows.payments ?? []).map(mapPayment),
+  }
+}
+
+/** La función RPC no existe en esta base (aún no se aplicó el SQL): PostgREST PGRST202 / Postgres 42883. */
+function isMissingFunction(error: { code?: string }): boolean {
+  return error.code === 'PGRST202' || error.code === '42883'
+}
+
 export class SupabaseRepository implements GymRepository {
   private readonly client: SupabaseClient
 
@@ -461,7 +504,27 @@ export class SupabaseRepository implements GymRepository {
     return user
   }
 
+  /**
+   * Estado completo en UNA llamada (RPC get_member_state, perf-rls-indices.sql) en vez de 14 lecturas.
+   * Si la base aún no tiene la función, cae al camino por tabla y no lo vuelve a intentar.
+   */
   private async fetchState(): Promise<GymState> {
+    if (this.memberStateRpc !== false) {
+      const { data, error } = await this.client.rpc('get_member_state')
+      if (!error && data && typeof data === 'object') {
+        this.memberStateRpc = true
+        return mapStateRows(data as StateRows)
+      }
+      if (error && !isMissingFunction(error)) throw new Error(error.message)
+      this.memberStateRpc = false
+    }
+    return this.fetchStateByTable()
+  }
+
+  /** null = sin probar; false = la base no tiene get_member_state. */
+  private memberStateRpc: boolean | null = null
+
+  private async fetchStateByTable(): Promise<GymState> {
     const [
       settingsRes,
       profilesRes,
@@ -513,25 +576,22 @@ export class SupabaseRepository implements GymRepository {
       if (res.error) throw new Error(res.error.message)
     }
 
-    const settingsRow = settingsRes.data
-    if (!settingsRow) throw new Error('Faltan gym_settings en Supabase')
-
-    return {
-      settings: mapSettings(settingsRow),
-      users: (profilesRes.data ?? []).map(mapUser),
-      trainers: (trainersRes.data ?? []).map(mapTrainer),
-      zones: (zonesRes.data ?? []).map(mapZone),
-      templates: (templatesRes.data ?? []).map(mapTemplate),
-      sessions: (sessionsRes.data ?? []).map(mapSession),
-      bookings: (bookingsRes.data ?? []).map(mapBooking),
-      waitlist: (waitlistRes.data ?? []).map(mapWaitlist),
-      checkIns: (checkInsRes.data ?? []).map(mapCheckIn),
-      measurements: (measurementsRes.data ?? []).map(mapMeasurement),
-      bodyGoals: (bodyGoalsRes.data ?? []).map(mapBodyGoal),
-      membershipPlans: (membershipPlansRes.data ?? []).map(mapMembershipPlan),
-      memberships: (membershipsRes.data ?? []).map(mapMembership),
-      payments: (paymentsRes.data ?? []).map(mapPayment),
-    }
+    return mapStateRows({
+      gym_settings: settingsRes.data,
+      profiles: profilesRes.data ?? [],
+      trainers: trainersRes.data ?? [],
+      zones: zonesRes.data ?? [],
+      class_templates: templatesRes.data ?? [],
+      sessions: sessionsRes.data ?? [],
+      bookings: bookingsRes.data ?? [],
+      waitlist_entries: waitlistRes.data ?? [],
+      check_ins: checkInsRes.data ?? [],
+      body_measurements: measurementsRes.data ?? [],
+      body_goals: bodyGoalsRes.data ?? [],
+      membership_plans: membershipPlansRes.data ?? [],
+      memberships: membershipsRes.data ?? [],
+      payments: paymentsRes.data ?? [],
+    })
   }
 
   async load(): Promise<GymState> {
