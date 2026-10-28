@@ -22,6 +22,7 @@ import { ConsentCheckbox } from '@/features/legal/ConsentCheckbox'
 import { LegalDocumentDialog } from '@/features/legal/LegalDocumentDialog'
 import { LegalLinks } from '@/features/legal/LegalPage'
 import { PRIVACY, TERMS_DOCUMENT, type LegalDocument } from '@/features/legal/legalDocuments'
+import { SignupCodeStep } from './SignupCodeStep'
 
 // Solo para `npm run dev` con datos locales en memoria. QA y producción son
 // públicos: ahí no se muestran ni se embeben credenciales.
@@ -61,6 +62,9 @@ export function LoginPage() {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [acceptPrivacy, setAcceptPrivacy] = useState(false)
   const [openDoc, setOpenDoc] = useState<LegalDocument | null>(null)
+
+  // Cuenta creada que espera el código del correo (SignupCodeStep).
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -206,7 +210,13 @@ export function LoginPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al registrar la cuenta'
       if (msg.startsWith('PENDING_EMAIL_CONFIRMATION:')) {
-        goToLoginAfterSignup(email, msg.replace('PENDING_EMAIL_CONFIRMATION:', ''))
+        if (repo.confirmSignUp) {
+          setRegisterPassword('')
+          setConfirmPassword('')
+          setPendingEmail(email)
+        } else {
+          goToLoginAfterSignup(email, msg.replace('PENDING_EMAIL_CONFIRMATION:', ''))
+        }
         return
       }
       // Mensaje legado (deploys anteriores) — tratarlo como éxito, no como error
@@ -244,6 +254,16 @@ export function LoginPage() {
           </p>
         </div>
 
+        {pendingEmail ? (
+          <SignupCodeStep
+            email={pendingEmail}
+            onBack={() => {
+              setPendingEmail(null)
+              setError('')
+            }}
+          />
+        ) : (
+        <>
         {/* Mode Switcher */}
         <div className="flex rounded-2xl bg-bg p-1 border border-line">
           <button
@@ -412,8 +432,8 @@ export function LoginPage() {
                 <span>Crea tu cuenta de socio</span>
               </div>
               <p className="mt-1 text-ink-3">
-                Después de crear y confirmar la cuenta, inicia sesión. En el primer
-                ingreso completarás tu ficha técnica (datos, salud y medidas corporales).
+                Te enviaremos un código a tu correo para confirmar la cuenta. Luego
+                completarás tu ficha técnica (datos, salud y medidas corporales).
               </p>
             </div>
 
@@ -487,6 +507,8 @@ export function LoginPage() {
               {submitting ? 'Creando cuenta…' : 'Crear cuenta'}
             </Button>
           </form>
+        )}
+        </>
         )}
       </Card>
       <LegalLinks className="mt-4 justify-center" />
