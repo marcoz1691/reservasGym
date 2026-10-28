@@ -37,7 +37,7 @@ describe('FichaTecnicaModal (Post-Registration Onboarding & Anthropometrics)', (
     expect(screen.queryByRole('button', { name: /peso/i })).not.toBeInTheDocument()
 
     expect(screen.getByText('Fecha de Nacimiento *')).toBeInTheDocument()
-    expect(screen.getByText('Sector / Ciudad de Residencia *')).toBeInTheDocument()
+    expect(screen.getByText('Sector / Ciudad de Residencia (opcional)')).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByLabelText(/Fecha de Nacimiento/i)).toHaveValue('1995-04-12')
     })
@@ -122,6 +122,9 @@ describe('FichaTecnicaModal (Post-Registration Onboarding & Anthropometrics)', (
     await user.click(screen.getByRole('button', { name: /Siguiente/i }))
     await user.click(screen.getByRole('button', { name: /Siguiente/i }))
 
+    // El consentimiento es obligatorio y se registra antes de guardar.
+    expect(screen.getByRole('button', { name: /Guardar Ficha Técnica/i })).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: /Consiento expresamente/ }))
     // Submit form
     const saveBtn = screen.getByRole('button', { name: /Guardar Ficha Técnica/i })
     await user.click(saveBtn)

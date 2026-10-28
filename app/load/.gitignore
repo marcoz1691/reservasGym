@@ -1,0 +1,3 @@
+# Datos efímeros del harness (tokens, meta del seed). Nunca se versionan.
+.tmp/
+.tmp-prod/

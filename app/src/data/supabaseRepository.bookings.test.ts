@@ -38,6 +38,71 @@ function clientWithRpc(rpc: ReturnType<typeof vi.fn>): SupabaseClient {
   } as unknown as SupabaseClient
 }
 
+describe('SupabaseRepository check-in y baja de cuenta vía RPC', () => {
+  it('hace check-in con check_in_booking: la base valida código, estado y ventana', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        id: 'ci-1',
+        booking_id: 'bk_1',
+        session_id: 'sess_1',
+        user_id: 'user_member',
+        checked_in_at: '2030-05-01T09:55:00+00:00',
+      },
+      error: null,
+    })
+    const client = clientWithRpc(rpc)
+    const repo = new SupabaseRepository(client)
+
+    const result = await repo.checkIn('bk_1', 'qr-047cac92')
+
+    expect(rpc).toHaveBeenCalledWith('check_in_booking', {
+      p_booking_id: 'bk_1',
+      p_code: 'qr-047cac92',
+    })
+    expect(client.from).not.toHaveBeenCalledWith('check_ins')
+    expect(client.from).not.toHaveBeenCalledWith('bookings')
+    expect(result).toMatchObject({ id: 'ci-1', bookingId: 'bk_1', userId: 'user_member' })
+  })
+
+  it('propaga el rechazo del check-in', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message: 'Fuera de la ventana de check-in' },
+    })
+    const repo = new SupabaseRepository(clientWithRpc(rpc))
+
+    await expect(repo.checkIn('bk_1', 'QR-1')).rejects.toThrow('Fuera de la ventana de check-in')
+  })
+
+  it('elimina la cuenta con delete_user_account y cierra sesión', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null })
+    const client = clientWithRpc(rpc)
+    const signOut = vi.fn().mockResolvedValue({ error: null })
+    Object.assign(client.auth, { signOut })
+    const repo = new SupabaseRepository(client)
+
+    await repo.deleteAccount()
+
+    expect(rpc).toHaveBeenCalledWith('delete_user_account')
+    expect(client.from).not.toHaveBeenCalledWith('profiles', expect.anything())
+    expect(signOut).toHaveBeenCalled()
+  })
+
+  it('si la base no borra la cuenta, avisa en vez de decir que se borró', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: '42501', message: 'permission denied' },
+    })
+    const client = clientWithRpc(rpc)
+    const signOut = vi.fn().mockResolvedValue({ error: null })
+    Object.assign(client.auth, { signOut })
+    const repo = new SupabaseRepository(client)
+
+    await expect(repo.deleteAccount()).rejects.toThrow('permission denied')
+    expect(signOut).not.toHaveBeenCalled()
+  })
+})
+
 describe('SupabaseRepository reservas vía RPC (ZCAPP-53/54)', () => {
   it('reserva con book_session y devuelve la reserva confirmada', async () => {
     const rpc = vi.fn().mockResolvedValue({ data: { booking: bookingRow }, error: null })
@@ -97,19 +162,59 @@ describe('SupabaseRepository reservas vía RPC (ZCAPP-53/54)', () => {
     expect(result.status).toBe('cancelled')
   })
 
-  it('si booking-rpc.sql no está aplicado, usa el camino anterior', async () => {
+  it('reagenda con reschedule_booking y devuelve la reserva nueva', async () => {
     const rpc = vi.fn().mockResolvedValue({
-      data: null,
-      error: { code: 'PGRST202', message: 'Could not find the function' },
+      data: { ...bookingRow, id: 'bk_2', session_id: 'sess_2' },
+      error: null,
     })
     const repo = new SupabaseRepository(clientWithRpc(rpc))
-    const legacy = vi
-      .spyOn(repo as unknown as { createBookingLegacy: () => Promise<unknown> }, 'createBookingLegacy')
-      .mockResolvedValue({ id: 'bk_legacy' })
 
-    await expect(repo.createBooking('sess_1', 'user_member')).resolves.toEqual({
-      id: 'bk_legacy',
+    const result = await repo.rescheduleBooking('bk_1', 'sess_2')
+
+    expect(rpc).toHaveBeenCalledWith('reschedule_booking', {
+      p_booking_id: 'bk_1',
+      p_session_id: 'sess_2',
     })
-    expect(legacy).toHaveBeenCalledWith('sess_1', 'user_member')
+    expect(result).toMatchObject({ id: 'bk_2', sessionId: 'sess_2', status: 'confirmed' })
+    // Un solo paso: no cancela ni reserva por separado
+    expect(rpc).toHaveBeenCalledTimes(1)
+  })
+
+  it('si la clase nueva está llena, propaga el aviso y no hace nada más', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message: 'La clase nueva está llena. Tu reserva actual no cambió.' },
+    })
+    const repo = new SupabaseRepository(clientWithRpc(rpc))
+
+    await expect(repo.rescheduleBooking('bk_1', 'sess_full')).rejects.toThrow(
+      /llena. Tu reserva actual no cambió/,
+    )
+    expect(rpc).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('SupabaseRepository evidencia de aceptación de términos', () => {
+  it('envía la versión de los términos a la Edge Function de pago', async () => {
+    const client = clientWithRpc(vi.fn())
+    const invoke = vi.fn().mockResolvedValue({
+      data: { url: 'https://payurl.link/X', paymentId: 'pay_1' },
+      error: null,
+    })
+    Object.assign(client, { functions: { invoke } })
+    const repo = new SupabaseRepository(client)
+
+    await repo.createPagomediosPayment({
+      planId: 'plan_mensual',
+      document: '1710034065',
+      documentType: '05',
+      phone: '0987569852',
+      address: 'Quito',
+      termsVersion: '2.1',
+    })
+
+    expect(invoke).toHaveBeenCalledWith('pagomedios-payment', {
+      body: expect.objectContaining({ action: 'create', termsVersion: '2.1' }),
+    })
   })
 })

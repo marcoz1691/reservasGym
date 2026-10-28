@@ -149,6 +149,19 @@ $$\text{Ruta Crítica: } \text{WBS 1.1.2} \rightarrow \text{1.1.3} \rightarrow \
 6. **Quality Gate 3 (20 Noviembre):** Firma de autorización de subida a tiendas de aplicaciones.
 7. **Quality Gate 4 (31 Diciembre):** Firma de Acta de Entrega y Cierre Definitivo del Proyecto.
 
+### 7.1 Registro de pagos del cliente
+
+El contrato fija el reparto 30/50/20 pero no la fecha de cada pago. Las fechas de los pagos pendientes son una propuesta atada a los Quality Gates.
+
+| Pago | Monto | Pagado | Saldo | Cuándo |
+|---|---:|---:|---:|---|
+| 1 · 30% al firmar | $2.040,00 | $2.040,00 | $0,00 | Pagado (firma, 28 Ago 2026) |
+| 2 · 50% | $3.400,00 | $500,00 | **$2.900,00** | Adelanto de $500 anotado el 02 Oct 2026. Saldo propuesto al **Quality Gate 1 (04 Oct)** |
+| 3 · 20% final | $1.360,00 | $0,00 | $1.360,00 | Propuesto al **Quality Gate 4 (31 Dic)**, con el Acta de Entrega |
+| **Total contrato** | **$6.800,00** | **$2.540,00** | **$4.260,00** | |
+
+Adenda N.º 1, pago recurrente con Pagomedios ($300, IVA incluido): solo si William la firma (reemplaza la cotización COT-ZC-REC-2026-001 rev. 5). Pago único de $300 hasta el **15 Oct 2026**.
+
 ---
 
 ## 8. DECISIÓN DE ARQUITECTURA — SUPABASE (PLAN FREE vs PRO)
@@ -160,7 +173,7 @@ $$\text{Ruta Crítica: } \text{WBS 1.1.2} \rightarrow \text{1.1.3} \rightarrow \
 | Proyecto Supabase | Rol | Plan acordado |
 |---|---|---|
 | `zona-cero` | Staging / QA (pruebas, demos William, Sprint 1–6) | **Free** |
-| `zona-cero-prod` *(por crear, Sprint 7)* | Producción — socios y staff reales | **Pro** (recomendado) |
+| `zona-cero-prod` *(creado el 27 sep 2026, ZCAPP-60)* | Producción — socios y staff reales | Free hoy; **Pro** antes del Go-Live (ZCAPP-59) |
 
 La etiqueta **main / PRODUCTION** en el dashboard de Supabase **no** indica el ambiente del gym: es el nombre de la rama principal de Postgres. Staging y producción se separan por **proyecto Supabase distinto**, no por cambiar ese badge.
 
@@ -176,7 +189,7 @@ El plan Free permite **2 proyectos** — suficiente para staging + prod sin cost
 
 | Trigger | Acción |
 |---|---|
-| **Sprint 6** (29 Oct) | Crear proyecto `zona-cero-prod`; mantener staging en Free |
+| **Sprint 6** (29 Oct) | ~~Crear proyecto `zona-cero-prod`~~ (adelantado y hecho el 27 sep, ZCAPP-60); mantener staging en Free |
 | **1–2 semanas antes Go-Live** (≈ 05 Dic) | Upgrade **Pro** en prod: backups diarios, sin pausa por inactividad |
 | Socios reales operando | Monitorear uso; Pro en prod como baseline operativa |
 

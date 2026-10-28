@@ -39,6 +39,7 @@ export function createMockRepo(
     signUp: vi.fn(),
     signOut: vi.fn(),
     resetPassword: vi.fn(),
+    completePasswordReset: vi.fn(),
     updatePassword: vi.fn(),
     updateProfile: vi.fn(),
     deleteAccount: vi.fn(),

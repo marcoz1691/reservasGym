@@ -2,36 +2,61 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ArrowLeftRight, ArrowRight, Banknote, Check, CreditCard, ShieldAlert } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  Banknote,
+  Check,
+  CreditCard,
+  QrCode,
+  ShieldAlert,
+} from 'lucide-react'
 import { useAppData, useCurrentUser, useGym, useRepo } from '@/data/RepositoryProvider'
-import { selectMyMembership } from '@/app/store'
+import {
+  selectMyDayPasses,
+  selectMyMembership,
+  selectMyQueuedMembership,
+} from '@/app/store'
 import type { ManualPaymentMethod } from '@/domain/models'
 import {
   MANUAL_PAYMENT_LABELS,
+  isDeunaConfigured,
+  isRemotePaymentMethod,
+  selectDiscardedPlanRequest,
   selectPendingPlanRequest,
 } from '@/domain/rules/planRequest'
+import { plansForAppSale } from '@/domain/rules/featureFlags'
+import { resolveTermsDocument } from '@/domain/rules/termsDocument'
+import { TermsDialog } from '@/features/legal/TermsDialog'
 import { formatCurrency } from '@/lib/format'
 import { Button, PageHeader } from '@/ui/primitives'
 import { isOnlinePayEnabled } from './onlinePay'
 import {
+  DayPassNotice,
+  ManualPaymentInstructions,
   MembershipCard,
   PaymentHistory,
   PendingPlanRequestCard,
   PlansShowcase,
 } from './components'
 
-const PAYMENT_METHODS: ManualPaymentMethod[] = ['cash', 'transfer', 'card_pos']
+// El pago recurrente lo registra recepción; el socio no lo pide desde Mi Plan.
+type RequestMethod = Exclude<ManualPaymentMethod, 'pagomedios_recurring'>
+
+const PAYMENT_METHODS: RequestMethod[] = ['cash', 'transfer', 'card_pos', 'deuna']
 
 const PAYMENT_ICONS = {
   cash: Banknote,
   transfer: ArrowLeftRight,
   card_pos: CreditCard,
+  deuna: QrCode,
 } as const
 
-const PAYMENT_HINTS: Record<ManualPaymentMethod, string> = {
+const PAYMENT_HINTS: Record<RequestMethod, string> = {
   cash: 'En caja del counter',
   transfer: 'Bancos locales',
   card_pos: 'Datáfono en recepción',
+  deuna: 'QR o código del gym',
 }
 
 export function MiPlanPage() {
@@ -43,13 +68,18 @@ export function MiPlanPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [payBanner, setPayBanner] = useState<string | null>(null)
   const [chosenPlanId, setChosenPlanId] = useState<string | null>(null)
-  const [chosenMethod, setChosenMethod] = useState<ManualPaymentMethod | null>(null)
+  const [chosenMethod, setChosenMethod] = useState<RequestMethod | null>(null)
   const [revising, setRevising] = useState(false)
   const [requesting, setRequesting] = useState(false)
   const [requestError, setRequestError] = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
   const paymentStepRef = useRef<HTMLDivElement>(null)
 
-  const onlinePayEnabled = isOnlinePayEnabled()
+  const onlinePayEnabled = isOnlinePayEnabled(data.settings)
+  const paymentMethods = isDeunaConfigured(data.settings)
+    ? PAYMENT_METHODS
+    : PAYMENT_METHODS.filter((method) => method !== 'deuna')
 
   const currentMembership = useMemo(
     () => selectMyMembership(data, user?.id),
@@ -65,6 +95,22 @@ export function MiPlanPage() {
     )
   }, [data.membershipPlans, currentMembership])
 
+  const queued = useMemo(() => {
+    const membership = selectMyQueuedMembership(data, user?.id)
+    if (!membership) return null
+    const plan = (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
+    return { membership, plan }
+  }, [data, user?.id])
+
+  const dayPasses = useMemo(
+    () =>
+      selectMyDayPasses(data, user?.id).map((membership) => ({
+        membership,
+        plan: (data.membershipPlans ?? []).find((p) => p.id === membership.planId),
+      })),
+    [data, user?.id],
+  )
+
   const myPayments = useMemo(() => {
     if (!user) return []
     return (data.payments ?? [])
@@ -78,6 +124,12 @@ export function MiPlanPage() {
   const pendingRequest = user
     ? selectPendingPlanRequest(data.payments ?? [], user.id)
     : null
+  const discardedRequest = user
+    ? selectDiscardedPlanRequest(data.payments ?? [], user.id)
+    : null
+  const discardedPlanName = (data.membershipPlans ?? []).find(
+    (plan) => plan.id === discardedRequest?.planId,
+  )?.name
   const pendingPlanName =
     (data.membershipPlans ?? []).find((plan) => plan.id === pendingRequest?.planId)
       ?.name ?? 'Plan solicitado'
@@ -93,14 +145,21 @@ export function MiPlanPage() {
     document.getElementById('planes-catalogo')?.scrollIntoView({ block: 'start' })
   }
 
-  async function handleRequestPayment(method: ManualPaymentMethod) {
-    if (!chosenPlanId) return
+  async function handleRequestPayment(method: RequestMethod) {
+    if (!chosenPlanId || !acceptedTerms) return
     setRequesting(true)
     setRequestError('')
     try {
-      await repo.requestPlanPayment({ planId: chosenPlanId, manualMethod: method })
+      const termsVersion = resolveTermsDocument(data.settings, import.meta.env.BASE_URL).version
+      await repo.recordLegalConsents?.('checkout', [{ document: 'terms', version: termsVersion }])
+      await repo.requestPlanPayment({
+        planId: chosenPlanId,
+        manualMethod: method,
+        termsVersion,
+      })
       setChosenPlanId(null)
       setChosenMethod(null)
+      setAcceptedTerms(false)
       setRevising(false)
       await refresh()
     } catch (err) {
@@ -183,16 +242,30 @@ export function MiPlanPage() {
         </div>
       ) : null}
 
+      {discardedRequest && !choosingPayment ? (
+        <div
+          role="status"
+          className="rounded-2xl border border-line bg-bg-2 px-4 py-3 text-sm text-ink"
+        >
+          Recepción descartó tu solicitud{discardedPlanName ? ` de ${discardedPlanName}` : ''}
+          {discardedRequest.reference ? ` (Ref. ${discardedRequest.reference})` : ''}. No se activó
+          ningún plan. Si ya pagaste, escribe al gimnasio con tu comprobante; si no, puedes elegir un
+          plan otra vez.
+        </div>
+      ) : null}
+
       {pendingRequest && !choosingPayment && !revising ? (
         <div className="space-y-3">
           <PendingPlanRequestCard
             payment={pendingRequest}
             planName={pendingPlanName}
+            settings={data.settings}
+            memberName={user.fullName}
           />
           <button
             type="button"
             onClick={handleChangePlan}
-            className="text-sm font-bold text-acc"
+            className="text-sm font-bold text-acc-dark"
           >
             Cambiar
           </button>
@@ -207,7 +280,11 @@ export function MiPlanPage() {
           memberName={user.fullName}
           memberSince={memberSince}
           onRenew={scrollToCatalog}
+          queued={queued}
+          dayPasses={dayPasses}
         />
+      ) : dayPasses.length > 0 ? (
+        <DayPassNotice passes={dayPasses} />
       ) : showEmptyHero ? (
         <div className="relative overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)]">
           <div
@@ -261,12 +338,15 @@ export function MiPlanPage() {
 
       {showCatalog ? (
         <PlansShowcase
-          plans={data.membershipPlans ?? []}
+          plans={plansForAppSale(data.membershipPlans ?? [], data.settings)}
           currentPlanId={
             currentMembership?.status === 'active' || currentMembership?.status === 'grace'
               ? currentMembership.planId
               : null
           }
+          queuedPlanId={queued?.membership.planId ?? null}
+          queuesChanges={currentMembership?.status === 'active'}
+          queueStartsAt={currentMembership?.status === 'active' ? currentMembership.endsAt : null}
           zones={data.zones ?? []}
           onlinePayEnabled={onlinePayEnabled}
           onPayOnline={onlinePayEnabled ? handlePayOnline : undefined}
@@ -286,7 +366,7 @@ export function MiPlanPage() {
                 <Check className="h-4 w-4" />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
                   {currentMembership ? 'Plan a activar' : 'Plan elegido'}
                 </p>
                 <p className="truncate text-sm font-bold text-ink">{chosenPlan.name}</p>
@@ -298,7 +378,7 @@ export function MiPlanPage() {
             <button
               type="button"
               onClick={handleChangePlan}
-              className="focus-ring shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-acc hover:text-acc-hi"
+              className="focus-ring shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-acc-dark hover:text-acc-hi"
             >
               Cambiar
             </button>
@@ -309,10 +389,12 @@ export function MiPlanPage() {
               ¿Cómo vas a pagar?
             </h3>
             <p className="mt-1 text-sm leading-relaxed text-ink-2">
-              El pago se completa en recepción. Tu acceso se activa cuando lo registren.
+              Recepción registra o valida tu pago. Tu acceso se activa cuando lo hagan.
             </p>
-            <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
-              {PAYMENT_METHODS.map((method) => {
+            <div
+              className={`mt-4 grid gap-2.5 ${paymentMethods.length > 3 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}
+            >
+              {paymentMethods.map((method) => {
                 const selected = chosenMethod === method
                 const Icon = PAYMENT_ICONS[method]
                 return (
@@ -333,7 +415,7 @@ export function MiPlanPage() {
                       aria-hidden
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
                         selected
-                          ? 'border-acc/30 bg-surface text-acc'
+                          ? 'border-acc/30 bg-surface text-acc-dark'
                           : 'border-line bg-surface-elevated text-ink-3'
                       }`}
                     >
@@ -343,7 +425,7 @@ export function MiPlanPage() {
                       <span className="block text-sm font-bold text-ink">
                         {MANUAL_PAYMENT_LABELS[method]}
                       </span>
-                      <span className="block text-[11px] text-ink-3">
+                      <span className="block text-xs text-ink-3">
                         {PAYMENT_HINTS[method]}
                       </span>
                     </span>
@@ -351,13 +433,42 @@ export function MiPlanPage() {
                 )
               })}
             </div>
+            {isRemotePaymentMethod(chosenMethod) ? (
+              <div className="mt-4">
+                <ManualPaymentInstructions
+                  method={chosenMethod}
+                  settings={data.settings}
+                  amountCents={chosenPlan.priceCents}
+                />
+              </div>
+            ) : null}
+            <div className="mt-5 flex flex-wrap items-center gap-x-1 text-sm text-ink-2">
+              <label className="flex min-h-11 cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  aria-label="Acepto los términos y condiciones"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="h-6 w-6 shrink-0 rounded border-line-strong accent-[var(--color-cta)]"
+                />
+                <span>Acepto los</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowTerms(true)}
+                className="inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-2"
+              >
+                términos y condiciones
+              </button>
+            </div>
+            {showTerms ? <TermsDialog settings={data.settings} onClose={() => setShowTerms(false)} /> : null}
             <button
               type="button"
-              disabled={!chosenMethod || requesting}
+              disabled={!chosenMethod || !acceptedTerms || requesting}
               onClick={() => {
                 if (chosenMethod) void handleRequestPayment(chosenMethod)
               }}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-40 active:scale-[0.99]"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-40 active:scale-[0.99]"
             >
               Enviar solicitud
               <ArrowRight className="h-4 w-4" aria-hidden />

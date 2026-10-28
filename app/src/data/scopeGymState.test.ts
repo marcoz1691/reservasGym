@@ -26,9 +26,24 @@ describe('scopeGymState', () => {
     expect(scoped.measurements.every((m) => m.userId === member.id)).toBe(true)
     expect(scoped.memberships.every((m) => m.userId === member.id)).toBe(true)
     expect(scoped.payments.every((p) => p.userId === member.id)).toBe(true)
-    expect(scoped.membershipPlans.every((p) => p.active)).toBe(true)
+    const heldPlanIds = new Set(scoped.memberships.map((m) => m.planId))
+    expect(scoped.membershipPlans.every((p) => p.active || heldPlanIds.has(p.id))).toBe(true)
     expect(scoped.zones.length).toBe(state.zones.length)
     expect(scoped.sessions.length).toBe(state.sessions.length)
+  })
+
+  it('keeps a discontinued plan the member still holds, and hides other inactive plans', () => {
+    const own = state.memberships.find((m) => m.userId === member.id)!
+    const otherInactive = state.membershipPlans.find((p) => p.id !== own.planId)!
+    const withInactive = {
+      ...state,
+      membershipPlans: state.membershipPlans.map((p) =>
+        p.id === own.planId || p.id === otherInactive.id ? { ...p, active: false } : p,
+      ),
+    }
+    const scoped = scopeGymState(withInactive, member)
+    expect(scoped.membershipPlans.some((p) => p.id === own.planId)).toBe(true)
+    expect(scoped.membershipPlans.some((p) => p.id === otherInactive.id)).toBe(false)
   })
 
   it('hides private collections when there is no session', () => {

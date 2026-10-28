@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { LocalRepository } from './localRepository'
 import { resetRepositoryForTests } from './repository'
+import { DEMO_PASSWORD } from './seed'
 
 describe('Auth and Profile expanded flows', () => {
   beforeEach(() => {
@@ -88,10 +89,25 @@ describe('Auth and Profile expanded flows', () => {
       initialWeightKg: 75,
     })
 
-    // Book a session
+    // Reservar exige membresía vigente: recepción registra el pago, como en la vida real.
+    await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    await repo.registerManualPayment({
+      userId: user.id,
+      planId: 'plan-mensual-full',
+      amountCents: 4500,
+      manualMethod: 'cash',
+    })
+    await repo.signIn({ email: 'borrar@test.com', password: 'password123' })
+    expect(await repo.getMemberMembership(user.id)).not.toBeNull()
+
+    // La primera sesión del catálogo puede haber empezado: reservar una futura con cupo.
     const sessions = await repo.listSessions()
-    expect(sessions.length).toBeGreaterThan(0)
-    await repo.createBooking(sessions[0]!.id, user.id)
+    const tomorrow = Date.now() + 24 * 60 * 60 * 1000
+    const targetSession = sessions.find(
+      (session) => new Date(session.startsAt).getTime() > tomorrow && session.bookedCount < session.capacity,
+    )
+    expect(targetSession).toBeDefined()
+    await repo.createBooking(targetSession!.id, user.id)
 
     const bookingsBefore = await repo.listBookingsForUser(user.id)
     expect(bookingsBefore.length).toBe(1)
@@ -109,6 +125,10 @@ describe('Auth and Profile expanded flows', () => {
     // User is completely removed from repository
     const allMembers = await repo.listMembers()
     expect(allMembers.some((m) => m.id === user.id)).toBe(false)
+
+    // Membership and payments are gone too
+    await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+    expect((await repo.listMemberships()).some((m) => m.userId === user.id)).toBe(false)
 
     // Attempting to sign in with deleted account fails
     await expect(

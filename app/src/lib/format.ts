@@ -15,6 +15,30 @@ export function ecuadorLocalDateTimeIso(dateYmd: string, timeHm: string): string
   return new Date(`${dateYmd}T${time}${ECUADOR_OFFSET}`).toISOString()
 }
 
+/**
+ * `YYYY-MM-DDTHH:mm` en hora de Ecuador, para `<input type="datetime-local">`.
+ * `toISOString().slice(0, 16)` daría la hora UTC (5 h adelantada) — ZCAPP-62.
+ */
+export function toEcuadorDateTimeLocal(input: string | Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ECUADOR_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(parseDateInput(input))
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? '00'
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+}
+
+/** Inverso de `toEcuadorDateTimeLocal`: valor de datetime-local (hora de Ecuador) → ISO UTC. */
+export function ecuadorDateTimeLocalToIso(value: string): string {
+  return ecuadorLocalDateTimeIso(value.slice(0, 10), value.slice(11, 16))
+}
+
 /** Día calendario en America/Guayaquil (`YYYY-MM-DD`). */
 export function ecuadorTodayYmd(now: string | Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -134,6 +158,18 @@ export function formatDateSpanish(iso: string | Date): string {
   }
 }
 
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  approved: 'Aprobado',
+  pending: 'Pendiente',
+  rejected: 'Rechazado',
+  refunded: 'Reembolsado',
+}
+
+/** Estado de un pago en español para socios y administración. */
+export function formatPaymentStatus(status: string): string {
+  return PAYMENT_STATUS_LABELS[status] ?? status
+}
+
 export function formatPaymentMethod(
   provider: string,
   method?: string | null,
@@ -146,12 +182,15 @@ export function formatPaymentMethod(
         return 'Transferencia'
       case 'card_pos':
         return 'Datáfono POS'
+      case 'deuna':
+        return 'Deuna'
+      case 'pagomedios_recurring':
+        return 'Pago recurrente'
       default:
         return 'Recepción'
     }
   }
-  if (provider === 'datafast') return 'Datafast'
-  if (provider === 'mercadopago') return 'Mercado Pago'
+  if (provider === 'pagomedios') return 'Tarjeta en línea'
   return provider
 }
 
@@ -169,4 +208,10 @@ export function applyBrandColors(primary: string, accent: string) {
   const root = document.documentElement
   root.style.setProperty('--color-brand', primary)
   root.style.setProperty('--color-acc', accent)
+  root.style.setProperty('--color-acc-dark', accentTextColor(accent))
+}
+
+/** Acento oscurecido para texto: el acento puro no llega a 4.5:1 sobre el fondo claro. */
+export function accentTextColor(accent: string) {
+  return `color-mix(in srgb, ${accent} 68%, #000)`
 }

@@ -3,6 +3,8 @@ import type { MembershipPlan } from '@/domain/models'
 import {
   describePlanOffer,
   groupPlansByFamily,
+  isDayPassPlan,
+  planFamilyId,
   selectUpgradePlan,
   validateMembershipPlanInput,
 } from './membershipPlan'
@@ -186,5 +188,40 @@ describe('selectUpgradePlan', () => {
   it('no recomienda nada si ya está en el plan más alto', () => {
     const only = [plan({ id: 'elite', name: 'Zero Elite Anual', durationDays: 420, priceCents: 90000 })]
     expect(selectUpgradePlan(only, 'elite')).toBeNull()
+  })
+
+  it('nunca sugiere un pase diario como mejora', () => {
+    const withPass = [
+      plan({ id: 'otro', name: 'Plan Mensual Ilimitado', durationDays: 30, priceCents: 4500 }),
+      plan({ id: 'hyrox', name: 'Pase Hyrox', durationDays: 1, priceCents: 9000, kind: 'day_pass' }),
+    ]
+    expect(selectUpgradePlan(withPass, 'otro')).toBeNull()
+    expect(selectUpgradePlan(withPass, null)?.id).toBe('otro')
+  })
+})
+
+describe('familia de pases diarios por tipo', () => {
+  it('un plan day_pass con cualquier nombre cae en Pases diarios', () => {
+    expect(planFamilyId(plan({ name: 'Pase Hyrox', durationDays: 1, priceCents: 800, kind: 'day_pass' }))).toBe(
+      'zona-day',
+    )
+  })
+
+  it('un Zona Day renombrado sigue en la familia', () => {
+    const renamed = plan({ name: 'Día libre Recovery', durationDays: 1, priceCents: 500, kind: 'day_pass' })
+    expect(describePlanOffer(renamed).familyId).toBe('zona-day')
+    expect(groupPlansByFamily([renamed]).map((g) => g.family.id)).toEqual(['zona-day'])
+  })
+
+  it('kind membership manda sobre el nombre', () => {
+    expect(planFamilyId(plan({ name: 'Zona Day Club', durationDays: 30, priceCents: 800, kind: 'membership' }))).toBe(
+      'otros',
+    )
+  })
+
+  it('sin kind usa el nombre como respaldo', () => {
+    expect(planFamilyId(plan({ name: 'Zona Day Full', durationDays: 1, priceCents: 1000 }))).toBe('zona-day')
+    expect(isDayPassPlan(plan({ name: 'Zona Day Full', durationDays: 1, priceCents: 1000 }))).toBe(true)
+    expect(isDayPassPlan(plan({ name: 'Zero Pro Mensual', durationDays: 30, priceCents: 5500 }))).toBe(false)
   })
 })

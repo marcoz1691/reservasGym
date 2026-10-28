@@ -38,8 +38,6 @@ describe('Security Audit & Zero Secret Leaks (Cero Fuga de Secretos)', () => {
       /SUPABASE_SERVICE_ROLE_KEY/i,
       /service_role_key/i,
       /serviceRoleKey/i,
-      /DATAFAST_SECRET/i,
-      /MERCADOPAGO_ACCESS_TOKEN/i,
       /STRIPE_SECRET_KEY/i,
       /PRIVATE_KEY/i,
     ]
@@ -107,8 +105,7 @@ describe('Security Audit & Zero Secret Leaks (Cero Fuga de Secretos)', () => {
       // Check for dangerous keywords in client bundles
       expect(jsContent).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY/)
       expect(jsContent).not.toMatch(/service_role_key/)
-      expect(jsContent).not.toMatch(/DATAFAST_SECRET/)
-      expect(jsContent).not.toMatch(/MERCADOPAGO_ACCESS_TOKEN/)
+      expect(jsContent).not.toMatch(/PAGOMEDIOS_TOKEN/)
       expect(jsContent).not.toMatch(/STRIPE_SECRET_KEY/)
     }
   })

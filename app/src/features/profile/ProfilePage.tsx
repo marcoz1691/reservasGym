@@ -1,3 +1,7 @@
+import { ConsentCheckbox } from '@/features/legal/ConsentCheckbox'
+import { LegalDocumentDialog } from '@/features/legal/LegalDocumentDialog'
+import { PRIVACY } from '@/features/legal/legalDocuments'
+import { LegalLinks } from '@/features/legal/LegalPage'
 import { useState, useEffect, type FormEvent } from 'react'
 import {
   User as UserIcon,
@@ -15,6 +19,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react'
 import { useCurrentUser, useGym, useRefresh } from '@/data/RepositoryProvider'
+import { memberPhoneError } from '@/domain/rules/paymentReceipt'
 import { isBiometricAccessEnabled } from '@/lib/biometricAccess'
 import {
   disableBiometrics,
@@ -31,14 +36,20 @@ export function ProfilePage() {
   const { repo } = useGym()
   const refresh = useRefresh()
 
+  const [acceptedHealth, setAcceptedHealth] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [fichaModalOpen, setFichaModalOpen] = useState(false)
   const [fullName, setFullName] = useState(user?.fullName ?? '')
   const [birthDate, setBirthDate] = useState(user?.birthDate ?? '')
   const [residence, setResidence] = useState(user?.residence ?? '')
+  const [phone, setPhone] = useState(user?.phone ?? '')
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   const [heightCm, setHeightCm] = useState(user?.heightCm?.toString() ?? '')
   const [goals, setGoals] = useState(user?.goals ?? '')
   const [healthNotes, setHealthNotes] = useState(user?.healthNotes ?? '')
+
+  const healthChanged = heightCm !== (user?.heightCm?.toString() ?? '') || healthNotes !== (user?.healthNotes ?? '')
 
   const [bioActive, setBioActive] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -100,19 +111,27 @@ export function ProfilePage() {
 
   async function handleSave(e: FormEvent) {
     e.preventDefault()
-    setSaving(true)
+    if (saving || (healthChanged && !acceptedHealth)) return
     setErrorMsg(null)
     setSuccessMsg(null)
+    const phoneProblem = memberPhoneError(phone)
+    setPhoneError(phoneProblem)
+    if (phoneProblem) return
+    setSaving(true)
 
     try {
+      if (healthChanged) {
+        await repo.recordLegalConsents?.('ficha', [{ document: 'health_data', version: PRIVACY.version }])
+      }
       if (repo.updateProfile) {
         await repo.updateProfile({
           fullName: fullName.trim(),
           birthDate: birthDate.trim() || undefined,
           residence: residence.trim() || undefined,
-          heightCm: heightCm ? Number(heightCm) : undefined,
+          // Solo si cambió: así guardar el resto del perfil no depende de la columna phone.
+          ...(phone.trim() !== (user?.phone ?? '') ? { phone: phone.trim() } : {}),
+          ...(healthChanged ? { heightCm: heightCm ? Number(heightCm) : undefined, healthNotes: healthNotes.trim() || undefined } : {}),
           goals: goals.trim() || undefined,
-          healthNotes: healthNotes.trim() || undefined,
         })
       }
       await refresh()
@@ -143,7 +162,7 @@ export function ProfilePage() {
               onClick={() => setFichaModalOpen(true)}
               className="flex items-center gap-1.5 text-xs font-bold"
             >
-              <FileSpreadsheet className="h-4 w-4 text-acc" />
+              <FileSpreadsheet className="h-4 w-4 text-acc-dark" />
               <span>Ficha Técnica Completa</span>
             </Button>
             {!isEditing ? (
@@ -153,9 +172,12 @@ export function ProfilePage() {
                   setFullName(user.fullName)
                   setBirthDate(user.birthDate ?? '')
                   setResidence(user.residence ?? '')
+                  setPhone(user.phone ?? '')
+                  setPhoneError(null)
                   setHeightCm(user.heightCm?.toString() ?? '')
                   setGoals(user.goals ?? '')
                   setHealthNotes(user.healthNotes ?? '')
+                  setAcceptedHealth(false)
                   setIsEditing(true)
                 }}
               >
@@ -168,7 +190,7 @@ export function ProfilePage() {
 
       {successMsg ? (
         <div className="flex items-center gap-2 rounded-2xl border border-acc/40 bg-acc/10 p-3.5 text-xs text-ink font-semibold">
-          <Check className="h-4 w-4 text-acc" />
+          <Check className="h-4 w-4 text-acc-dark" />
           <span>{successMsg}</span>
         </div>
       ) : null}
@@ -203,7 +225,7 @@ export function ProfilePage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-ink-3">
-            <Ruler className="h-4 w-4 text-acc" />
+            <Ruler className="h-4 w-4 text-acc-dark" />
             <span>Estatura</span>
           </div>
           <div className="text-2xl font-extrabold text-ink">
@@ -213,7 +235,7 @@ export function ProfilePage() {
 
         <Card className="p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-ink-3">
-            <Scale className="h-4 w-4 text-acc" />
+            <Scale className="h-4 w-4 text-acc-dark" />
             <span>Peso inicial</span>
           </div>
           <div className="text-2xl font-extrabold text-ink">
@@ -223,7 +245,7 @@ export function ProfilePage() {
 
         <Card className="p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-ink-3">
-            <Activity className="h-4 w-4 text-acc" />
+            <Activity className="h-4 w-4 text-acc-dark" />
             <span>IMC inicial</span>
           </div>
           <div className="text-2xl font-extrabold text-ink">
@@ -233,7 +255,7 @@ export function ProfilePage() {
 
         <Card className="p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-ink-3">
-            <Calendar className="h-4 w-4 text-acc" />
+            <Calendar className="h-4 w-4 text-acc-dark" />
             <span>Nacimiento</span>
           </div>
           <div className="text-sm font-extrabold text-ink truncate mt-1">
@@ -246,7 +268,7 @@ export function ProfilePage() {
       <Card className="p-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-acc/15 text-acc">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-acc/15 text-acc-dark">
               <Fingerprint className="h-6 w-6" />
             </div>
             <div>
@@ -302,6 +324,18 @@ export function ProfilePage() {
               />
 
               <Input
+                label="Celular (opcional)"
+                type="tel"
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value)
+                  if (phoneError) setPhoneError(null)
+                }}
+                error={phoneError ?? undefined}
+                placeholder="Ej. 0991234567"
+              />
+
+              <Input
                 label="Estatura (cm)"
                 type="number"
                 min="50"
@@ -338,6 +372,13 @@ export function ProfilePage() {
               />
             </label>
 
+            {healthChanged && (
+              <ConsentCheckbox checked={acceptedHealth} onChange={setAcceptedHealth}
+                label="Consiento expresamente el tratamiento de mis datos de salud"
+                linkText="política de privacidad" onOpen={() => setShowPrivacy(true)}>
+                Consiento expresamente el tratamiento de mis datos de salud para adaptar mi entrenamiento, según la
+              </ConsentCheckbox>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
@@ -347,7 +388,7 @@ export function ProfilePage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || (healthChanged && !acceptedHealth)}>
                 {saving ? 'Guardando…' : 'Guardar cambios'}
               </Button>
             </div>
@@ -357,10 +398,14 @@ export function ProfilePage() {
         <div className="grid sm:grid-cols-2 gap-4">
           <Card className="p-5 space-y-3.5">
             <h3 className="text-xs font-bold uppercase tracking-wider text-ink-3 flex items-center gap-2">
-              <UserIcon className="h-4 w-4 text-acc" />
+              <UserIcon className="h-4 w-4 text-acc-dark" />
               Datos personales
             </h3>
             <div className="space-y-2.5 text-sm">
+              <div>
+                <span className="text-xs text-ink-3 block">Celular:</span>
+                <span className="font-semibold text-ink">{user.phone || 'No registrado'}</span>
+              </div>
               <div>
                 <span className="text-xs text-ink-3 block">Residencia:</span>
                 <span className="font-semibold text-ink">
@@ -388,7 +433,7 @@ export function ProfilePage() {
 
           <Card className="p-5 space-y-3.5">
             <h3 className="text-xs font-bold uppercase tracking-wider text-ink-3 flex items-center gap-2">
-              <HeartPulse className="h-4 w-4 text-acc" />
+              <HeartPulse className="h-4 w-4 text-acc-dark" />
               Ficha de salud y metas
             </h3>
             <div className="space-y-2.5 text-sm">
@@ -413,6 +458,11 @@ export function ProfilePage() {
         </div>
       )}
 
+      <Card className="space-y-3 p-6">
+        <h2 className="text-base font-bold text-ink">Documentos legales</h2>
+        <LegalLinks />
+      </Card>
+
       {/* Apple 5.1.1(v) & Google Data Safety: Account Deletion UI */}
       <Card className="border-danger/30 bg-danger/5 p-6 space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -422,7 +472,7 @@ export function ProfilePage() {
               Privacidad y eliminación de cuenta
             </h3>
             <p className="mt-1 text-xs text-ink-2 max-w-xl leading-relaxed">
-              De acuerdo con las normativas de privacidad (Apple Guideline 5.1.1(v) y Google Data Safety), puedes solicitar la eliminación completa y permanente de tu cuenta, historial de reservas, mediciones corporales y datos de salud en cualquier momento.
+              De acuerdo con las normativas de privacidad (Apple Guideline 5.1.1(v) y Google Data Safety), puedes eliminar en cualquier momento, de forma permanente, tu cuenta, historial de reservas, mediciones corporales y datos de salud. Tus pagos ya realizados se conservan sin tus datos personales, solo para la contabilidad del gimnasio.
             </p>
           </div>
           <Button
@@ -436,6 +486,8 @@ export function ProfilePage() {
           </Button>
         </div>
       </Card>
+
+      {showPrivacy && <LegalDocumentDialog doc={PRIVACY} onClose={() => setShowPrivacy(false)} />}
 
       <FichaTecnicaModal
         open={fichaModalOpen}

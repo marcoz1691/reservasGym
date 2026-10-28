@@ -10,14 +10,19 @@ import {
   CreditCard,
   DollarSign,
   History,
+  MessageCircle,
   PlusCircle,
+  QrCode,
   RefreshCw,
+  Repeat,
   Search,
   ShieldCheck,
   UserCheck,
   X,
+  type LucideIcon,
 } from 'lucide-react'
 import {
+  useAppData,
   useCurrentUser,
   useRefresh,
   useRepo,
@@ -34,10 +39,58 @@ import {
   daysRemaining,
   isNearExpiration,
 } from '@/domain/rules/membership'
-import { formatCurrency, formatDateShort, formatPaymentMethod } from '@/lib/format'
-import { Badge, Button, Card, EmptyState, Input, PageHeader } from '@/ui/primitives'
+import { isDayPassPlan } from '@/domain/rules/membershipPlan'
+import { buildMembershipReminderUrl } from '@/domain/rules/membershipReminder'
+import {
+  formatReceiptNumber,
+  matchesReceiptNumber,
+  normalizeWhatsAppPhone,
+} from '@/domain/rules/paymentReceipt'
+import {
+  currentMembership,
+  memberMembership,
+  planChangeCredit,
+  planPurchaseOutcome,
+} from '@/domain/rules/memberships'
+import { MANUAL_PAYMENT_LABELS } from '@/domain/rules/planRequest'
+import { suggestPosDefaults } from '@/domain/rules/posDefaults'
+import {
+  formatCurrency,
+  formatDateShort,
+  formatPaymentMethod,
+  formatPaymentStatus,
+} from '@/lib/format'
+import { Badge, Button, Card, EmptyState, Input, PageHeader, SkeletonCard } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 
 type TabType = 'pos' | 'vencimientos' | 'historial'
+
+const POS_METHODS: {
+  value: ManualPaymentMethod
+  title: string
+  detail: string
+  icon: LucideIcon
+}[] = [
+  { value: 'card_pos', title: 'Datáfono POS Datafast', detail: 'Tarjeta débito/crédito', icon: CreditCard },
+  { value: 'cash', title: 'Efectivo', detail: 'Cobro en caja', icon: Banknote },
+  { value: 'transfer', title: 'Transferencia Bancaria', detail: 'Banco / App', icon: Building2 },
+  { value: 'deuna', title: MANUAL_PAYMENT_LABELS.deuna, detail: 'QR o código del gym', icon: QrCode },
+  {
+    value: 'pagomedios_recurring',
+    title: 'Pago recurrente Pagomedios',
+    detail: 'Cobro mensual automático',
+    icon: Repeat,
+  },
+]
+
+const HISTORY_FILTERS: { value: string; label: string }[] = [
+  { value: 'all', label: 'Todos los métodos' },
+  ...(['card_pos', 'cash', 'transfer', 'deuna', 'pagomedios_recurring'] as const).map((method) => ({
+    value: method,
+    label: formatPaymentMethod('manual', method),
+  })),
+  { value: 'pagomedios', label: 'En línea (Pagomedios)' },
+]
 
 interface ReceiptData {
   payment: Payment
@@ -50,6 +103,7 @@ export function CobrosPage() {
   const repo = useRepo()
   const user = useCurrentUser()
   const refresh = useRefresh()
+  const { settings } = useAppData()
 
   const [activeTab, setActiveTab] = useState<TabType>('pos')
 
@@ -58,6 +112,9 @@ export function CobrosPage() {
   const [plans, setPlans] = useState<MembershipPlan[]>([])
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
+  // Hasta la primera carga se muestra un esqueleto: evita que el formulario salte
+  // cuando aparecen las solicitudes pendientes.
+  const [loaded, setLoaded] = useState(false)
 
   // POS Form State
   const [selectedMemberId, setSelectedMemberId] = useState<string>('')
@@ -67,8 +124,12 @@ export function CobrosPage() {
   const [amountUsd, setAmountUsd] = useState<string>('')
   const [reference, setReference] = useState<string>('')
   const [processingPayment, setProcessingPayment] = useState(false)
+  const [discardingId, setDiscardingId] = useState<string | null>(null)
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<ReceiptData | null>(null)
+  const [changeNow, setChangeNow] = useState(false)
+  // Con un plan ya elegido la lista se pliega en una línea; "Cambiar plan" la abre.
+  const [showAllPlans, setShowAllPlans] = useState(false)
 
   // Expiration Filter state
   const [expirationFilter, setExpirationFilter] = useState<'all' | 'grace' | 'expired' | 'warning'>('all')
@@ -93,6 +154,8 @@ export function CobrosPage() {
       setPayments(pays)
     } catch (err) {
       console.error('Error loading cobros data:', err)
+    } finally {
+      setLoaded(true)
     }
   }
 
@@ -103,6 +166,8 @@ export function CobrosPage() {
   // Auto-fill price when plan changes
   const handleSelectPlan = (planId: string) => {
     setSelectedPlanId(planId)
+    setChangeNow(false)
+    setShowAllPlans(false)
     const plan = plans.find((p) => p.id === planId)
     if (plan) {
       setAmountUsd((plan.priceCents / 100).toFixed(2))
@@ -115,26 +180,23 @@ export function CobrosPage() {
   }, [plans])
 
   // Map of active membership by user ID
-  const membershipByUser = useMemo(() => {
-    const map = new Map<string, Membership>()
+  const membershipsByUser = useMemo(() => {
+    const map = new Map<string, Membership[]>()
     for (const m of memberships) {
-      const existing = map.get(m.userId)
-      if (!existing) {
-        map.set(m.userId, m)
-      } else {
-        const statusExisting = computeMembershipStatus(existing)
-        const statusM = computeMembershipStatus(m)
-        if (
-          (statusM === 'active' && statusExisting !== 'active') ||
-          (statusM === 'grace' && statusExisting === 'expired') ||
-          new Date(m.endsAt).getTime() > new Date(existing.endsAt).getTime()
-        ) {
-          map.set(m.userId, m)
-        }
-      }
+      map.set(m.userId, [...(map.get(m.userId) ?? []), m])
     }
     return map
   }, [memberships])
+
+  // Membresía vigente (o la última ya empezada) por socio; ignora planes en espera y pases
+  const membershipByUser = useMemo(() => {
+    const map = new Map<string, Membership>()
+    for (const [userId, rows] of membershipsByUser) {
+      const shown = memberMembership(rows, plans)
+      if (shown) map.set(userId, shown)
+    }
+    return map
+  }, [membershipsByUser, plans])
 
   // Selected member helper
   const selectedMember = useMemo(() => {
@@ -145,6 +207,40 @@ export function CobrosPage() {
     if (!selectedMemberId) return null
     return membershipByUser.get(selectedMemberId) ?? null
   }, [membershipByUser, selectedMemberId])
+
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId) ?? null
+
+  const posOutcome = useMemo(() => {
+    if (!selectedMemberId || !selectedPlan) return null
+    return planPurchaseOutcome({
+      memberships: membershipsByUser.get(selectedMemberId) ?? [],
+      plans,
+      plan: selectedPlan,
+    })
+  }, [membershipsByUser, plans, selectedMemberId, selectedPlan])
+
+  // "Cambiar plan hoy": cierra el plan vigente y abona los días no usados
+  const planChange = useMemo(() => {
+    if (!repo.changePlanNow || !selectedMemberId || !selectedPlan) return null
+    if (isDayPassPlan(selectedPlan)) return null
+    const current = currentMembership(membershipsByUser.get(selectedMemberId) ?? [], plans)
+    if (!current || current.planId === selectedPlan.id) return null
+    const currentPlan = plans.find((p) => p.id === current.planId)
+    const creditCents = planChangeCredit(current, currentPlan)
+    return {
+      currentPlanName: currentPlan?.name ?? 'Plan actual',
+      creditCents,
+      amountCents: Math.max(0, selectedPlan.priceCents - creditCents),
+    }
+  }, [repo, membershipsByUser, plans, selectedMemberId, selectedPlan])
+
+  const applyChangeNow = Boolean(planChange) && changeNow
+
+  const handleToggleChangeNow = (checked: boolean) => {
+    setChangeNow(checked)
+    if (checked && planChange) setAmountUsd((planChange.amountCents / 100).toFixed(2))
+    else if (selectedPlan) setAmountUsd((selectedPlan.priceCents / 100).toFixed(2))
+  }
 
   // Search filtered members for POS picker
   const filteredMembers = useMemo(() => {
@@ -236,22 +332,34 @@ export function CobrosPage() {
         member?.email.toLowerCase().includes(q) ||
         plan?.name.toLowerCase().includes(q) ||
         p.reference?.toLowerCase().includes(q) ||
-        p.id.toLowerCase().includes(q)
+        p.authorizationCode?.toLowerCase().includes(q) ||
+        matchesReceiptNumber(historySearch, p.receiptNumber)
       )
     })
   }, [payments, members, plans, historyMethodFilter, historySearch])
 
   // Metrics
+  // Solo cuenta dinero cobrado: un pago en línea pendiente o rechazado no suma.
   const metrics = useMemo(() => {
-    const totalCents = payments.reduce((sum, p) => sum + p.amountCents, 0)
-    const cashCents = payments
+    const approved = payments.filter((p) => p.status === 'approved')
+    const totalCents = approved.reduce((sum, p) => sum + p.amountCents, 0)
+    const cashCents = approved
       .filter((p) => p.manualMethod === 'cash')
       .reduce((sum, p) => sum + p.amountCents, 0)
-    const transferCents = payments
+    const transferCents = approved
       .filter((p) => p.manualMethod === 'transfer')
       .reduce((sum, p) => sum + p.amountCents, 0)
-    const cardPosCents = payments
+    const cardPosCents = approved
       .filter((p) => p.manualMethod === 'card_pos')
+      .reduce((sum, p) => sum + p.amountCents, 0)
+    const deunaCents = approved
+      .filter((p) => p.manualMethod === 'deuna')
+      .reduce((sum, p) => sum + p.amountCents, 0)
+    const recurringCents = approved
+      .filter((p) => p.manualMethod === 'pagomedios_recurring')
+      .reduce((sum, p) => sum + p.amountCents, 0)
+    const onlineCents = approved
+      .filter((p) => p.provider === 'pagomedios')
       .reduce((sum, p) => sum + p.amountCents, 0)
 
     return {
@@ -259,18 +367,39 @@ export function CobrosPage() {
       cashUsd: cashCents / 100,
       transferUsd: transferCents / 100,
       cardPosUsd: cardPosCents / 100,
-      totalTransactions: payments.length,
+      deunaUsd: deunaCents / 100,
+      recurringUsd: recurringCents / 100,
+      onlineUsd: onlineCents / 100,
+      totalTransactions: approved.length,
     }
   }, [payments])
 
-  // Quick Action from Expiring list
-  const handleQuickRenewal = (memberId: string, planId?: string) => {
+  // Al elegir al socio se proponen su plan y el medio con el que pagó la última vez (ZCAPP-78)
+  const handleSelectMember = (memberId: string) => {
     setSelectedMemberId(memberId)
     setMemberSearchQuery('')
-    const targetPlan = activePlans.find((p) => p.id === planId) ?? activePlans[0]
-    if (targetPlan) {
-      handleSelectPlan(targetPlan.id)
+    setReference('')
+    setPaymentError(null)
+    const suggested = suggestPosDefaults({
+      memberships: membershipsByUser.get(memberId) ?? [],
+      payments: payments.filter((p) => p.userId === memberId),
+      plans: activePlans,
+    })
+    if (suggested.planId) {
+      handleSelectPlan(suggested.planId)
+    } else {
+      setSelectedPlanId('')
+      setAmountUsd('')
+      setChangeNow(false)
+      setShowAllPlans(false)
     }
+    setPaymentMethod(suggested.method ?? 'card_pos')
+  }
+
+  // Quick Action from Expiring list
+  const handleQuickRenewal = (memberId: string, planId?: string) => {
+    handleSelectMember(memberId)
+    if (planId && activePlans.some((p) => p.id === planId)) handleSelectPlan(planId)
     setReceipt(null)
     setActiveTab('pos')
   }
@@ -289,8 +418,12 @@ export function CobrosPage() {
       return
     }
     const numAmount = parseFloat(amountUsd)
-    if (isNaN(numAmount) || numAmount <= 0) {
+    if (isNaN(numAmount) || numAmount < 0 || (numAmount === 0 && !applyChangeNow)) {
       setPaymentError('El monto debe ser mayor a 0.00 USD.')
+      return
+    }
+    if (!applyChangeNow && posOutcome?.kind === 'reject') {
+      setPaymentError(posOutcome.reason)
       return
     }
 
@@ -298,13 +431,22 @@ export function CobrosPage() {
 
     try {
       const amountCents = Math.round(numAmount * 100)
-      const res = await repo.registerManualPayment({
-        userId: selectedMemberId,
-        planId: selectedPlanId,
-        amountCents,
-        manualMethod: paymentMethod,
-        reference: reference.trim() || undefined,
-      })
+      const res =
+        applyChangeNow && repo.changePlanNow
+          ? await repo.changePlanNow({
+              userId: selectedMemberId,
+              planId: selectedPlanId,
+              amountCents,
+              manualMethod: paymentMethod,
+            })
+          : await repo.registerManualPayment({
+              userId: selectedMemberId,
+              planId: selectedPlanId,
+              amountCents,
+              manualMethod: paymentMethod,
+              reference: reference.trim() || undefined,
+            })
+      setChangeNow(false)
 
       const targetMember = members.find((m) => m.id === selectedMemberId)
       const targetPlan = plans.find((p) => p.id === selectedPlanId)
@@ -335,6 +477,45 @@ export function CobrosPage() {
     setReference('')
     setPaymentError(null)
     setReceipt(null)
+    setChangeNow(false)
+    setShowAllPlans(false)
+    setPaymentMethod('card_pos')
+  }
+
+  const handleDiscardRequest = async (paymentId: string, memberName: string) => {
+    if (!repo.discardPlanRequest) return
+    if (
+      !window.confirm(
+        `¿Descartar la solicitud de ${memberName}? No se activa ningún plan y el socio verá el aviso en Mi Plan.`,
+      )
+    ) {
+      return
+    }
+    setDiscardingId(paymentId)
+    try {
+      await repo.discardPlanRequest(paymentId)
+      await refresh()
+      await loadData()
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'No se pudo descartar la solicitud.')
+    } finally {
+      setDiscardingId(null)
+    }
+  }
+
+  const handleRefund = async (payment: Payment) => {
+    if (!repo.refundPayment) return
+    if (!window.confirm('¿Marcar este pago como reembolsado?')) return
+    const cancelMembership = payment.membershipId
+      ? window.confirm('¿Cancelar también la membresía que activó este pago?')
+      : false
+    try {
+      await repo.refundPayment({ paymentId: payment.id, cancelMembership })
+      await refresh()
+      await loadData()
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'No se pudo marcar el reembolso.')
+    }
   }
 
   // Guard: Staff or Admin role only
@@ -345,9 +526,7 @@ export function CobrosPage() {
           title="Acceso restringido"
           description="Este módulo es exclusivo para el equipo de staff y administradores de Zona Cero."
           action={
-            <Link to="/">
-              <Button>Volver al inicio</Button>
-            </Link>
+            <ButtonLink to="/">Volver al inicio</ButtonLink>
           }
         />
       </div>
@@ -357,43 +536,39 @@ export function CobrosPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Panel de Cobros & POS"
-        subtitle="Cobros presenciales en caja, gestión de renovaciones y control de caja"
+        title="Cobros"
         action={
           <div className="flex items-center gap-2">
-            <Link to="/admin">
-              <Button variant="ghost" className="gap-2">
+            <ButtonLink to="/admin" variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4" />
                 Panel Admin
-              </Button>
-            </Link>
+              </ButtonLink>
             {user?.role === 'admin' ? (
-              <Link to="/admin/planes">
-                <Button variant="secondary" className="gap-2">
+              <ButtonLink to="/admin/planes" variant="secondary" size="sm">
                   <PlusCircle className="h-4 w-4" />
                   Gestionar Planes
-                </Button>
-              </Link>
+                </ButtonLink>
             ) : null}
           </div>
         }
       />
 
       {/* Tabs Navigation */}
-      <div className="flex flex-wrap gap-2 border-b border-line pb-3">
+      <div className="grid grid-cols-3 gap-2 border-b border-line pb-3 sm:flex sm:flex-wrap">
         <button
           type="button"
           onClick={() => {
             setActiveTab('pos')
           }}
-          className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
+          className={`focus-ring inline-flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs font-bold transition sm:flex-row sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm ${
             activeTab === 'pos'
-              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+              ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
           <CreditCard className="h-4 w-4" />
-          Registrar Cobro (POS)
+          <span className="sm:hidden">Cobrar</span>
+          <span className="hidden sm:inline">Registrar Cobro (POS)</span>
         </button>
 
         <button
@@ -401,19 +576,20 @@ export function CobrosPage() {
           onClick={() => {
             setActiveTab('vencimientos')
           }}
-          className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
+          className={`focus-ring inline-flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs font-bold transition sm:flex-row sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm ${
             activeTab === 'vencimientos'
-              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+              ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
           <AlertTriangle className="h-4 w-4" />
-          Socios por Vencer y Vencidos
+          <span className="sm:hidden">Vencimientos</span>
+          <span className="hidden sm:inline">Socios por Vencer y Vencidos</span>
           {expiringCount > 0 ? (
             <span
-              className={`ml-1 rounded-full px-2 py-0.5 text-xs font-black ${
+              className={`sm:ml-1 rounded-full px-2 py-0.5 text-xs font-black ${
                 activeTab === 'vencimientos'
-                  ? 'bg-black/15 text-[var(--color-acc-contrast)]'
+                  ? 'bg-cta-contrast/20 text-cta-contrast'
                   : 'bg-warn/20 text-warn'
               }`}
             >
@@ -427,19 +603,21 @@ export function CobrosPage() {
           onClick={() => {
             setActiveTab('historial')
           }}
-          className={`focus-ring inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
+          className={`focus-ring inline-flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs font-bold transition sm:flex-row sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm ${
             activeTab === 'historial'
-              ? 'bg-acc text-[var(--color-acc-contrast)] shadow-sm'
+              ? 'bg-cta text-cta-contrast shadow-sm'
               : 'bg-surface text-ink-2 hover:bg-surface/80 hover:text-ink'
           }`}
         >
           <History className="h-4 w-4" />
-          Historial General de Cobros
+          <span className="sm:hidden">Historial</span>
+          <span className="hidden sm:inline">Historial General de Cobros</span>
         </button>
       </div>
 
       {/* TAB 1: REGISTRAR COBRO (POS) */}
-      {activeTab === 'pos' && (
+      {activeTab === 'pos' && !loaded ? <SkeletonCard /> : null}
+      {activeTab === 'pos' && loaded && (
         <div className="space-y-6">
           {payments.some((p) => p.status === 'pending' && p.provider === 'manual') ? (
             <Card className="space-y-3 p-5">
@@ -453,34 +631,52 @@ export function CobrosPage() {
                   .map((payment) => {
                     const member = members.find((m) => m.id === payment.userId)
                     const plan = plans.find((p) => p.id === payment.planId)
+                    const memberName = member?.fullName ?? 'Socio'
                     return (
-                      <button
+                      <div
                         key={payment.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedMemberId(payment.userId)
-                          setMemberSearchQuery('')
-                          handleSelectPlan(payment.planId)
-                          if (payment.manualMethod) setPaymentMethod(payment.manualMethod)
-                          setReceipt(null)
-                        }}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-bg px-4 py-3 text-left hover:border-acc"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-bg px-4 py-3 hover:border-acc"
                       >
-                        <span>
-                          <span className="block text-sm font-bold text-ink">
-                            {member?.fullName ?? 'Socio'}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedMemberId(payment.userId ?? '')
+                            setMemberSearchQuery('')
+                            handleSelectPlan(payment.planId)
+                            if (payment.manualMethod) setPaymentMethod(payment.manualMethod)
+                            setReference(payment.reference ?? '')
+                            setReceipt(null)
+                          }}
+                          className="flex flex-1 flex-wrap items-center justify-between gap-2 text-left"
+                        >
+                          <span>
+                            <span className="block text-sm font-bold text-ink">{memberName}</span>
+                            <span className="text-xs text-ink-3">
+                              {plan?.name ?? 'Plan'} ·{' '}
+                              {payment.manualMethod
+                                ? MANUAL_PAYMENT_LABELS[payment.manualMethod]
+                                : 'Recepción'}
+                            </span>
+                            {payment.reference ? (
+                              <span className="block font-mono text-xs font-bold text-ink-2">
+                                Ref. {payment.reference}
+                              </span>
+                            ) : null}
                           </span>
-                          <span className="text-xs text-ink-3">
-                            {plan?.name ?? 'Plan'} ·{' '}
-                            {payment.manualMethod === 'cash'
-                              ? 'Efectivo'
-                              : payment.manualMethod === 'transfer'
-                                ? 'Transferencia'
-                                : 'Tarjeta Datafast'}
-                          </span>
-                        </span>
-                        <span className="text-sm font-bold text-acc">Cobrar</span>
-                      </button>
+                          <span className="text-sm font-bold text-acc-dark">Cobrar</span>
+                        </button>
+                        {repo.discardPlanRequest ? (
+                          <button
+                            type="button"
+                            disabled={discardingId === payment.id}
+                            onClick={() => void handleDiscardRequest(payment.id, memberName)}
+                            aria-label={`Descartar solicitud de ${memberName}`}
+                            className="rounded-xl px-3 py-1.5 text-xs font-semibold text-ink-3 hover:bg-bg-2 hover:text-ink disabled:opacity-50"
+                          >
+                            {discardingId === payment.id ? 'Descartando…' : 'Descartar'}
+                          </button>
+                        ) : null}
+                      </div>
                     )
                   })}
               </div>
@@ -492,7 +688,7 @@ export function CobrosPage() {
             {receipt ? (
               /* Success Receipt / Confirmation Banner */
               <Card className="border-acc/40 bg-acc/5 p-6 space-y-5">
-                <div className="flex items-center gap-3 text-acc">
+                <div className="flex items-center gap-3 text-acc-dark">
                   <CheckCircle2 className="h-7 w-7 shrink-0" />
                   <div>
                     <h2 className="text-xl font-extrabold text-ink">
@@ -510,9 +706,11 @@ export function CobrosPage() {
                       <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
                         Comprobante de Pago
                       </span>
-                      <div className="text-sm font-mono font-bold text-acc">
-                        ID: {receipt.payment.id}
-                      </div>
+                      {formatReceiptNumber(receipt.payment.receiptNumber) ? (
+                        <div className="text-sm font-mono font-bold text-acc-dark">
+                          N.º {formatReceiptNumber(receipt.payment.receiptNumber)}
+                        </div>
+                      ) : null}
                     </div>
                     <Badge tone="ok">
                       {receipt.payment.status === 'approved' ? 'Aprobado' : receipt.payment.status}
@@ -534,7 +732,7 @@ export function CobrosPage() {
 
                     <div>
                       <span className="text-xs text-ink-3">Monto Cobrado:</span>
-                      <div className="text-xl font-black text-acc">
+                      <div className="text-xl font-black text-acc-dark">
                         {formatCurrency(receipt.payment.amountCents)} USD
                       </div>
                     </div>
@@ -604,7 +802,7 @@ export function CobrosPage() {
                 <Card className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-base font-bold text-ink flex items-center gap-2">
-                      <UserCheck className="h-5 w-5 text-acc" />
+                      <UserCheck className="h-5 w-5 text-acc-dark" />
                       1. Seleccionar Socio
                     </h3>
                     {selectedMember ? (
@@ -614,7 +812,7 @@ export function CobrosPage() {
                           setSelectedMemberId('')
                           setMemberSearchQuery('')
                         }}
-                        className="text-xs font-bold text-acc hover:underline"
+                        className="text-xs font-bold text-acc-dark hover:underline"
                       >
                         Cambiar socio
                       </button>
@@ -656,16 +854,7 @@ export function CobrosPage() {
                               <button
                                 key={m.id}
                                 type="button"
-                                onClick={() => {
-                                  setSelectedMemberId(m.id)
-                                  setMemberSearchQuery('')
-                                  if (curM && curM.planId) {
-                                    const prevPlan = activePlans.find((p) => p.id === curM.planId)
-                                    if (prevPlan && !selectedPlanId) {
-                                      handleSelectPlan(prevPlan.id)
-                                    }
-                                  }
-                                }}
+                                onClick={() => handleSelectMember(m.id)}
                                 className="w-full flex items-center justify-between p-3 text-left hover:bg-surface/80 transition"
                               >
                                 <div>
@@ -740,16 +929,37 @@ export function CobrosPage() {
                 {/* 2. Seleccionar Plan */}
                 <Card className="space-y-4">
                   <h3 className="text-base font-bold text-ink flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-acc" />
+                    <ShieldCheck className="h-5 w-5 text-acc-dark" />
                     2. Seleccionar Plan de Membresía
                   </h3>
 
                   {activePlans.length === 0 ? (
                     <div className="text-xs text-ink-3 p-4 text-center">
                       No hay planes activos configurados.{' '}
-                      <Link to="/admin/planes" className="text-acc underline font-bold">
+                      <Link to="/admin/planes" className="text-acc-dark underline font-bold">
                         Crear un plan
                       </Link>
+                    </div>
+                  ) : selectedPlan && !showAllPlans ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-acc bg-acc/10 p-4">
+                      <div>
+                        <div className="font-bold text-ink text-sm">{selectedPlan.name}</div>
+                        <div className="mt-1 flex flex-wrap gap-2 text-xs text-ink-3">
+                          <span className="font-extrabold text-acc-dark">
+                            {formatCurrency(selectedPlan.priceCents)}
+                          </span>
+                          <span>•</span>
+                          <span>{selectedPlan.durationDays} días</span>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setShowAllPlans(true)}
+                        className="text-xs py-1.5 px-3"
+                      >
+                        Cambiar plan
+                      </Button>
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -767,14 +977,14 @@ export function CobrosPage() {
                           >
                             <div className="flex justify-between items-start">
                               <div className="font-bold text-ink text-sm">{plan.name}</div>
-                              <div className="text-base font-extrabold text-acc">
+                              <div className="text-base font-extrabold text-acc-dark">
                                 {formatCurrency(plan.priceCents)}
                               </div>
                             </div>
 
                             <div className="mt-2 flex flex-wrap gap-2 text-xs text-ink-3">
                               <span className="flex items-center gap-1">
-                                <Clock className="h-3.5 w-3.5 text-acc" />
+                                <Clock className="h-3.5 w-3.5 text-acc-dark" />
                                 {plan.durationDays} días
                               </span>
                               <span>•</span>
@@ -785,7 +995,7 @@ export function CobrosPage() {
                               </span>
                             </div>
 
-                            <div className="mt-2 text-[11px] text-ink-3">
+                            <div className="mt-2 text-xs text-ink-3">
                               {!plan.allowedZoneIds || plan.allowedZoneIds.length === 0
                                 ? '✓ Acceso total a todas las áreas'
                                 : `✓ ${plan.allowedZoneIds.length} áreas específicas permitidas`}
@@ -795,12 +1005,45 @@ export function CobrosPage() {
                       })}
                     </div>
                   )}
+
+                  {posOutcome && !applyChangeNow ? (
+                    posOutcome.kind === 'reject' ? (
+                      <div className="rounded-2xl border border-danger/40 bg-danger/10 p-3 text-xs font-medium text-danger">
+                        {posOutcome.reason}
+                      </div>
+                    ) : posOutcome.kind === 'queue' ? (
+                      <p className="text-xs font-medium text-ink-2">
+                        Empieza el {formatDateShort(posOutcome.startsAt)} cuando termine el plan actual.
+                      </p>
+                    ) : posOutcome.kind === 'day_pass' ? (
+                      <p className="text-xs font-medium text-ink-2">
+                        Válido solo hoy, hasta las 23:59. No cambia la membresía del socio.
+                      </p>
+                    ) : null
+                  ) : null}
+
+                  {planChange ? (
+                    <label className="flex items-start gap-2.5 rounded-2xl border border-line bg-surface p-3 text-xs text-ink-2">
+                      <input
+                        type="checkbox"
+                        checked={changeNow}
+                        onChange={(e) => handleToggleChangeNow(e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="block font-bold text-ink">Cambiar plan hoy</span>
+                        Cierra {planChange.currentPlanName} hoy y abona{' '}
+                        {formatCurrency(planChange.creditCents)} por los días no usados. Monto
+                        sugerido: {formatCurrency(planChange.amountCents)}.
+                      </span>
+                    </label>
+                  ) : null}
                 </Card>
 
                 {/* 3. Método de Pago y Monto */}
                 <Card className="space-y-4">
                   <h3 className="text-base font-bold text-ink flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-acc" />
+                    <DollarSign className="h-5 w-5 text-acc-dark" />
                     3. Método de Pago y Monto (USD)
                   </h3>
 
@@ -809,49 +1052,39 @@ export function CobrosPage() {
                     <span className="text-xs font-bold uppercase tracking-wide text-ink-3">
                       Medio de Pago Presencial
                     </span>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('card_pos')}
-                        className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-center transition ${
-                          paymentMethod === 'card_pos'
-                            ? 'border-acc bg-acc/10 text-acc font-bold'
-                            : 'border-line bg-bg text-ink-2 hover:bg-surface'
-                        }`}
-                      >
-                        <CreditCard className="h-5 w-5 mb-1 text-acc" />
-                        <span className="text-xs">Datáfono POS Datafast</span>
-                        <span className="text-[10px] text-ink-3">Tarjeta débito/crédito</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('cash')}
-                        className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-center transition ${
-                          paymentMethod === 'cash'
-                            ? 'border-acc bg-acc/10 text-acc font-bold'
-                            : 'border-line bg-bg text-ink-2 hover:bg-surface'
-                        }`}
-                      >
-                        <Banknote className="h-5 w-5 mb-1 text-acc" />
-                        <span className="text-xs">Efectivo</span>
-                        <span className="text-[10px] text-ink-3">Cobro en caja</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('transfer')}
-                        className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-center transition ${
-                          paymentMethod === 'transfer'
-                            ? 'border-acc bg-acc/10 text-acc font-bold'
-                            : 'border-line bg-bg text-ink-2 hover:bg-surface'
-                        }`}
-                      >
-                        <Building2 className="h-5 w-5 mb-1 text-acc" />
-                        <span className="text-xs">Transferencia Bancaria</span>
-                        <span className="text-[10px] text-ink-3">Banco / App</span>
-                      </button>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {POS_METHODS.map(({ value, title, detail, icon: Icon }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          aria-pressed={paymentMethod === value}
+                          onClick={() => setPaymentMethod(value)}
+                          className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-center transition ${
+                            paymentMethod === value
+                              ? 'border-acc bg-acc/10 text-acc-dark font-bold'
+                              : 'border-line bg-bg text-ink-2 hover:bg-surface'
+                          }`}
+                        >
+                          <Icon className="h-5 w-5 mb-1 text-acc-dark" />
+                          <span className="text-xs">{title}</span>
+                          <span className="text-[11px] text-ink-3">{detail}</span>
+                        </button>
+                      ))}
                     </div>
+                    {paymentMethod === 'pagomedios_recurring' ? (
+                      <div
+                        role="note"
+                        className="flex items-start gap-2 rounded-2xl border border-warn/40 bg-warn-soft p-3 text-xs text-ink-2"
+                      >
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn" aria-hidden />
+                        <span>
+                          Registra este cobro solo cuando el panel de Pagomedios muestre el pago
+                          mensual del socio como <strong>aprobado</strong>. Pagomedios puede tardar
+                          hasta 24 horas en mostrarlo. Usa como referencia el número del cobro en
+                          Pagomedios.
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Amount and Reference */}
@@ -860,7 +1093,7 @@ export function CobrosPage() {
                       label="Monto a Cobrar (USD)"
                       type="number"
                       step="0.01"
-                      min="0.01"
+                      min={applyChangeNow ? '0' : '0.01'}
                       value={amountUsd}
                       onChange={(e) => setAmountUsd(e.target.value)}
                       placeholder="0.00"
@@ -874,7 +1107,14 @@ export function CobrosPage() {
                       placeholder="Ej: POS-9482, Lote 03 o Transf #1092"
                     />
                   </div>
+                </Card>
 
+                {/* Confirmar siempre a la vista: queda fijo abajo mientras se baja por el formulario (ZCAPP-78).
+                    Sin socio elegido no se fija, para no tapar la lista de socios en pantallas bajas (ZCAPP-85). */}
+                <div
+                  data-testid="pos-confirm-bar"
+                  className={`${selectedMember ? 'sticky bottom-0 z-10 shadow-lg backdrop-blur' : ''} space-y-2 rounded-2xl border border-line bg-bg/95 p-2`}
+                >
                   {paymentError ? (
                     <div className="rounded-2xl border border-danger/40 bg-danger/10 p-3 text-xs text-danger font-medium flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -882,10 +1122,22 @@ export function CobrosPage() {
                     </div>
                   ) : null}
 
+                  {selectedMember && selectedPlan ? (
+                    <p className="truncate px-2 text-xs text-ink-2">
+                      {selectedMember.fullName} · {selectedPlan.name} ·{' '}
+                      <strong>{formatPaymentMethod('manual', paymentMethod)}</strong>
+                    </p>
+                  ) : null}
+
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    disabled={processingPayment || !selectedMemberId || !selectedPlanId}
+                    disabled={
+                      processingPayment ||
+                      !selectedMemberId ||
+                      !selectedPlanId ||
+                      (!applyChangeNow && posOutcome?.kind === 'reject')
+                    }
                     className="w-full py-3 text-base gap-2"
                   >
                     {processingPayment ? (
@@ -897,7 +1149,7 @@ export function CobrosPage() {
                       </>
                     )}
                   </Button>
-                </Card>
+                </div>
               </form>
             )}
           </div>
@@ -927,15 +1179,13 @@ export function CobrosPage() {
                 <div className="flex justify-between py-1.5">
                   <span className="text-ink-3">Medio de cobro:</span>
                   <span className="font-bold text-ink">
-                    {paymentMethod === 'card_pos' && 'Datáfono POS'}
-                    {paymentMethod === 'cash' && 'Efectivo'}
-                    {paymentMethod === 'transfer' && 'Transferencia'}
+                    {formatPaymentMethod('manual', paymentMethod)}
                   </span>
                 </div>
 
                 <div className="flex justify-between py-2 text-sm">
                   <span className="font-bold text-ink">Total a cobrar:</span>
-                  <span className="font-extrabold text-acc text-base">
+                  <span className="font-extrabold text-acc-dark text-base">
                     ${amountUsd ? parseFloat(amountUsd || '0').toFixed(2) : '0.00'} USD
                   </span>
                 </div>
@@ -947,13 +1197,13 @@ export function CobrosPage() {
               <h4 className="text-xs font-bold uppercase text-ink-3">Caja Hoy</h4>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="rounded-2xl bg-bg p-2.5">
-                  <div className="text-[10px] text-ink-3">Total Recaudado</div>
-                  <div className="text-lg font-black text-acc">
+                  <div className="text-[11px] text-ink-3">Total Recaudado</div>
+                  <div className="text-lg font-black text-acc-dark">
                     ${metrics.totalUsd.toFixed(2)}
                   </div>
                 </div>
                 <div className="rounded-2xl bg-bg p-2.5">
-                  <div className="text-[10px] text-ink-3">Cobros Registrados</div>
+                  <div className="text-[11px] text-ink-3">Cobros Registrados</div>
                   <div className="text-lg font-black text-ink">
                     {metrics.totalTransactions}
                   </div>
@@ -968,14 +1218,14 @@ export function CobrosPage() {
       {/* TAB 2: SOCIOS POR VENCER Y VENCIDOS */}
       {activeTab === 'vencimientos' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
               <button
                 type="button"
                 onClick={() => setExpirationFilter('all')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'all'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -984,9 +1234,9 @@ export function CobrosPage() {
               <button
                 type="button"
                 onClick={() => setExpirationFilter('warning')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'warning'
-                    ? 'bg-warn text-ink'
+                    ? 'bg-warn text-white'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -995,9 +1245,9 @@ export function CobrosPage() {
               <button
                 type="button"
                 onClick={() => setExpirationFilter('grace')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'grace'
-                    ? 'bg-warn text-ink'
+                    ? 'bg-warn text-white'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
                 }`}
               >
@@ -1006,7 +1256,7 @@ export function CobrosPage() {
               <button
                 type="button"
                 onClick={() => setExpirationFilter('expired')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
                   expirationFilter === 'expired'
                     ? 'bg-danger text-white'
                     : 'bg-surface text-ink-2 hover:bg-surface/80'
@@ -1088,14 +1338,45 @@ export function CobrosPage() {
                     </div>
                   </div>
 
-                  <Button
-                    variant="primary"
-                    onClick={() => handleQuickRenewal(item.member.id, item.planId)}
-                    className="w-full gap-2 text-xs py-2"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    Cobrar Renovación
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      variant="primary"
+                      onClick={() => handleQuickRenewal(item.member.id, item.planId)}
+                      className="w-full gap-2 text-xs py-2"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Cobrar Renovación
+                    </Button>
+                    {(() => {
+                      const reminderUrl = item.membership
+                        ? buildMembershipReminderUrl({
+                            phone: item.member.phone,
+                            memberName: item.member.fullName,
+                            gymName: settings.name,
+                            planName: item.planName,
+                            endsOn: formatDateShort(item.membership.endsAt),
+                            status: item.status,
+                          })
+                        : null
+                      return reminderUrl ? (
+                        <a
+                          href={reminderUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-xs font-semibold text-[#06361F] transition hover:brightness-95"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Recordar por WhatsApp
+                        </a>
+                      ) : (
+                        <p className="text-center text-[11px] text-ink-3">
+                          {item.member.phone?.trim() && !normalizeWhatsAppPhone(item.member.phone)
+                            ? `Celular no válido (${item.member.phone.trim()}): pide al socio que lo corrija en su perfil.`
+                            : 'Sin celular registrado: no se puede enviar el recordatorio.'}
+                        </p>
+                      )
+                    })()}
+                  </div>
                 </Card>
               ))}
             </div>
@@ -1107,95 +1388,90 @@ export function CobrosPage() {
       {activeTab === 'historial' && (
         <div className="space-y-4">
           {/* Metrics summary cards */}
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-4 lg:grid-cols-7">
             <Card>
-              <div className="text-[11px] font-bold uppercase text-ink-3">Total Recaudado</div>
-              <div className="mt-1 text-2xl font-black text-acc">
+              <div className="text-xs font-bold uppercase text-ink-3">Total Recaudado</div>
+              <div className="mt-1 text-2xl font-black text-acc-dark">
                 ${metrics.totalUsd.toFixed(2)} USD
               </div>
-              <div className="text-[11px] text-ink-3 mt-1">
-                {metrics.totalTransactions} cobros totales
+              <div className="text-xs text-ink-3 mt-1">
+                {metrics.totalTransactions} cobros aprobados
               </div>
             </Card>
 
             <Card>
-              <div className="text-[11px] font-bold uppercase text-ink-3">Datáfono POS</div>
+              <div className="text-xs font-bold uppercase text-ink-3">Datáfono POS</div>
               <div className="mt-1 text-2xl font-black text-ink">
                 ${metrics.cardPosUsd.toFixed(2)} USD
               </div>
-              <div className="text-[11px] text-ink-3 mt-1">Tarjetas Datafast</div>
+              <div className="text-xs text-ink-3 mt-1">Tarjetas Datafast</div>
             </Card>
 
             <Card>
-              <div className="text-[11px] font-bold uppercase text-ink-3">Efectivo</div>
+              <div className="text-xs font-bold uppercase text-ink-3">Efectivo</div>
               <div className="mt-1 text-2xl font-black text-ink">
                 ${metrics.cashUsd.toFixed(2)} USD
               </div>
-              <div className="text-[11px] text-ink-3 mt-1">Caja física</div>
+              <div className="text-xs text-ink-3 mt-1">Caja física</div>
             </Card>
 
             <Card>
-              <div className="text-[11px] font-bold uppercase text-ink-3">Transferencias</div>
+              <div className="text-xs font-bold uppercase text-ink-3">Transferencias</div>
               <div className="mt-1 text-2xl font-black text-ink">
                 ${metrics.transferUsd.toFixed(2)} USD
               </div>
-              <div className="text-[11px] text-ink-3 mt-1">Bancos acreditados</div>
+              <div className="text-xs text-ink-3 mt-1">Bancos acreditados</div>
+            </Card>
+
+            <Card>
+              <div className="text-xs font-bold uppercase text-ink-3">Deuna</div>
+              <div className="mt-1 text-2xl font-black text-ink">
+                ${metrics.deunaUsd.toFixed(2)} USD
+              </div>
+              <div className="text-xs text-ink-3 mt-1">QR o código Deuna</div>
+            </Card>
+
+            <Card>
+              <div className="text-xs font-bold uppercase text-ink-3">Pago recurrente</div>
+              <div className="mt-1 text-2xl font-black text-ink">
+                ${metrics.recurringUsd.toFixed(2)} USD
+              </div>
+              <div className="text-xs text-ink-3 mt-1">Renovaciones mensuales</div>
+            </Card>
+
+            <Card>
+              <div className="text-xs font-bold uppercase text-ink-3">En línea</div>
+              <div className="mt-1 text-2xl font-black text-ink">
+                ${metrics.onlineUsd.toFixed(2)} USD
+              </div>
+              <div className="text-xs text-ink-3 mt-1">Pagomedios</div>
             </Card>
           </div>
 
           {/* Filters */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setHistoryMethodFilter('all')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
-                  historyMethodFilter === 'all'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
-                    : 'bg-surface text-ink-2 hover:bg-surface/80'
-                }`}
-              >
-                Todos los métodos
-              </button>
-              <button
-                type="button"
-                onClick={() => setHistoryMethodFilter('card_pos')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
-                  historyMethodFilter === 'card_pos'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
-                    : 'bg-surface text-ink-2 hover:bg-surface/80'
-                }`}
-              >
-                Datáfono POS
-              </button>
-              <button
-                type="button"
-                onClick={() => setHistoryMethodFilter('cash')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
-                  historyMethodFilter === 'cash'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
-                    : 'bg-surface text-ink-2 hover:bg-surface/80'
-                }`}
-              >
-                Efectivo
-              </button>
-              <button
-                type="button"
-                onClick={() => setHistoryMethodFilter('transfer')}
-                className={`rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
-                  historyMethodFilter === 'transfer'
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
-                    : 'bg-surface text-ink-2 hover:bg-surface/80'
-                }`}
-              >
-                Transferencia
-              </button>
+              {HISTORY_FILTERS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={historyMethodFilter === value}
+                  onClick={() => setHistoryMethodFilter(value)}
+                  className={`shrink-0 whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs font-bold transition ${
+                    historyMethodFilter === value
+                      ? 'bg-cta text-cta-contrast'
+                      : 'bg-surface text-ink-2 hover:bg-surface/80'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-3" />
               <Input
-                placeholder="Buscar por socio, plan, ref..."
+                placeholder="Buscar por socio, plan, ref. o N.º..."
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
                 className="pl-9 py-1.5 text-xs"
@@ -1212,8 +1488,9 @@ export function CobrosPage() {
           ) : (
             <div className="overflow-x-auto rounded-3xl border border-line bg-bg-2">
               <table className="w-full text-left text-xs">
-                <thead className="border-b border-line bg-surface/50 text-[11px] uppercase tracking-wider text-ink-3 font-bold">
+                <thead className="border-b border-line bg-surface/50 text-xs uppercase tracking-wider text-ink-3 font-bold">
                   <tr>
+                    <th className="p-3.5">N.º</th>
                     <th className="p-3.5">Fecha</th>
                     <th className="p-3.5">Socio</th>
                     <th className="p-3.5">Plan</th>
@@ -1221,6 +1498,9 @@ export function CobrosPage() {
                     <th className="p-3.5">Método</th>
                     <th className="p-3.5">Referencia</th>
                     <th className="p-3.5">Estado</th>
+                    <th className="p-3.5">
+                      <span className="sr-only">Acciones</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -1229,21 +1509,24 @@ export function CobrosPage() {
                     const plan = plans.find((p) => p.id === pay.planId)
                     return (
                       <tr key={pay.id} className="hover:bg-surface/40 transition">
+                        <td className="p-3.5 whitespace-nowrap font-mono font-bold text-ink">
+                          {formatReceiptNumber(pay.receiptNumber) ?? '—'}
+                        </td>
                         <td className="p-3.5 whitespace-nowrap text-ink-3 font-mono">
                           {formatDateShort(pay.createdAt)}
                         </td>
                         <td className="p-3.5">
                           <div className="font-bold text-ink">
-                            {member ? member.fullName : pay.userId}
+                            {member ? member.fullName : pay.userId ? pay.userId : 'Cuenta eliminada'}
                           </div>
-                          <div className="text-[10px] text-ink-3">
+                          <div className="text-[11px] text-ink-3">
                             {member?.email}
                           </div>
                         </td>
                         <td className="p-3.5 font-medium text-ink">
                           {plan ? plan.name : pay.planId}
                         </td>
-                        <td className="p-3.5 font-bold text-acc whitespace-nowrap text-sm">
+                        <td className="p-3.5 font-bold text-acc-dark whitespace-nowrap text-sm">
                           {formatCurrency(pay.amountCents)}
                         </td>
                         <td className="p-3.5">
@@ -1252,7 +1535,10 @@ export function CobrosPage() {
                           </span>
                         </td>
                         <td className="p-3.5 font-mono text-ink-3">
-                          {pay.reference || '—'}
+                          {pay.authorizationCode ? (
+                            <div className="text-ink">Aut. {pay.authorizationCode}</div>
+                          ) : null}
+                          <div>{pay.reference || '—'}</div>
                         </td>
                         <td className="p-3.5">
                           <Badge
@@ -1264,8 +1550,22 @@ export function CobrosPage() {
                                 : 'danger'
                             }
                           >
-                            {pay.status === 'approved' ? 'Aprobado' : pay.status}
+                            {formatPaymentStatus(pay.status)}
                           </Badge>
+                          {pay.notes ? (
+                            <div className="mt-1 max-w-[220px] text-[11px] text-ink-3">{pay.notes}</div>
+                          ) : null}
+                        </td>
+                        <td className="p-3.5">
+                          {pay.status === 'approved' && repo.refundPayment ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleRefund(pay)}
+                              className="whitespace-nowrap text-xs font-bold text-danger hover:underline"
+                            >
+                              Marcar reembolsado
+                            </button>
+                          ) : null}
                         </td>
                       </tr>
                     )

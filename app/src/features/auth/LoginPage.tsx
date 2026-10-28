@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Fingerprint, ScanFace, Sparkles } from 'lucide-react'
 import {
   useAppData,
@@ -16,23 +16,22 @@ import {
   isBiometricsEnabled,
 } from '@/lib/biometrics'
 import { displayFirstName } from '@/domain/rules'
+import { DEMO_PASSWORD } from '@/data/seed'
 import { Button, Card, Input } from '@/ui/primitives'
-import { ForgotPasswordModal } from './ForgotPasswordModal'
+import { ConsentCheckbox } from '@/features/legal/ConsentCheckbox'
+import { LegalDocumentDialog } from '@/features/legal/LegalDocumentDialog'
+import { LegalLinks } from '@/features/legal/LegalPage'
+import { PRIVACY, TERMS_DOCUMENT, type LegalDocument } from '@/features/legal/legalDocuments'
 
-const IS_STAGING = import.meta.env.MODE === 'staging'
-const SHOW_DEMO_ACCESS = import.meta.env.DEV || IS_STAGING
-const DEMO_PASSWORD = IS_STAGING ? 'ZonaCero2026!' : 'demo1234'
-const DEMO_ACCOUNTS = IS_STAGING
-  ? {
-      socio: 'socio.staging@zonacero.test',
-      staff: 'staff.staging@zonacero.test',
-      admin: 'admin.staging@zonacero.test',
-    }
-  : {
-      socio: 'socio@gym.local',
-      staff: 'staff@gym.local',
-      admin: 'admin@gym.local',
-    }
+// Solo para `npm run dev` con datos locales en memoria. QA y producción son
+// públicos: ahí no se muestran ni se embeben credenciales.
+const SHOW_DEMO_ACCESS =
+  import.meta.env.DEV && import.meta.env.MODE !== 'staging'
+const DEMO_ACCOUNTS = {
+  socio: 'socio@gym.local',
+  staff: 'staff@gym.local',
+  admin: 'admin@gym.local',
+}
 
 export function LoginPage() {
   const user = useCurrentUser()
@@ -41,14 +40,16 @@ export function LoginPage() {
   const { settings } = useAppData()
 
   const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [forgotModalOpen, setForgotModalOpen] = useState(false)
+  const navigate = useNavigate()
+  // Al volver de /recuperar con la contraseña ya cambiada.
+  const recoveredEmail = (useLocation().state as { recoveredEmail?: string } | null)
+    ?.recoveredEmail
 
-  // Login fields — staging usa cuentas @zonacero.test (ver supabase/staging-users.sql)
   const [loginEmail, setLoginEmail] = useState(
-    SHOW_DEMO_ACCESS ? DEMO_ACCOUNTS.socio : '',
+    recoveredEmail ?? (SHOW_DEMO_ACCESS ? DEMO_ACCOUNTS.socio : ''),
   )
   const [loginPassword, setLoginPassword] = useState(
-    SHOW_DEMO_ACCESS ? DEMO_PASSWORD : '',
+    SHOW_DEMO_ACCESS && !recoveredEmail ? DEMO_PASSWORD : '',
   )
 
   // Register fields: Simple initial account creation
@@ -56,6 +57,10 @@ export function LoginPage() {
   const [registerEmail, setRegisterEmail] = useState('')
   const [registerPassword, setRegisterPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  // LOPDP: términos y privacidad se aceptan en casillas separadas (legal_consents)
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false)
+  const [openDoc, setOpenDoc] = useState<LegalDocument | null>(null)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -165,6 +170,10 @@ export function LoginPage() {
       setError('Las contraseñas no coinciden')
       return
     }
+    if (!acceptTerms || !acceptPrivacy) {
+      setError('Para crear tu cuenta acepta los términos y condiciones y la política de privacidad.')
+      return
+    }
 
     setError('')
     setSuccess('')
@@ -177,6 +186,10 @@ export function LoginPage() {
         email,
         password: registerPassword,
         fullName: fullName.trim(),
+        consents: [
+          { document: 'terms', version: TERMS_DOCUMENT.version },
+          { document: 'privacy', version: PRIVACY.version },
+        ],
       })
       // Flujo esperado: crear cuenta → iniciar sesión → ficha en /bienvenida.
       // Si Supabase dejó sesión abierta, la cerramos para forzar el login.
@@ -215,12 +228,14 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-bg p-4 py-10">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-bg p-4 py-10">
       <Card className="w-full max-w-lg space-y-6 p-6 sm:p-8">
         {/* Brand header — imagotipo centrado, como en la maqueta del login */}
         <div className="text-center">
           <img
-            src={settings.logoUrl || `${import.meta.env.BASE_URL}brand/logo-color.png`}
+            src={settings.logoUrl || `${import.meta.env.BASE_URL}brand/logo-color.webp`}
+            width={530}
+            height={168}
             alt={settings.name || 'Zona Cero'}
             className="mx-auto h-14 w-auto"
           />
@@ -239,7 +254,7 @@ export function LoginPage() {
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
               mode === 'login'
-                ? 'bg-acc text-[var(--color-acc-contrast)] font-bold shadow-xs'
+                ? 'bg-cta text-cta-contrast font-bold shadow-xs'
                 : 'text-ink-2 hover:text-ink'
             }`}
           >
@@ -254,7 +269,7 @@ export function LoginPage() {
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
               mode === 'register'
-                ? 'bg-acc text-[var(--color-acc-contrast)] font-bold shadow-xs'
+                ? 'bg-cta text-cta-contrast font-bold shadow-xs'
                 : 'text-ink-2 hover:text-ink'
             }`}
           >
@@ -299,7 +314,7 @@ export function LoginPage() {
               type="email"
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
-              placeholder="socio@gym.local"
+              placeholder="tu.correo@ejemplo.com"
               required
             />
 
@@ -315,8 +330,10 @@ export function LoginPage() {
               <div className="mt-1.5 text-right">
                 <button
                   type="button"
-                  onClick={() => setForgotModalOpen(true)}
-                  className="text-xs text-acc hover:underline font-semibold"
+                  onClick={() =>
+                    navigate('/recuperar', { state: { email: loginEmail } })
+                  }
+                  className="text-xs text-acc-dark hover:underline font-semibold"
                 >
                   ¿Olvidaste tu contraseña?
                 </button>
@@ -326,6 +343,12 @@ export function LoginPage() {
             {success ? (
               <p className="rounded-xl border border-success/40 bg-success-soft p-3 text-xs text-success font-semibold">
                 {success}
+              </p>
+            ) : null}
+
+            {recoveredEmail && !error ? (
+              <p className="rounded-xl border border-success/40 bg-success-soft p-3 text-xs text-success font-semibold">
+                Tu contraseña se actualizó. Entra con la nueva.
               </p>
             ) : null}
 
@@ -342,12 +365,8 @@ export function LoginPage() {
             {SHOW_DEMO_ACCESS ? (
             <div className="mt-6 rounded-2xl border border-line bg-bg p-3.5 text-xs text-ink-3 space-y-2">
               <p className="font-bold text-ink-2 flex items-center justify-between">
-                <span>
-                  {IS_STAGING
-                    ? 'Acceso rápido QA (staging):'
-                    : 'Acceso rápido demo (desarrollo):'}
-                </span>
-                <span className="text-[10px] text-acc font-mono">{DEMO_PASSWORD}</span>
+                <span>Acceso rápido demo (desarrollo):</span>
+                <span className="text-[11px] text-acc-dark font-mono">{DEMO_PASSWORD}</span>
               </p>
               <div className="grid grid-cols-3 gap-1.5 pt-1">
                 <button
@@ -356,7 +375,7 @@ export function LoginPage() {
                     setLoginEmail(DEMO_ACCOUNTS.socio)
                     setLoginPassword(DEMO_PASSWORD)
                   }}
-                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-[11px] font-semibold text-ink hover:border-acc/40 transition"
+                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:border-acc/40 transition"
                 >
                   Socio
                 </button>
@@ -366,7 +385,7 @@ export function LoginPage() {
                     setLoginEmail(DEMO_ACCOUNTS.staff)
                     setLoginPassword(DEMO_PASSWORD)
                   }}
-                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-[11px] font-semibold text-ink hover:border-acc/40 transition"
+                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:border-acc/40 transition"
                 >
                   Staff
                 </button>
@@ -376,7 +395,7 @@ export function LoginPage() {
                     setLoginEmail(DEMO_ACCOUNTS.admin)
                     setLoginPassword(DEMO_PASSWORD)
                   }}
-                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-[11px] font-semibold text-ink hover:border-acc/40 transition"
+                  className="rounded-xl border border-line bg-surface/60 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:border-acc/40 transition"
                 >
                   Admin
                 </button>
@@ -388,7 +407,7 @@ export function LoginPage() {
           /* STREAMLINED REGISTRATION FORM */
           <form className="space-y-4" onSubmit={handleRegister}>
             <div className="rounded-2xl border border-acc/20 bg-acc/5 p-4 text-xs text-ink-2">
-              <div className="flex items-center gap-2 font-bold text-acc">
+              <div className="flex items-center gap-2 font-bold text-acc-dark">
                 <Sparkles className="h-4 w-4" />
                 <span>Crea tu cuenta de socio</span>
               </div>
@@ -437,6 +456,27 @@ export function LoginPage() {
               />
             </div>
 
+            <div>
+              <ConsentCheckbox
+                checked={acceptTerms}
+                onChange={setAcceptTerms}
+                label="Acepto los términos y condiciones"
+                linkText="términos y condiciones"
+                onOpen={() => setOpenDoc(TERMS_DOCUMENT)}
+              >
+                Acepto los
+              </ConsentCheckbox>
+              <ConsentCheckbox
+                checked={acceptPrivacy}
+                onChange={setAcceptPrivacy}
+                label="Autorizo el tratamiento de mis datos personales según la política de privacidad"
+                linkText="política de privacidad"
+                onOpen={() => setOpenDoc(PRIVACY)}
+              >
+                Autorizo el tratamiento de mis datos según la
+              </ConsentCheckbox>
+            </div>
+
             {error ? (
               <p className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-xs text-danger font-semibold">
                 {error}
@@ -449,11 +489,8 @@ export function LoginPage() {
           </form>
         )}
       </Card>
-
-      <ForgotPasswordModal
-        isOpen={forgotModalOpen}
-        onClose={() => setForgotModalOpen(false)}
-      />
-    </div>
+      <LegalLinks className="mt-4 justify-center" />
+      {openDoc ? <LegalDocumentDialog doc={openDoc} onClose={() => setOpenDoc(null)} /> : null}
+    </main>
   )
 }

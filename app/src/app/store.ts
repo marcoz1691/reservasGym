@@ -16,7 +16,7 @@ import type {
 } from '@/domain/models'
 import type { AuthCredentials } from '@/data/types'
 import { getRepository } from '@/data'
-import { computeMembershipStatus } from '@/domain/rules/membership'
+import { activeDayPasses, memberMembership, queuedMembership } from '@/domain/rules/memberships'
 
 type AgendaView = 'day' | 'week' | 'month'
 
@@ -281,24 +281,48 @@ export function selectMyMembership(
   now: Date = new Date(),
 ): Membership | null {
   if (!state || !userId) return null
-  const userMemberships = (state.memberships ?? []).filter((m) => m.userId === userId)
-  if (userMemberships.length === 0) return null
+  // Misma regla que getMemberMembership: la vigente o la última que ya empezó (sin pases)
+  return memberMembership(userMemberships(state, userId), state.membershipPlans ?? [], now)
+}
 
-  // Misma regla que getMemberMembership / MiPlanPage: preferir active|grace
-  const current = userMemberships.find((m) => {
-    const s = computeMembershipStatus(m, now)
-    return s === 'active' || s === 'grace'
-  })
-  if (current) {
-    return { ...current, status: computeMembershipStatus(current, now) }
-  }
+function userMemberships(state: GymState, userId: string): Membership[] {
+  return (state.memberships ?? []).filter((m) => m.userId === userId)
+}
 
-  const sorted = [...userMemberships].sort(
-    (a, b) => new Date(b.endsAt).getTime() - new Date(a.endsAt).getTime(),
-  )
-  const latest = sorted[0]
-  if (!latest) return null
-  return { ...latest, status: computeMembershipStatus(latest, now) }
+/** Plan comprado que empieza cuando termina el vigente. */
+export function selectMyQueuedMembership(
+  state: GymState | null,
+  userId?: string,
+  now: Date = new Date(),
+): Membership | null {
+  if (!state || !userId) return null
+  return queuedMembership(userMemberships(state, userId), state.membershipPlans ?? [], now)
+}
+
+/** Pases del día vigentes ahora (filas de membresía). */
+export function selectMyDayPasses(
+  state: GymState | null,
+  userId?: string,
+  now: Date = new Date(),
+): Membership[] {
+  if (!state || !userId) return []
+  return activeDayPasses(userMemberships(state, userId), state.membershipPlans ?? [], now)
+}
+
+/**
+ * Planes de los pases del día vigentes: abren sus zonas además del plan.
+ * Con `sessionStartsAt`, solo los pases que siguen vigentes cuando empieza la clase.
+ */
+export function selectMyDayPassPlans(
+  state: GymState | null,
+  userId?: string,
+  now: Date = new Date(),
+  sessionStartsAt?: string,
+): MembershipPlan[] {
+  const plans = state?.membershipPlans ?? []
+  return selectMyDayPasses(state, userId, now)
+    .filter((pass) => !sessionStartsAt || new Date(pass.endsAt) >= new Date(sessionStartsAt))
+    .flatMap((pass) => plans.filter((p) => p.id === pass.planId))
 }
 
 export function selectMyPayments(state: GymState | null, userId?: string): Payment[] {

@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { TERMS_BUCKET, validateTermsPdf } from '@/domain/rules/termsDocument'
 import type {
   BodyGoal,
   BodyGoalStatus,
@@ -9,6 +10,8 @@ import type {
   ClassTemplate,
   GymSettings,
   GymState,
+  LegalConsentContext,
+  LegalConsentInput,
   ManualPaymentMethod,
   Membership,
   MembershipPlan,
@@ -27,18 +30,24 @@ import type {
 } from '@/domain/models'
 import {
   calculateBmi,
-  assertMemberBookingAllowed,
-  canBookSession,
   canManageGoals,
   canManageWeight,
   computeMembershipStatus,
-  extendMembership,
-  hasOverlap,
-  isCheckInWindow,
-  nextWaitlistPosition,
-  promoteFirstWaitlist,
+  memberMembership,
+  planPurchaseOutcome,
 } from '@/domain/rules'
-import type { AuthCredentials, GymRepository } from './types'
+import { RECOVERY_CODE_INVALID } from '@/domain/rules/password'
+import { assertPlanSellableInApp } from '@/domain/rules/featureFlags'
+import { recurringRenewalFrom } from '@/domain/rules/recurringRenewal'
+import { resolveRequestReference } from '@/domain/rules/paymentReceipt'
+import { DISCARDED_REQUEST_NOTE } from '@/domain/rules/planRequest'
+import type {
+  AuthCredentials,
+  GymRepository,
+  OnlinePaymentReceipt,
+  OnlinePaymentResult,
+  PagomediosDocumentType,
+} from './types'
 import { isSupabaseEnvConfigured } from './selectRepositoryBackend'
 import { scopeGymState } from './scopeGymState'
 import {
@@ -49,10 +58,6 @@ import {
   saveBiometricSession,
 } from '@/lib/biometrics'
 
-function uid(prefix: string): string {
-  return `${prefix}-${crypto.randomUUID().slice(0, 8)}`
-}
-
 function mapUser(row: {
   id: string
   email: string
@@ -61,6 +66,7 @@ function mapUser(row: {
   created_at: string
   birth_date?: string | null
   residence?: string | null
+  phone?: string | null
   height_cm?: number | string | null
   initial_weight_kg?: number | string | null
   goals?: string | null
@@ -75,6 +81,7 @@ function mapUser(row: {
     createdAt: row.created_at,
     birthDate: row.birth_date ?? undefined,
     residence: row.residence ?? undefined,
+    phone: row.phone ?? undefined,
     heightCm: row.height_cm != null ? Number(row.height_cm) : undefined,
     initialWeightKg:
       row.initial_weight_kg != null ? Number(row.initial_weight_kg) : undefined,
@@ -91,6 +98,22 @@ function mapSettings(row: {
   booking_window_hours: number
   cancel_window_hours: number
   check_in_window_minutes: number
+  online_payments_enabled?: boolean | null
+  waitlist_enabled?: boolean | null
+  measurements_enabled?: boolean | null
+  day_passes_enabled?: boolean | null
+  recurring_payments_enabled?: boolean | null
+  whatsapp_payments?: string | null
+  bank_name?: string | null
+  bank_account_type?: string | null
+  bank_account_number?: string | null
+  bank_account_holder?: string | null
+  bank_account_id?: string | null
+  deuna_code?: string | null
+  deuna_qr_url?: string | null
+  terms_pdf_url?: string | null
+  terms_version?: string | null
+  terms_updated_at?: string | null
 }): GymSettings {
   return {
     name: row.name,
@@ -100,8 +123,35 @@ function mapSettings(row: {
     bookingWindowHours: row.booking_window_hours,
     cancelWindowHours: row.cancel_window_hours,
     checkInWindowMinutes: row.check_in_window_minutes,
+    onlinePaymentsEnabled: row.online_payments_enabled ?? undefined,
+    waitlistEnabled: row.waitlist_enabled ?? undefined,
+    measurementsEnabled: row.measurements_enabled ?? undefined,
+    dayPassesEnabled: row.day_passes_enabled ?? undefined,
+    recurringPaymentsEnabled: row.recurring_payments_enabled ?? undefined,
+    whatsappPayments: row.whatsapp_payments ?? null,
+    bankName: row.bank_name ?? null,
+    bankAccountType: row.bank_account_type ?? null,
+    bankAccountNumber: row.bank_account_number ?? null,
+    bankAccountHolder: row.bank_account_holder ?? null,
+    bankAccountId: row.bank_account_id ?? null,
+    deunaCode: row.deuna_code ?? null,
+    deunaQrUrl: row.deuna_qr_url ?? null,
+    termsPdfUrl: row.terms_pdf_url ?? null,
+    termsVersion: row.terms_version ?? null,
+    termsUpdatedAt: row.terms_updated_at ?? null,
   }
 }
+
+const PAYMENT_DETAIL_COLUMNS = {
+  whatsappPayments: 'whatsapp_payments',
+  bankName: 'bank_name',
+  bankAccountType: 'bank_account_type',
+  bankAccountNumber: 'bank_account_number',
+  bankAccountHolder: 'bank_account_holder',
+  bankAccountId: 'bank_account_id',
+  deunaCode: 'deuna_code',
+  deunaQrUrl: 'deuna_qr_url',
+} as const satisfies Partial<Record<keyof GymSettings, string>>
 
 function mapZone(row: {
   id: string
@@ -197,11 +247,6 @@ type WaitlistRow = {
   created_at: string
 }
 
-/** PostgREST no encuentra la función: booking-rpc.sql aún no se aplicó. */
-function isMissingRpc(error: { code?: string }): boolean {
-  return error.code === 'PGRST202' || error.code === '42883'
-}
-
 function mapBooking(row: BookingRow): Booking {
   return {
     id: row.id,
@@ -243,7 +288,7 @@ function mapCheckIn(row: {
 function mapMeasurement(row: {
   id: string
   user_id: string
-  recorded_by: string
+  recorded_by: string | null
   weight_kg: number | string
   height_cm?: number | string | null
   bmi?: number | string | null
@@ -258,7 +303,7 @@ function mapMeasurement(row: {
   return {
     id: row.id,
     userId: row.user_id,
-    recordedBy: row.recorded_by,
+    recordedBy: row.recorded_by ?? '',
     weightKg: Number(row.weight_kg),
     heightCm: row.height_cm != null ? Number(row.height_cm) : undefined,
     bmi: row.bmi != null ? Number(row.bmi) : undefined,
@@ -300,6 +345,7 @@ function mapMembershipPlan(row: {
   visit_quota: number | null
   allowed_zone_ids: string[] | null
   active: boolean
+  kind?: string | null
   created_at?: string
 }): MembershipPlan {
   return {
@@ -310,6 +356,8 @@ function mapMembershipPlan(row: {
     visitQuota: row.visit_quota,
     allowedZoneIds: row.allowed_zone_ids ?? [],
     active: row.active,
+    // Sin columna kind (antes de plan-rules.sql) queda undefined y decide el nombre.
+    kind: row.kind === 'day_pass' || row.kind === 'membership' ? row.kind : undefined,
     createdAt: row.created_at,
   }
 }
@@ -348,6 +396,9 @@ function mapPayment(row: {
   provider: string
   manual_method: string | null
   reference?: string | null
+  mp_payment_id?: string | null
+  notes?: string | null
+  receipt_number?: number | string | null
   created_at: string
   approved_at: string | null
 }): Payment {
@@ -361,6 +412,9 @@ function mapPayment(row: {
     provider: row.provider as PaymentProvider,
     manualMethod: (row.manual_method as ManualPaymentMethod) ?? null,
     reference: row.reference,
+    authorizationCode: row.provider === 'pagomedios' ? (row.mp_payment_id ?? null) : null,
+    notes: row.notes ?? null,
+    receiptNumber: row.receipt_number == null ? null : Number(row.receipt_number),
     createdAt: row.created_at,
     approvedAt: row.approved_at,
   }
@@ -391,6 +445,49 @@ export function createSupabaseClient(): SupabaseClient {
   })
 }
 
+/** Filas por tabla tal como llegan de PostgREST o de get_member_state (mismas columnas, misma RLS). */
+interface StateRows {
+  gym_settings: Parameters<typeof mapSettings>[0] | null
+  profiles: Parameters<typeof mapUser>[0][]
+  trainers: Parameters<typeof mapTrainer>[0][]
+  zones: Parameters<typeof mapZone>[0][]
+  class_templates: Parameters<typeof mapTemplate>[0][]
+  sessions: Parameters<typeof mapSession>[0][]
+  bookings: Parameters<typeof mapBooking>[0][]
+  waitlist_entries: Parameters<typeof mapWaitlist>[0][]
+  check_ins: Parameters<typeof mapCheckIn>[0][]
+  body_measurements: Parameters<typeof mapMeasurement>[0][]
+  body_goals: Parameters<typeof mapBodyGoal>[0][]
+  membership_plans: Parameters<typeof mapMembershipPlan>[0][]
+  memberships: Parameters<typeof mapMembership>[0][]
+  payments: Parameters<typeof mapPayment>[0][]
+}
+
+function mapStateRows(rows: StateRows): GymState {
+  if (!rows.gym_settings) throw new Error('Faltan gym_settings en Supabase')
+  return {
+    settings: mapSettings(rows.gym_settings),
+    users: (rows.profiles ?? []).map(mapUser),
+    trainers: (rows.trainers ?? []).map(mapTrainer),
+    zones: (rows.zones ?? []).map(mapZone),
+    templates: (rows.class_templates ?? []).map(mapTemplate),
+    sessions: (rows.sessions ?? []).map(mapSession),
+    bookings: (rows.bookings ?? []).map(mapBooking),
+    waitlist: (rows.waitlist_entries ?? []).map(mapWaitlist),
+    checkIns: (rows.check_ins ?? []).map(mapCheckIn),
+    measurements: (rows.body_measurements ?? []).map(mapMeasurement),
+    bodyGoals: (rows.body_goals ?? []).map(mapBodyGoal),
+    membershipPlans: (rows.membership_plans ?? []).map(mapMembershipPlan),
+    memberships: (rows.memberships ?? []).map(mapMembership),
+    payments: (rows.payments ?? []).map(mapPayment),
+  }
+}
+
+/** La función RPC no existe en esta base (aún no se aplicó el SQL): PostgREST PGRST202 / Postgres 42883. */
+function isMissingFunction(error: { code?: string }): boolean {
+  return error.code === 'PGRST202' || error.code === '42883'
+}
+
 export class SupabaseRepository implements GymRepository {
   private readonly client: SupabaseClient
 
@@ -404,19 +501,33 @@ export class SupabaseRepository implements GymRepository {
     return user
   }
 
-  private async requireStaff(): Promise<User> {
-    const user = await this.requireUser()
-    if (user.role === 'member') throw new Error('Sin permiso')
-    return user
-  }
-
   private async requireAdmin(): Promise<User> {
     const user = await this.requireUser()
     if (user.role !== 'admin') throw new Error('Solo admin')
     return user
   }
 
+  /**
+   * Estado completo en UNA llamada (RPC get_member_state, perf-rls-indices.sql) en vez de 14 lecturas.
+   * Si la base aún no tiene la función, cae al camino por tabla y no lo vuelve a intentar.
+   */
   private async fetchState(): Promise<GymState> {
+    if (this.memberStateRpc !== false) {
+      const { data, error } = await this.client.rpc('get_member_state')
+      if (!error && data && typeof data === 'object') {
+        this.memberStateRpc = true
+        return mapStateRows(data as StateRows)
+      }
+      if (error && !isMissingFunction(error)) throw new Error(error.message)
+      this.memberStateRpc = false
+    }
+    return this.fetchStateByTable()
+  }
+
+  /** null = sin probar; false = la base no tiene get_member_state. */
+  private memberStateRpc: boolean | null = null
+
+  private async fetchStateByTable(): Promise<GymState> {
     const [
       settingsRes,
       profilesRes,
@@ -468,25 +579,22 @@ export class SupabaseRepository implements GymRepository {
       if (res.error) throw new Error(res.error.message)
     }
 
-    const settingsRow = settingsRes.data
-    if (!settingsRow) throw new Error('Faltan gym_settings en Supabase')
-
-    return {
-      settings: mapSettings(settingsRow),
-      users: (profilesRes.data ?? []).map(mapUser),
-      trainers: (trainersRes.data ?? []).map(mapTrainer),
-      zones: (zonesRes.data ?? []).map(mapZone),
-      templates: (templatesRes.data ?? []).map(mapTemplate),
-      sessions: (sessionsRes.data ?? []).map(mapSession),
-      bookings: (bookingsRes.data ?? []).map(mapBooking),
-      waitlist: (waitlistRes.data ?? []).map(mapWaitlist),
-      checkIns: (checkInsRes.data ?? []).map(mapCheckIn),
-      measurements: (measurementsRes.data ?? []).map(mapMeasurement),
-      bodyGoals: (bodyGoalsRes.data ?? []).map(mapBodyGoal),
-      membershipPlans: (membershipPlansRes.data ?? []).map(mapMembershipPlan),
-      memberships: (membershipsRes.data ?? []).map(mapMembership),
-      payments: (paymentsRes.data ?? []).map(mapPayment),
-    }
+    return mapStateRows({
+      gym_settings: settingsRes.data,
+      profiles: profilesRes.data ?? [],
+      trainers: trainersRes.data ?? [],
+      zones: zonesRes.data ?? [],
+      class_templates: templatesRes.data ?? [],
+      sessions: sessionsRes.data ?? [],
+      bookings: bookingsRes.data ?? [],
+      waitlist_entries: waitlistRes.data ?? [],
+      check_ins: checkInsRes.data ?? [],
+      body_measurements: measurementsRes.data ?? [],
+      body_goals: bodyGoalsRes.data ?? [],
+      membership_plans: membershipPlansRes.data ?? [],
+      memberships: membershipsRes.data ?? [],
+      payments: paymentsRes.data ?? [],
+    })
   }
 
   async load(): Promise<GymState> {
@@ -560,6 +668,17 @@ export class SupabaseRepository implements GymRepository {
     return user
   }
 
+  async recordLegalConsents(context: LegalConsentContext, consents: LegalConsentInput[]): Promise<void> {
+    for (const consent of consents) {
+      const { error } = await this.client.rpc('record_legal_consent', {
+        p_document: consent.document,
+        p_version: consent.version,
+        p_context: context,
+      })
+      if (error) throw new Error(error.message)
+    }
+  }
+
   async signUp(creds: AuthCredentials): Promise<User> {
     if (!creds.fullName?.trim()) throw new Error('Nombre requerido')
     if (!creds.password || creds.password.length < 8) {
@@ -579,6 +698,9 @@ export class SupabaseRepository implements GymRepository {
             : null,
           goals: creds.goals?.trim() || null,
           health_notes: creds.healthNotes?.trim() || null,
+          // handle_new_user las guarda en legal_consents al crear la cuenta (legal-consents.sql)
+          consents: creds.consents ?? [],
+          user_agent: typeof navigator === 'undefined' ? null : navigator.userAgent.slice(0, 400),
         },
       },
     })
@@ -664,20 +786,39 @@ export class SupabaseRepository implements GymRepository {
     return user
   }
 
+  /**
+   * Envía el correo de recuperación. La plantilla "Reset Password" de Supabase
+   * lleva el código ({{ .Token }}), no un enlace: así funciona igual dentro de
+   * la app nativa, donde un enlace a la web no vuelve a la app.
+   */
   async resetPassword(email: string): Promise<void> {
-    const { error } = await this.client.auth.resetPasswordForEmail(
-      email.trim(),
-      {
-        // Apunta a la pantalla donde el socio escribe la contraseña nueva.
-        // Esta URL debe estar en Authentication → URL Configuration →
-        // Redirect URLs del proyecto Supabase, o el enlace del correo falla.
-        redirectTo:
-          typeof window !== 'undefined'
-            ? `${window.location.origin}/recuperar`
-            : undefined,
-      },
-    )
+    const { error } = await this.client.auth.resetPasswordForEmail(email.trim())
     if (error) throw new Error(error.message)
+  }
+
+  async completePasswordReset(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<void> {
+    const { error: otpError } = await this.client.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: 'recovery',
+    })
+    if (otpError) throw new Error(RECOVERY_CODE_INVALID)
+
+    // El código ya abrió sesión: se cierra pase lo que pase, porque es de un
+    // solo uso y el socio debe entrar desde el login con la clave nueva.
+    const { error } = await this.client.auth.updateUser({ password: newPassword })
+    await this.client.auth.signOut()
+    if (error) {
+      throw new Error(
+        error.code === 'same_password'
+          ? 'La contraseña nueva debe ser distinta a la anterior. Pide un código nuevo e inténtalo otra vez.'
+          : error.message,
+      )
+    }
   }
 
   async updatePassword(newPassword: string): Promise<void> {
@@ -688,28 +829,13 @@ export class SupabaseRepository implements GymRepository {
   }
 
   /**
-   * Al abrir el enlace del correo, supabase-js canjea el token del hash
-   * por una sesión (detectSessionInUrl). Si hay sesión al entrar a
-   * /recuperar, el enlace era válido.
+   * Borra auth.users y, en cascada, el perfil y todos sus datos (schema.sql).
+   * Los DELETE directos no sirven: RLS los ignora sin error.
    */
-  async hasRecoverySession(): Promise<boolean> {
-    const { data } = await this.client.auth.getSession()
-    return Boolean(data.session)
-  }
-
   async deleteAccount(): Promise<void> {
-    const actor = await this.requireUser()
-    const userId = actor.id
-
-    // Delete personal records
-    await this.client.from('payments').delete().eq('user_id', userId)
-    await this.client.from('memberships').delete().eq('user_id', userId)
-    await this.client.from('body_measurements').delete().eq('user_id', userId)
-    await this.client.from('check_ins').delete().eq('user_id', userId)
-    await this.client.from('waitlist_entries').delete().eq('user_id', userId)
-    await this.client.from('bookings').delete().eq('user_id', userId)
-    await this.client.from('profiles').delete().eq('id', userId)
-
+    await this.requireUser()
+    const { error } = await this.client.rpc('delete_user_account')
+    if (error) throw new Error(error.message)
     await this.signOut()
   }
 
@@ -723,6 +849,7 @@ export class SupabaseRepository implements GymRepository {
       row.birth_date = patch.birthDate.trim() || null
     if (patch.residence !== undefined)
       row.residence = patch.residence.trim() || null
+    if (patch.phone !== undefined) row.phone = patch.phone.trim() || null
     if (patch.heightCm !== undefined)
       row.height_cm = patch.heightCm ? Number(patch.heightCm) : null
     if (patch.initialWeightKg !== undefined) {
@@ -745,12 +872,15 @@ export class SupabaseRepository implements GymRepository {
   }
 
   async updateSettings(patch: Partial<GymSettings>): Promise<GymSettings> {
-    await this.requireUser()
+    await this.requireAdmin()
     const row: Record<string, unknown> = {}
     if (patch.name !== undefined) row.name = patch.name
     if (patch.logoUrl !== undefined) row.logo_url = patch.logoUrl
     if (patch.primaryColor !== undefined) row.primary_color = patch.primaryColor
     if (patch.accentColor !== undefined) row.accent_color = patch.accentColor
+    if (patch.termsPdfUrl !== undefined) row.terms_pdf_url = patch.termsPdfUrl
+    if (patch.termsVersion !== undefined) row.terms_version = patch.termsVersion
+    if (patch.termsUpdatedAt !== undefined) row.terms_updated_at = patch.termsUpdatedAt
     if (patch.bookingWindowHours !== undefined) {
       row.booking_window_hours = patch.bookingWindowHours
     }
@@ -760,6 +890,21 @@ export class SupabaseRepository implements GymRepository {
     if (patch.checkInWindowMinutes !== undefined) {
       row.check_in_window_minutes = patch.checkInWindowMinutes
     }
+    if (patch.onlinePaymentsEnabled !== undefined) {
+      row.online_payments_enabled = patch.onlinePaymentsEnabled
+    }
+    if (patch.waitlistEnabled !== undefined) row.waitlist_enabled = patch.waitlistEnabled
+    if (patch.measurementsEnabled !== undefined) {
+      row.measurements_enabled = patch.measurementsEnabled
+    }
+    if (patch.dayPassesEnabled !== undefined) row.day_passes_enabled = patch.dayPassesEnabled
+    if (patch.recurringPaymentsEnabled !== undefined) {
+      row.recurring_payments_enabled = patch.recurringPaymentsEnabled
+    }
+    for (const [key, column] of Object.entries(PAYMENT_DETAIL_COLUMNS)) {
+      const value = patch[key as keyof typeof PAYMENT_DETAIL_COLUMNS]
+      if (value !== undefined) row[column] = value?.trim() || null
+    }
     const { data, error } = await this.client
       .from('gym_settings')
       .update(row)
@@ -768,6 +913,26 @@ export class SupabaseRepository implements GymRepository {
       .single()
     if (error) throw new Error(error.message)
     return mapSettings(data)
+  }
+
+  async publishTermsPdf(file: File, version: string): Promise<GymSettings> {
+    await this.requireAdmin()
+    await validateTermsPdf(file, version)
+    const bucket = this.client.storage.from(TERMS_BUCKET)
+    const path = `terms/${crypto.randomUUID()}.pdf`
+    const { error } = await bucket.upload(path, file, { contentType: 'application/pdf', upsert: false })
+    if (error) throw new Error(error.message)
+    try {
+      return await this.updateSettings({
+        termsPdfUrl: bucket.getPublicUrl(path).data.publicUrl,
+        termsVersion: version.trim(),
+        termsUpdatedAt: new Date().toISOString(),
+      })
+    } catch (err) {
+      // Si publicar falla, se conserva la configuración anterior y se limpia solo el archivo nuevo.
+      await bucket.remove([path]).catch(() => undefined)
+      throw err
+    }
   }
 
   async listZones(): Promise<Zone[]> {
@@ -894,10 +1059,7 @@ export class SupabaseRepository implements GymRepository {
       p_session_id: sessionId,
       p_user_id: userId,
     })
-    if (error) {
-      if (isMissingRpc(error)) return this.createBookingLegacy(sessionId, userId)
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
     const result = data as { booking?: BookingRow; waitlist?: WaitlistRow }
     if (result.waitlist) return mapWaitlist(result.waitlist)
     return mapBooking(result.booking!)
@@ -908,265 +1070,33 @@ export class SupabaseRepository implements GymRepository {
     const { data, error } = await this.client.rpc('cancel_booking', {
       p_booking_id: bookingId,
     })
-    if (error) {
-      if (isMissingRpc(error)) return this.cancelBookingLegacy(bookingId)
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
     return mapBooking(data as BookingRow)
   }
 
-  // TODO: borrar los *Legacy cuando booking-rpc.sql esté aplicado en staging y prod.
-  // Sin esas funciones en la base se mantiene el comportamiento anterior.
-  private async createBookingLegacy(
-    sessionId: string,
-    userId: string,
-  ): Promise<Booking | WaitlistEntry> {
-    const actor = await this.requireUser()
-    if (actor.role === 'member' && actor.id !== userId) {
-      throw new Error('No puedes reservar por otro socio')
-    }
-    const state = await this.fetchState()
-    const session = state.sessions.find((s) => s.id === sessionId)
-    if (!session) throw new Error('Sesión no encontrada')
-
-    const already = state.bookings.find(
-      (b) =>
-        b.sessionId === sessionId &&
-        b.userId === userId &&
-        (b.status === 'confirmed' ||
-          b.status === 'pending' ||
-          b.status === 'waitlisted'),
-    )
-    if (already) throw new Error('Ya tienes reserva en esta sesión')
-    if (hasOverlap(state.sessions, state.bookings, userId, session)) {
-      throw new Error('Se solapa con otra reserva activa')
-    }
-
-    const subject = state.users.find((u) => u.id === userId)
-    if (subject?.role === 'member' || actor.role === 'member') {
-      const membership = (state.memberships ?? []).find((m) => m.userId === userId)
-      const plan = membership
-        ? (state.membershipPlans ?? []).find((p) => p.id === membership.planId)
-        : undefined
-      const allowed = assertMemberBookingAllowed(membership, plan, session.zoneId)
-      if (!allowed.ok) throw new Error(allowed.reason)
-    }
-
-    const capacity = canBookSession(session, state.bookings)
-    if (!capacity.ok) {
-      const entry: WaitlistEntry = {
-        id: uid('wl'),
-        sessionId,
-        userId,
-        position: nextWaitlistPosition(state.waitlist, sessionId),
-        createdAt: new Date().toISOString(),
-      }
-      const { error: wlError } = await this.client.from('waitlist_entries').insert({
-        id: entry.id,
-        session_id: entry.sessionId,
-        user_id: entry.userId,
-        position: entry.position,
-        created_at: entry.createdAt,
-      })
-      if (wlError) throw new Error(wlError.message)
-      const waitBooking: Booking = {
-        id: uid('bk'),
-        sessionId,
-        userId,
-        status: 'waitlisted',
-        createdAt: entry.createdAt,
-        cancelledAt: null,
-        checkInCode: uid('QR').toUpperCase(),
-      }
-      const { error: bkError } = await this.client.from('bookings').insert({
-        id: waitBooking.id,
-        session_id: waitBooking.sessionId,
-        user_id: waitBooking.userId,
-        status: waitBooking.status,
-        created_at: waitBooking.createdAt,
-        cancelled_at: null,
-        check_in_code: waitBooking.checkInCode,
-      })
-      if (bkError) throw new Error(bkError.message)
-      return entry
-    }
-
-    const booking: Booking = {
-      id: uid('bk'),
-      sessionId,
-      userId,
-      status: 'confirmed',
-      createdAt: new Date().toISOString(),
-      cancelledAt: null,
-      checkInCode: uid('QR').toUpperCase(),
-    }
-    const { error } = await this.client.from('bookings').insert({
-      id: booking.id,
-      session_id: booking.sessionId,
-      user_id: booking.userId,
-      status: booking.status,
-      created_at: booking.createdAt,
-      cancelled_at: null,
-      check_in_code: booking.checkInCode,
-    })
-    if (error) throw new Error(error.message)
-    const bookedCount =
-      state.bookings.filter(
-        (b) => b.sessionId === sessionId && b.status === 'confirmed',
-      ).length + 1
-    await this.client
-      .from('sessions')
-      .update({ booked_count: bookedCount })
-      .eq('id', sessionId)
-    return booking
-  }
-
-  private async cancelBookingLegacy(bookingId: string): Promise<Booking> {
-    const actor = await this.requireUser()
-    const state = await this.fetchState()
-    const booking = state.bookings.find((b) => b.id === bookingId)
-    if (!booking) throw new Error('Reserva no encontrada')
-    if (actor.role === 'member' && booking.userId !== actor.id) {
-      throw new Error('Sin permiso')
-    }
-    const wasConfirmed = booking.status === 'confirmed'
-    const cancelledAt = new Date().toISOString()
-    const { data, error } = await this.client
-      .from('bookings')
-      .update({ status: 'cancelled', cancelled_at: cancelledAt })
-      .eq('id', bookingId)
-      .select('*')
-      .single()
-    if (error) throw new Error(error.message)
-
-    await this.client
-      .from('waitlist_entries')
-      .delete()
-      .eq('session_id', booking.sessionId)
-      .eq('user_id', booking.userId)
-
-    if (wasConfirmed) {
-      const promoted = promoteFirstWaitlist(state.waitlist, booking.sessionId)
-      if (promoted) {
-        await this.client.from('waitlist_entries').delete().eq('id', promoted.id)
-        const waitBooking = state.bookings.find(
-          (b) =>
-            b.sessionId === booking.sessionId &&
-            b.userId === promoted.userId &&
-            b.status === 'waitlisted',
-        )
-        if (waitBooking) {
-          await this.client
-            .from('bookings')
-            .update({ status: 'confirmed' })
-            .eq('id', waitBooking.id)
-        } else {
-          await this.client.from('bookings').insert({
-            id: uid('bk'),
-            session_id: booking.sessionId,
-            user_id: promoted.userId,
-            status: 'confirmed',
-            created_at: new Date().toISOString(),
-            cancelled_at: null,
-            check_in_code: uid('QR').toUpperCase(),
-          })
-        }
-      }
-    }
-
-    const refreshed = await this.fetchState()
-    const session = refreshed.sessions.find((s) => s.id === booking.sessionId)
-    if (session) {
-      const bookedCount = refreshed.bookings.filter(
-        (b) => b.sessionId === session.id && b.status === 'confirmed',
-      ).length
-      await this.client
-        .from('sessions')
-        .update({ booked_count: bookedCount })
-        .eq('id', session.id)
-    }
-
-    return mapBooking(data)
-  }
-
+  /** Mueve la reserva en un solo paso (reschedule_booking): si falla, no cambia nada. */
   async rescheduleBooking(
     bookingId: string,
     newSessionId: string,
   ): Promise<Booking> {
-    const actor = await this.requireUser()
-    const state = await this.fetchState()
-    const old = state.bookings.find((b) => b.id === bookingId)
-    if (!old) throw new Error('Reserva no encontrada')
-    const next = state.sessions.find((s) => s.id === newSessionId)
-    if (!next) throw new Error('Sesión no encontrada')
-    if (new Date(next.startsAt).getTime() <= Date.now()) {
-      throw new Error('Esa clase ya empezó')
-    }
-    const previousStatus = old.status
-    await this.cancelBooking(bookingId)
-    const userId = old.userId ?? actor.id
-    let result: Booking | WaitlistEntry
-    try {
-      result = await this.createBooking(newSessionId, userId)
-    } catch (error) {
-      await this.client
-        .from('bookings')
-        .update({ status: previousStatus, cancelled_at: null })
-        .eq('id', bookingId)
-      throw error
-    }
-    if ('position' in result) {
-      throw new Error('La nueva sesión está llena; quedaste en lista de espera')
-    }
-    return result
-  }
-
-  async checkIn(bookingId: string, code: string): Promise<CheckIn> {
-    const actor = await this.requireUser()
-    const state = await this.fetchState()
-    const booking = state.bookings.find((b) => b.id === bookingId)
-    if (!booking) throw new Error('Reserva no encontrada')
-    if (actor.role === 'member' && booking.userId !== actor.id) {
-      throw new Error('Sin permiso para este check-in')
-    }
-    if (booking.checkInCode !== code.trim().toUpperCase()) {
-      throw new Error('Código QR inválido')
-    }
-    if (booking.status !== 'confirmed' && booking.status !== 'pending') {
-      throw new Error('La reserva no está activa')
-    }
-    const session = state.sessions.find((s) => s.id === booking.sessionId)
-    if (!session) throw new Error('Sesión no encontrada')
-    if (
-      !isCheckInWindow(
-        session.startsAt,
-        new Date(),
-        state.settings.checkInWindowMinutes,
-        10,
-      )
-    ) {
-      throw new Error('Fuera de la ventana de check-in')
-    }
-    const checkIn: CheckIn = {
-      id: uid('ci'),
-      bookingId: booking.id,
-      sessionId: session.id,
-      userId: booking.userId,
-      checkedInAt: new Date().toISOString(),
-    }
-    const { error } = await this.client.from('check_ins').insert({
-      id: checkIn.id,
-      booking_id: checkIn.bookingId,
-      session_id: checkIn.sessionId,
-      user_id: checkIn.userId,
-      checked_in_at: checkIn.checkedInAt,
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('reschedule_booking', {
+      p_booking_id: bookingId,
+      p_session_id: newSessionId,
     })
     if (error) throw new Error(error.message)
-    await this.client
-      .from('bookings')
-      .update({ status: 'attended' })
-      .eq('id', booking.id)
-    return checkIn
+    return mapBooking(data as BookingRow)
+  }
+
+  /** Código, estado y ventana se validan en la base (check_in_booking en booking-rpc.sql). */
+  async checkIn(bookingId: string, code: string): Promise<CheckIn> {
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('check_in_booking', {
+      p_booking_id: bookingId,
+      p_code: code,
+    })
+    if (error) throw new Error(error.message)
+    return mapCheckIn(data as Parameters<typeof mapCheckIn>[0])
   }
 
   async listMeasurements(userId: string): Promise<BodyMeasurement[]> {
@@ -1422,7 +1352,7 @@ export class SupabaseRepository implements GymRepository {
   async upsertMembershipPlan(
     plan: Partial<MembershipPlan> & { name: string; priceCents: number; durationDays: number },
   ): Promise<MembershipPlan> {
-    await this.requireStaff()
+    await this.requireAdmin()
     const row: Record<string, unknown> = {
       name: plan.name,
       price_cents: plan.priceCents,
@@ -1432,6 +1362,7 @@ export class SupabaseRepository implements GymRepository {
     if (plan.visitQuota !== undefined) row.visit_quota = plan.visitQuota
     if (plan.allowedZoneIds !== undefined) row.allowed_zone_ids = plan.allowedZoneIds
     if (plan.active !== undefined) row.active = plan.active
+    if (plan.kind !== undefined) row.kind = plan.kind
 
     const { data, error } = await this.client
       .from('membership_plans')
@@ -1451,25 +1382,26 @@ export class SupabaseRepository implements GymRepository {
     if (error) throw new Error(error.message)
   }
 
-  async getMemberMembership(userId: string): Promise<Membership | null> {
+  /** Membresías del socio con su plan embebido (para distinguir pases del día). */
+  private async membershipsWithPlans(
+    userId: string,
+  ): Promise<{ memberships: Membership[]; plans: MembershipPlan[] }> {
     const { data, error } = await this.client
       .from('memberships')
-      .select('*')
+      .select('*, membership_plans(*)')
       .eq('user_id', userId)
       .order('ends_at', { ascending: false })
     if (error) throw new Error(error.message)
-    if (!data || data.length === 0) return null
-    const mapped = data.map(mapMembership)
-    const active = mapped.find((m) => {
-      const s = computeMembershipStatus(m)
-      return s === 'active' || s === 'grace'
-    })
-    if (active) {
-      return { ...active, status: computeMembershipStatus(active) }
-    }
-    const latest = mapped[0]
-    if (!latest) return null
-    return { ...latest, status: computeMembershipStatus(latest) }
+    const rows = data ?? []
+    const plans = rows.flatMap((row) =>
+      row.membership_plans ? [mapMembershipPlan(row.membership_plans)] : [],
+    )
+    return { memberships: rows.map(mapMembership), plans }
+  }
+
+  async getMemberMembership(userId: string): Promise<Membership | null> {
+    const { memberships, plans } = await this.membershipsWithPlans(userId)
+    return memberMembership(memberships, plans)
   }
 
   async getMemberPayments(userId: string): Promise<Payment[]> {
@@ -1506,6 +1438,8 @@ export class SupabaseRepository implements GymRepository {
   async requestPlanPayment(params: {
     planId: string
     manualMethod: ManualPaymentMethod
+    reference?: string
+    termsVersion: string
   }): Promise<Payment> {
     const user = await this.requireUser()
     if (user.role !== 'member') {
@@ -1519,6 +1453,15 @@ export class SupabaseRepository implements GymRepository {
       .single()
     if (planError || !planRow) throw new Error('Plan no encontrado')
     const plan = mapMembershipPlan(planRow)
+    const { data: settingsRow } = await this.client
+      .from('gym_settings')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle()
+    assertPlanSellableInApp(plan, settingsRow ? mapSettings(settingsRow) : null)
+    const mine = await this.membershipsWithPlans(user.id)
+    const outcome = planPurchaseOutcome({ ...mine, plan })
+    if (outcome.kind === 'reject') throw new Error(outcome.reason)
 
     const { data: existing, error: existingError } = await this.client
       .from('payments')
@@ -1538,7 +1481,8 @@ export class SupabaseRepository implements GymRepository {
       status: 'pending',
       provider: 'manual',
       manual_method: params.manualMethod,
-      reference: null,
+      reference: resolveRequestReference(existing?.reference, params.reference),
+      terms_version: params.termsVersion,
     }
     const query = existing
       ? this.client.from('payments').update(payload).eq('id', existing.id)
@@ -1557,42 +1501,33 @@ export class SupabaseRepository implements GymRepository {
   }): Promise<{ payment: Payment; membership: Membership }> {
     await this.requireUser()
 
-    // 1. Get plan
-    const { data: planRow, error: planError } = await this.client
-      .from('membership_plans')
-      .select('*')
-      .eq('id', params.planId)
-      .single()
-    if (planError || !planRow) throw new Error('Plan no encontrado')
-    const plan = mapMembershipPlan(planRow)
-
-    // 2. Get current membership & compute extension
-    const currentMembership = await this.getMemberMembership(params.userId)
-    const newDates = extendMembership(currentMembership, plan, new Date())
-
-    // 3. Upsert membership
-    const membershipPayload: Record<string, unknown> = {
-      user_id: params.userId,
-      plan_id: plan.id,
-      starts_at: newDates.startsAt,
-      ends_at: newDates.endsAt,
-      grace_ends_at: newDates.graceEndsAt,
-      status: newDates.status,
-      visits_left: newDates.visitsLeft,
-    }
-    if (currentMembership) {
-      membershipPayload.id = currentMembership.id
+    // El cobro mensual del pago recurrente cuenta desde el fin anterior (recurringRenewal.ts)
+    let paidAt: string | undefined
+    if (params.manualMethod === 'pagomedios_recurring') {
+      const [planRes, membershipsRes] = await Promise.all([
+        this.client.from('membership_plans').select('id, duration_days').eq('id', params.planId).single(),
+        this.client.from('memberships').select('plan_id, status, ends_at').eq('user_id', params.userId),
+      ])
+      if (planRes.error) throw new Error(planRes.error.message)
+      if (membershipsRes.error) throw new Error(membershipsRes.error.message)
+      paidAt = recurringRenewalFrom(
+        (membershipsRes.data ?? []).map((m) => ({ planId: m.plan_id, status: m.status, endsAt: m.ends_at })),
+        { id: planRes.data.id, durationDays: planRes.data.duration_days },
+        new Date(),
+      ).toISOString()
     }
 
-    const { data: memData, error: memError } = await this.client
-      .from('memberships')
-      .upsert(membershipPayload)
-      .select('*')
-      .single()
+    // La base decide vigente / en espera / pase del día y bloquea al socio (plan-rules.sql)
+    const { data: memData, error: memError } = await this.client.rpc('apply_plan_purchase', {
+      p_user_id: params.userId,
+      p_plan_id: params.planId,
+      ...(paidAt ? { p_paid_at: paidAt } : {}),
+    })
     if (memError) throw new Error(memError.message)
-    const membership = mapMembership(memData)
+    const membershipRow = mapMembership(memData)
+    const membership = { ...membershipRow, status: computeMembershipStatus(membershipRow) }
 
-    // 4. Aprueba la solicitud pendiente o registra un cobro nuevo
+    // Aprueba la solicitud pendiente o registra un cobro nuevo
     const { data: pending, error: pendingError } = await this.client
       .from('payments')
       .select('id, created_at, reference')
@@ -1605,7 +1540,7 @@ export class SupabaseRepository implements GymRepository {
 
     const paymentPayload = {
       user_id: params.userId,
-      plan_id: plan.id,
+      plan_id: params.planId,
       membership_id: membership.id,
       amount_cents: params.amountCents,
       status: 'approved',
@@ -1627,67 +1562,123 @@ export class SupabaseRepository implements GymRepository {
     return { payment, membership }
   }
 
-  async createOnlineCheckout(params: {
+  async changePlanNow(params: {
+    userId: string
     planId: string
+    amountCents: number
+    manualMethod: ManualPaymentMethod
+  }): Promise<{ payment: Payment; membership: Membership }> {
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('change_plan_now', {
+      p_user_id: params.userId,
+      p_plan_id: params.planId,
+      p_amount_cents: params.amountCents,
+      p_method: params.manualMethod,
+    })
+    if (error) throw new Error(error.message)
+    const membership = mapMembership(data.membership)
+    return {
+      payment: mapPayment(data.payment),
+      membership: { ...membership, status: computeMembershipStatus(membership) },
+    }
+  }
+
+  async discardPlanRequest(paymentId: string): Promise<Payment> {
+    await this.requireUser()
+    const { data, error } = await this.client
+      .from('payments')
+      .update({ status: 'rejected', notes: DISCARDED_REQUEST_NOTE })
+      .eq('id', paymentId)
+      .eq('status', 'pending')
+      .eq('provider', 'manual')
+      .select('*')
+      .maybeSingle()
+    if (error) throw new Error(error.message)
+    if (!data) throw new Error('La solicitud ya no está pendiente.')
+    return mapPayment(data)
+  }
+
+  async refundPayment(params: { paymentId: string; cancelMembership: boolean }): Promise<Payment> {
+    await this.requireUser()
+    const { data, error } = await this.client.rpc('refund_payment', {
+      p_payment_id: params.paymentId,
+      p_cancel_membership: params.cancelMembership,
+    })
+    if (error) throw new Error(error.message)
+    return mapPayment(data)
+  }
+
+  async createPagomediosPayment(params: {
+    planId: string
+    document: string
+    documentType: PagomediosDocumentType
     phone: string
-    identification: string
-    street?: string
-  }): Promise<{
-    checkoutId: string
-    paymentId: string
-    widgetScriptUrl: string
-    shopperResultUrl: string
-  }> {
+    address: string
+    termsVersion: string
+    native?: boolean
+    recurring?: boolean
+  }): Promise<{ url: string; paymentId: string }> {
     await this.requireUser()
-    const { data, error } = await this.client.functions.invoke(
-      'create-datafast-checkout',
-      { body: params },
-    )
-
-    const payload = (data ?? {}) as {
-      checkoutId?: string
-      paymentId?: string
-      widgetScriptUrl?: string
-      shopperResultUrl?: string
-      error?: string
+    const { data, error } = await this.invokePagomedios({ action: 'create', ...params })
+    const payload = (data ?? {}) as { url?: string; paymentId?: string; error?: string }
+    if (payload.url && payload.paymentId) {
+      return { url: payload.url, paymentId: payload.paymentId }
     }
-
-    if (
-      payload.checkoutId &&
-      payload.paymentId &&
-      payload.widgetScriptUrl &&
-      payload.shopperResultUrl
-    ) {
-      return {
-        checkoutId: payload.checkoutId,
-        paymentId: payload.paymentId,
-        widgetScriptUrl: payload.widgetScriptUrl,
-        shopperResultUrl: payload.shopperResultUrl,
-      }
-    }
-
     if (payload.error) throw new Error(payload.error)
-    if (error) throw new Error(error.message || 'No se pudo iniciar el pago Datafast')
-    throw new Error('Pasarela Datafast no disponible. Revisa secrets en Supabase.')
+    throw new Error(
+      (await functionErrorMessage(error)) ??
+        'Pasarela Pagomedios no disponible. Revisa secrets en Supabase.',
+    )
   }
 
-  async verifyOnlinePayment(params: {
-    paymentId: string
-    resourcePath: string
-  }): Promise<{ ok: boolean; description?: string }> {
+  async verifyPagomediosPayment(params: { paymentId: string }): Promise<OnlinePaymentResult> {
     await this.requireUser()
-    const { data, error } = await this.client.functions.invoke(
-      'verify-datafast-payment',
-      { body: params },
-    )
+    const { data, error } = await this.invokePagomedios({
+      action: 'verify',
+      paymentId: params.paymentId,
+    })
     const payload = (data ?? {}) as {
-      ok?: boolean
+      status?: OnlinePaymentResult['status']
       description?: string
+      receipt?: OnlinePaymentReceipt
       error?: string
     }
-    if (payload.ok) return { ok: true }
+    if (payload.status) {
+      return { status: payload.status, description: payload.description, receipt: payload.receipt }
+    }
     if (payload.error) throw new Error(payload.error)
-    if (error) throw new Error(error.message || 'No se pudo verificar el pago')
-    return { ok: false, description: payload.description ?? 'Pago no aprobado' }
+    throw new Error((await functionErrorMessage(error)) ?? 'No se pudo verificar el pago')
   }
+
+  /** En dev, VITE_FUNCTIONS_URL apunta a la función corriendo con Deno (simulador local). */
+  private async invokePagomedios(
+    body: Record<string, unknown>,
+  ): Promise<{ data: unknown; error: unknown }> {
+    const localUrl = import.meta.env.DEV ? import.meta.env.VITE_FUNCTIONS_URL : undefined
+    if (!localUrl) return this.client.functions.invoke('pagomedios-payment', { body })
+    const {
+      data: { session },
+    } = await this.client.auth.getSession()
+    const res = await fetch(localUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json().catch(() => null)
+    return { data, error: res.ok ? null : new Error(`Función local respondió ${res.status}`) }
+  }
+}
+
+/** Las Edge Functions responden JSON { error } con status != 2xx; invoke() lo esconde en error.context. */
+async function functionErrorMessage(error: unknown): Promise<string | null> {
+  if (!error) return null
+  const context = (error as { context?: unknown }).context
+  if (context instanceof Response) {
+    const body = await context.clone().json().catch(() => null)
+    if (body && typeof body.error === 'string') return body.error
+  }
+  return error instanceof Error ? error.message : null
 }

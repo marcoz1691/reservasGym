@@ -10,9 +10,9 @@ export type ButtonSize = 'sm' | 'md' | 'lg'
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-acc text-[var(--color-acc-contrast)] font-bold hover:bg-acc-hi active:scale-[0.97] shadow-[var(--shadow-acc)] border border-transparent disabled:opacity-50 disabled:shadow-none',
+    'bg-cta text-cta-contrast font-bold hover:bg-cta-hi active:scale-[0.97] shadow-sm border border-transparent disabled:opacity-50 disabled:shadow-none',
   accent:
-    'bg-acc text-[var(--color-acc-contrast)] font-bold hover:bg-acc-hi active:scale-[0.97] shadow-[var(--shadow-acc)] border border-transparent disabled:opacity-50',
+    'bg-cta text-cta-contrast font-bold hover:bg-cta-hi active:scale-[0.97] shadow-sm border border-transparent disabled:opacity-50',
   secondary:
     'bg-surface-elevated text-ink border border-line hover:border-acc/40 hover:bg-surface active:scale-[0.97] disabled:opacity-50',
   outline:

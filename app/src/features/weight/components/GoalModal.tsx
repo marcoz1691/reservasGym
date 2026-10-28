@@ -2,6 +2,7 @@ import { useState, useMemo, type FormEvent } from 'react'
 import type { BodyGoal, BodyGoalStatus } from '@/domain/models'
 import { calculateBmi, getBmiCategory } from '@/domain/rules'
 import { Input, Select } from '@/ui/primitives'
+import { ecuadorTodayYmd } from '@/lib/format'
 import { Target, X, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
 
 interface GoalModalProps {
@@ -34,8 +35,9 @@ export function GoalModal({
   )
   const [targetDate, setTargetDate] = useState(() => {
     if (existingGoal?.targetDate) return existingGoal.targetDate.slice(0, 10)
-    const d = new Date()
-    d.setDate(d.getDate() + 60)
+    // +60 días sobre el día de hoy en Ecuador (no en UTC: de noche ya sería mañana)
+    const d = new Date(`${ecuadorTodayYmd()}T12:00:00Z`)
+    d.setUTCDate(d.getUTCDate() + 60)
     return d.toISOString().slice(0, 10)
   })
   const [status, setStatus] = useState<BodyGoalStatus>(
@@ -107,7 +109,7 @@ export function GoalModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/15 text-acc">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/15 text-acc-dark">
               <Target className="h-5 w-5" />
             </div>
             <div>
@@ -139,7 +141,7 @@ export function GoalModal({
               ) : diffInfo.isGain ? (
                 <TrendingUp className="h-4 w-4 text-warn" />
               ) : (
-                <Sparkles className="h-4 w-4 text-acc" />
+                <Sparkles className="h-4 w-4 text-acc-dark" />
               )}
               <span className="text-ink-2">
                 {diffInfo.isLoss
@@ -151,7 +153,7 @@ export function GoalModal({
             </div>
             {targetBmi != null && targetCategory && (
               <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
                 style={{
                   backgroundColor: `${targetCategory.color}20`,
                   color: targetCategory.color,
@@ -215,7 +217,7 @@ export function GoalModal({
             <button
               type="submit"
               disabled={saving}
-              className="focus-ring inline-flex items-center gap-2 rounded-2xl bg-acc px-5 py-2.5 text-xs font-black text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] transition hover:brightness-110 active:scale-95 disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-2xl bg-cta px-5 py-2.5 text-xs font-black text-cta-contrast shadow-sm transition hover:brightness-110 active:scale-95 disabled:opacity-50"
             >
               {saving ? 'Guardando...' : existingGoal ? 'Actualizar Meta' : 'Fijar Meta'}
             </button>

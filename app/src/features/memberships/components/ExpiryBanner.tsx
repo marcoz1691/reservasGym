@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, AlertCircle, Clock, X, ArrowRight } from 'lucide-react'
 import { useAppData, useCurrentUser } from '@/data/RepositoryProvider'
-import { selectMyMembership } from '@/app/store'
+import { selectMyMembership, selectMyQueuedMembership } from '@/app/store'
 import {
   computeMembershipStatus,
   daysRemaining,
@@ -101,7 +101,7 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
         <button
           type="button"
           onClick={() => navigate('/membresia')}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-acc px-3.5 py-1.5 text-xs font-bold text-[var(--color-acc-contrast)] transition hover:brightness-110 active:scale-95"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-cta px-3.5 py-1.5 text-xs font-bold text-cta-contrast transition hover:brightness-110 active:scale-95"
         >
           <span>Renovar ahora</span>
           <ArrowRight className="h-3.5 w-3.5" />
@@ -110,8 +110,8 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
     )
   }
 
-  // 3. Warning Banner (<= 7 days remaining)
-  if (isNearExpiration(membership, 7, now)) {
+  // 3. Warning Banner (<= 7 days remaining). Con un plan en espera no hay interrupción.
+  if (isNearExpiration(membership, 7, now) && !selectMyQueuedMembership(data, user.id, now)) {
     const days = daysRemaining(membership, now)
 
     return (
@@ -132,7 +132,7 @@ export function ExpiryBanner({ className = '', now = new Date() }: ExpiryBannerP
           <button
             type="button"
             onClick={() => navigate('/membresia')}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-warn/50 bg-warn/20 px-3 py-1.5 text-xs font-bold text-warn transition hover:bg-warn/30 active:scale-95"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-warn/50 bg-warn/20 px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-warn/30 active:scale-95"
           >
             <span>Ver mi plan</span>
             <ArrowRight className="h-3.5 w-3.5" />

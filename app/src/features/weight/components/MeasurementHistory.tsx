@@ -86,7 +86,7 @@ export function MeasurementHistory({
                     </span>
                     <span className="text-xs font-bold text-ink-3">kg</span>
                   </div>
-                  <div className="flex items-center gap-1 text-[11px] text-ink-3">
+                  <div className="flex items-center gap-1 text-xs text-ink-3">
                     <Calendar className="h-3 w-3" />
                     <span>{formatDateShort(m.measuredAt)}</span>
                   </div>
@@ -113,7 +113,7 @@ export function MeasurementHistory({
                     {delta.formatted}
                   </span>
                 ) : (
-                  <span className="rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-3">
+                  <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-ink-3">
                     Primer registro
                   </span>
                 )}
@@ -162,16 +162,18 @@ export function MeasurementHistory({
                     <button
                       type="button"
                       onClick={() => onEdit(m)}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl text-ink-3 transition hover:bg-surface-elevated hover:text-ink"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl text-ink-3 transition hover:bg-surface-elevated hover:text-ink"
                       title="Editar registro"
+                      aria-label={`Editar registro del ${formatDateShort(m.measuredAt)}`}
                     >
                       <Edit3 className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteId(m.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl text-ink-3 transition hover:bg-danger-soft hover:text-danger"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl text-ink-3 transition hover:bg-danger-soft hover:text-danger"
                       title="Eliminar registro"
+                      aria-label={`Eliminar registro del ${formatDateShort(m.measuredAt)}`}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -183,32 +185,32 @@ export function MeasurementHistory({
             {/* Circumference detail pills (if recorded) */}
             {hasCircumferences && (
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line/60 pt-2.5 text-xs text-ink-2">
-                <span className="flex items-center gap-1 text-[11px] font-bold text-ink-3 uppercase tracking-wider">
-                  <Ruler className="h-3 w-3 text-acc" />
+                <span className="flex items-center gap-1 text-xs font-bold text-ink-3 uppercase tracking-wider">
+                  <Ruler className="h-3 w-3 text-acc-dark" />
                   Medidas:
                 </span>
                 {m.waistCm != null && (
-                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-[11px]">
+                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-xs">
                     Cintura: <strong className="text-ink">{m.waistCm} cm</strong>
                   </span>
                 )}
                 {m.hipCm != null && (
-                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-[11px]">
+                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-xs">
                     Cadera: <strong className="text-ink">{m.hipCm} cm</strong>
                   </span>
                 )}
                 {m.chestCm != null && (
-                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-[11px]">
+                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-xs">
                     Pecho: <strong className="text-ink">{m.chestCm} cm</strong>
                   </span>
                 )}
                 {m.armCm != null && (
-                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-[11px]">
+                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-xs">
                     Brazo: <strong className="text-ink">{m.armCm} cm</strong>
                   </span>
                 )}
                 {m.thighCm != null && (
-                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-[11px]">
+                  <span className="rounded-lg bg-bg px-2 py-0.5 border border-line text-xs">
                     Muslo: <strong className="text-ink">{m.thighCm} cm</strong>
                   </span>
                 )}

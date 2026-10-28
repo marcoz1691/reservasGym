@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   nextWaitlistPosition,
-  nextWaitlistPromotion,
   pickWaitlistPromotion,
 } from './index'
 import type { WaitlistEntry } from '../models'
@@ -25,7 +24,7 @@ const entries: WaitlistEntry[] = [
 
 describe('waitlist', () => {
   it('promotes lowest position first', () => {
-    expect(nextWaitlistPromotion(entries, 's1')?.id).toBe('b')
+    expect(pickWaitlistPromotion(entries, 's1', () => true).promoted?.id).toBe('b')
   })
 
   it('assigns next position', () => {

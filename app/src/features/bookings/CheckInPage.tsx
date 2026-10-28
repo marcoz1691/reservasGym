@@ -138,7 +138,7 @@ export function CheckInPage() {
             : 'Muestra tu QR al llegar a la clase'
         }
       />
-      {msg ? <p className="mb-3 text-sm text-acc">{msg}</p> : null}
+      {msg ? <p className="mb-3 text-sm text-acc-dark">{msg}</p> : null}
 
       {isStaff ? (
         <div className="space-y-6">
@@ -191,7 +191,7 @@ export function CheckInPage() {
                     {selectedCandidate.chip.label}
                   </Badge>
                 </div>
-                <span className="font-mono text-xs text-acc font-bold">
+                <span className="font-mono text-xs text-acc-dark font-bold">
                   {selectedCandidate.booking.checkInCode}
                 </span>
               </div>
@@ -260,10 +260,10 @@ export function CheckInPage() {
                         </p>
                       </div>
                       <div className="flex items-center justify-between pt-1 border-t border-line/40 text-xs">
-                        <span className="font-mono font-bold text-acc">
+                        <span className="font-mono font-bold text-acc-dark">
                           {booking.checkInCode}
                         </span>
-                        <span className="text-[11px] text-ink-3">
+                        <span className="text-xs text-ink-3">
                           {isSelected ? 'Seleccionado' : 'Tocar para elegir'}
                         </span>
                       </div>
@@ -302,7 +302,7 @@ export function CheckInPage() {
                       locale: es,
                     })}
                   </p>
-                  <p className="mt-2 font-mono text-sm font-bold tracking-wider text-acc">
+                  <p className="mt-2 font-mono text-sm font-bold tracking-wider text-acc-dark">
                     {booking.checkInCode}
                   </p>
                 </div>

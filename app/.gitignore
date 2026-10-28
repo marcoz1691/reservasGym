@@ -35,3 +35,7 @@ android/local.properties
 
 .vercel
 .env*
+
+# Pruebas E2E (Playwright)
+e2e/report/
+e2e/results/

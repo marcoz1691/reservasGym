@@ -176,7 +176,7 @@ export function BmiGauge({
         )}
 
         {/* Scale labels */}
-        <div className="flex justify-between text-[10px] font-medium text-ink-3 px-0.5">
+        <div className="flex justify-between text-[11px] font-medium text-ink-3 px-0.5">
           <span>15</span>
           <span className="text-blue-600/80">18.5</span>
           <span className="text-success/80">25.0</span>

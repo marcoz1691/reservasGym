@@ -1,5 +1,4 @@
 import { useState, useMemo, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
   Calendar,
@@ -31,7 +30,15 @@ import {
 } from '@/lib/format'
 import { createId } from '@/lib/id'
 import { resolveSessionTemplateId } from '@/domain/rules/sessionTemplate'
+import {
+  DEFAULT_WEEKDAYS,
+  MAX_RANGE_DAYS,
+  WEEKDAY_LABELS,
+  expandSessionDates,
+  rangeDays,
+} from '@/domain/rules/sessionRange'
 import { Badge, Button, Card, EmptyState, Input, PageHeader, Select } from '@/ui/primitives'
+import { ButtonLink } from '@/ui/ButtonLink'
 import { StaffBookingModal } from '@/features/agenda/StaffBookingModal'
 
 interface SessionFormData {
@@ -41,6 +48,9 @@ interface SessionFormData {
   kind: SessionKind
   trainerId: string
   date: string
+  /** Solo al crear: si se indica, la clase se repite hasta esta fecha en los días elegidos. */
+  endDate: string
+  weekdays: number[]
   startTime: string
   durationMinutes: number
   capacity: number
@@ -52,6 +62,8 @@ const DEFAULT_FORM: SessionFormData = {
   kind: 'class',
   trainerId: '',
   date: ecuadorTodayYmd(),
+  endDate: '',
+  weekdays: [...DEFAULT_WEEKDAYS],
   startTime: '07:00',
   durationMinutes: 60,
   capacity: 20,
@@ -75,6 +87,7 @@ export function SessionsPage() {
   const [formData, setFormData] = useState<SessionFormData>(DEFAULT_FORM)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
   // Delete Confirmation State
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null)
@@ -117,6 +130,7 @@ export function SessionsPage() {
   // Open Create Modal
   const handleOpenCreate = () => {
     setIsEditing(false)
+    setNotice(null)
     const initialZone = data.zones[0]?.id ?? 'zone-gimnasio'
     const zoneObj = data.zones.find((z) => z.id === initialZone)
     setFormData({
@@ -145,6 +159,8 @@ export function SessionsPage() {
       kind: session.kind,
       trainerId: session.trainerId ?? '',
       date: ecuadorTodayYmd(start),
+      endDate: '',
+      weekdays: [...DEFAULT_WEEKDAYS],
       startTime: formatEcuadorTime(session.startsAt),
       durationMinutes: durationMin > 0 ? durationMin : 60,
       capacity: session.capacity,
@@ -183,40 +199,92 @@ export function SessionsPage() {
       return
     }
 
-    // Build start and end ISO dates (Ecuador UTC-5, no parsear YYYY-MM-DD como UTC)
-    const startsAt = ecuadorLocalDateTimeIso(formData.date, formData.startTime)
-    const startMs = new Date(startsAt).getTime()
-    const endsAt = new Date(
-      startMs + formData.durationMinutes * 60 * 1000,
-    ).toISOString()
+    const repeating = !isEditing && formData.endDate !== ''
+    if (repeating) {
+      const days = rangeDays(formData.date, formData.endDate)
+      if (days === 0) {
+        setFormError('La fecha final debe ser igual o posterior a la fecha de inicio.')
+        return
+      }
+      if (days > MAX_RANGE_DAYS) {
+        setFormError('Programa como máximo 3 meses a la vez.')
+        return
+      }
+      if (formData.weekdays.length === 0) {
+        setFormError('Elige al menos un día de la semana.')
+        return
+      }
+    }
+    const dates = repeating
+      ? expandSessionDates(formData.date, formData.endDate, formData.weekdays)
+      : [formData.date]
+    if (dates.length === 0) {
+      setFormError('Ningún día del rango coincide con los días elegidos.')
+      return
+    }
 
     setSubmitting(true)
 
     try {
-      const sessionId = formData.id || createId('ses')
-      const existingSession = data.sessions.find((s) => s.id === sessionId)
-
-      const sessionPayload: Session = {
-        id: sessionId,
-        templateId: resolveSessionTemplateId(
-          data.templates,
-          formData.zoneId,
-          formData.kind,
-          existingSession?.templateId,
-        ),
-        zoneId: formData.zoneId,
-        title: formData.title.trim(),
-        kind: formData.kind,
-        startsAt,
-        endsAt,
-        capacity: Number(formData.capacity),
-        trainerId: formData.trainerId ? formData.trainerId : null,
-        bookedCount: existingSession?.bookedCount ?? 0,
+      const title = formData.title.trim()
+      const buildPayload = (ymd: string, id: string, bookedCount: number, templateId?: string | null): Session => {
+        // Hora Ecuador UTC-5, sin parsear YYYY-MM-DD como UTC
+        const startsAt = ecuadorLocalDateTimeIso(ymd, formData.startTime)
+        const endsAt = new Date(
+          new Date(startsAt).getTime() + formData.durationMinutes * 60 * 1000,
+        ).toISOString()
+        return {
+          id,
+          templateId: resolveSessionTemplateId(
+            data.templates,
+            formData.zoneId,
+            formData.kind,
+            templateId ?? undefined,
+          ),
+          zoneId: formData.zoneId,
+          title,
+          kind: formData.kind,
+          startsAt,
+          endsAt,
+          capacity: Number(formData.capacity),
+          trainerId: formData.trainerId ? formData.trainerId : null,
+          bookedCount,
+        }
       }
 
-      await repo.upsertSession(sessionPayload)
+      if (!repeating) {
+        const sessionId = formData.id || createId('ses')
+        const existingSession = data.sessions.find((s) => s.id === sessionId)
+        await repo.upsertSession(
+          buildPayload(formData.date, sessionId, existingSession?.bookedCount ?? 0, existingSession?.templateId),
+        )
+        await refresh()
+        setIsModalOpen(false)
+        return
+      }
+
+      // Programación en bloque: se omiten las clases que ya existen (misma área, hora y título).
+      // Supabase devuelve la hora como «…+00:00» y la nueva sale como «….000Z»: se compara el instante.
+      const sessionKey = (zoneId: string, startsAt: string, sessionTitle: string) =>
+        `${zoneId}|${new Date(startsAt).getTime()}|${sessionTitle.trim().toLowerCase()}`
+      const existingKeys = new Set(data.sessions.map((s) => sessionKey(s.zoneId, s.startsAt, s.title)))
+      let created = 0
+      let skipped = 0
+      for (const ymd of dates) {
+        const payload = buildPayload(ymd, createId('ses'), 0)
+        if (existingKeys.has(sessionKey(payload.zoneId, payload.startsAt, title))) {
+          skipped += 1
+          continue
+        }
+        await repo.upsertSession(payload)
+        created += 1
+      }
       await refresh()
       setIsModalOpen(false)
+      setNotice(
+        `Se programaron ${created} ${created === 1 ? 'clase' : 'clases'}` +
+          (skipped > 0 ? ` (${skipped} ya existían y se omitieron).` : '.'),
+      )
     } catch (err) {
       setFormError(
         err instanceof Error ? err.message : 'Error al guardar la sesión.',
@@ -249,9 +317,7 @@ export function SessionsPage() {
           title="Acceso exclusivo para Staff y Administradores"
           description="La gestión de clases y programación de sesiones está reservada para el equipo de administración y recepción."
           action={
-            <Link to="/agenda">
-              <Button>Ver Agenda de Clases</Button>
-            </Link>
+            <ButtonLink to="/agenda">Ver Agenda de Clases</ButtonLink>
           }
         />
       </div>
@@ -261,16 +327,13 @@ export function SessionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Gestión de Sesiones y Clases"
-        subtitle="Programa horarios, instructores, cupos y disciplinas en Zona Cero sin tocar código"
+        title="Sesiones"
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Link to="/admin">
-              <Button variant="ghost" className="gap-2">
+            <ButtonLink to="/admin" variant="ghost" className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 Panel Admin
-              </Button>
-            </Link>
+              </ButtonLink>
             <Button
               variant="primary"
               onClick={handleOpenCreate}
@@ -282,6 +345,26 @@ export function SessionsPage() {
           </div>
         }
       />
+
+      {notice ? (
+        <div
+          role="status"
+          className="flex items-start justify-between gap-3 rounded-2xl border border-success/40 bg-success-soft p-3 text-sm font-medium text-ink"
+        >
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+            {notice}
+          </span>
+          <button
+            type="button"
+            onClick={() => setNotice(null)}
+            aria-label="Cerrar aviso"
+            className="rounded-lg p-0.5 text-ink-3 hover:text-ink"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
 
       {/* Filter and Search Bar */}
       <Card className="p-4 bg-bg-2">
@@ -333,7 +416,7 @@ export function SessionsPage() {
               setZoneFilter('all')
               setSelectedDateFilter('')
             }}
-            className="text-acc font-bold hover:underline"
+            className="text-acc-dark font-bold hover:underline"
           >
             Limpiar filtros
           </button>
@@ -378,10 +461,10 @@ export function SessionsPage() {
                         <Icon className="h-4 w-4" />
                       </div>
                       <div>
-                        <h3 className="font-black text-ink text-sm">
+                        <h2 className="font-black text-ink text-sm">
                           {session.title}
-                        </h3>
-                        <span className="text-[11px] text-ink-3">
+                        </h2>
+                        <span className="text-xs text-ink-3">
                           {zone?.name ?? meta.name}
                         </span>
                       </div>
@@ -393,7 +476,7 @@ export function SessionsPage() {
                   <div className="space-y-1.5 rounded-2xl bg-bg p-3 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-ink-3 flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-acc" />
+                        <Calendar className="h-3.5 w-3.5 text-acc-dark" />
                         Fecha:
                       </span>
                       <span className="font-bold text-ink">
@@ -403,7 +486,7 @@ export function SessionsPage() {
 
                     <div className="flex items-center justify-between">
                       <span className="text-ink-3 flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-acc" />
+                        <Clock className="h-3.5 w-3.5 text-acc-dark" />
                         Horario:
                       </span>
                       <span className="font-bold text-ink">
@@ -414,7 +497,7 @@ export function SessionsPage() {
 
                     <div className="flex items-center justify-between">
                       <span className="text-ink-3 flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5 text-acc" />
+                        <Users className="h-3.5 w-3.5 text-acc-dark" />
                         Instructor:
                       </span>
                       <span className="font-bold text-ink">
@@ -435,7 +518,7 @@ export function SessionsPage() {
                 <div className="border-t border-line pt-2.5 flex flex-wrap items-center justify-between gap-2">
                   <Button
                     variant="secondary"
-                    className="text-xs py-1 px-2.5 h-7 gap-1 text-acc border-acc/30 hover:bg-acc/10"
+                    className="text-xs py-1 px-2.5 h-7 gap-1 text-acc-dark border-acc/30 hover:bg-acc/10"
                     onClick={() => setStaffBookingSession(session)}
                     title="Reservar en nombre de un socio"
                   >
@@ -471,8 +554,8 @@ export function SessionsPage() {
 
       {/* CREATE / EDIT SESSION MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-line bg-bg-2 p-6 shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 backdrop-blur-xs sm:items-center sm:p-4">
+          <div className="relative w-full max-w-lg max-h-[calc(100dvh-1rem)] overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-bg-2 p-5 shadow-2xl space-y-5 sm:max-h-[90dvh] sm:rounded-3xl sm:p-6">
             <button
               type="button"
               onClick={() => !submitting && setIsModalOpen(false)}
@@ -482,7 +565,7 @@ export function SessionsPage() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/10 text-acc">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acc/10 text-acc-dark">
                 <Calendar className="h-5 w-5" />
               </div>
               <div>
@@ -557,7 +640,7 @@ export function SessionsPage() {
               {/* Date & Start Time */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input
-                  label="Fecha (YYYY-MM-DD)"
+                  label={isEditing ? 'Fecha' : 'Fecha de inicio'}
                   type="date"
                   value={formData.date}
                   onChange={(e) =>
@@ -576,6 +659,65 @@ export function SessionsPage() {
                   required
                 />
               </div>
+
+              {/* Repeat range (solo al crear) */}
+              {!isEditing ? (
+                <div className="space-y-3 rounded-2xl border border-line bg-surface p-3">
+                  <Input
+                    label="Repetir hasta (opcional)"
+                    type="date"
+                    min={formData.date}
+                    value={formData.endDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, endDate: e.target.value })
+                    }
+                    hint="Déjalo vacío para programar un solo día. Con fecha final se crea la misma clase, a la misma hora, en cada día elegido."
+                  />
+                  {formData.endDate ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink-3">
+                          Días de la semana
+                        </span>
+                        <div className="grid grid-cols-7 gap-1.5">
+                          {[1, 2, 3, 4, 5, 6, 0].map((day) => {
+                            const active = formData.weekdays.includes(day)
+                            return (
+                              <button
+                                key={day}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() =>
+                                  setFormData({
+                                    ...formData,
+                                    weekdays: active
+                                      ? formData.weekdays.filter((d) => d !== day)
+                                      : [...formData.weekdays, day],
+                                  })
+                                }
+                                className={`focus-ring rounded-xl py-2 text-xs font-bold transition ${
+                                  active
+                                    ? 'bg-cta text-cta-contrast'
+                                    : 'bg-bg text-ink-2 border border-line'
+                                }`}
+                              >
+                                {WEEKDAY_LABELS[day]}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      <p className="text-xs font-semibold text-ink-2">
+                        {rangeDays(formData.date, formData.endDate) === 0
+                          ? 'La fecha final debe ser posterior al inicio.'
+                          : `Se programarán ${
+                              expandSessionDates(formData.date, formData.endDate, formData.weekdays).length
+                            } clases.`}
+                      </p>
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
 
               {/* Duration and Capacity */}
               <div className="grid gap-3 sm:grid-cols-2">
@@ -617,7 +759,7 @@ export function SessionsPage() {
               ) : null}
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="sticky -bottom-5 -mx-5 flex justify-end gap-3 border-t border-line bg-bg-2 px-5 pb-5 pt-3 sm:-bottom-6 sm:-mx-6 sm:px-6 sm:pb-6">
                 <Button
                   type="button"
                   variant="ghost"

@@ -203,7 +203,7 @@ export function WeightPage() {
       {isStaff && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 shadow-md">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-acc/15 text-acc">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-acc/15 text-acc-dark">
               <Users className="h-4 w-4" />
             </div>
             <div>
@@ -211,7 +211,7 @@ export function WeightPage() {
                 Panel de Entrenador / Staff
               </span>
               <p className="text-xs font-semibold text-ink-2">
-                Visualizando a: <strong className="text-acc">{targetMember.fullName}</strong>
+                Visualizando a: <strong className="text-acc-dark">{targetMember.fullName}</strong>
               </p>
             </div>
           </div>
@@ -260,7 +260,7 @@ export function WeightPage() {
       <div>
         <div className="mb-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Scale className="h-4 w-4 text-acc" />
+            <Scale className="h-4 w-4 text-acc-dark" />
             <h3 className="text-base font-extrabold text-ink">
               Historial de Mediciones
             </h3>
@@ -271,7 +271,7 @@ export function WeightPage() {
               setEditingMeasurement(null)
               setIsMeasurementModalOpen(true)
             }}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-acc hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-acc-dark hover:underline"
           >
             <Plus className="h-3.5 w-3.5" />
             Agregar registro

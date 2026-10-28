@@ -6,6 +6,8 @@ import type {
   ClassTemplate,
   GymSettings,
   GymState,
+  LegalConsentContext,
+  LegalConsentInput,
   ManualPaymentMethod,
   Membership,
   MembershipPlan,
@@ -21,15 +23,41 @@ import {
   canBookSession,
   canManageGoals,
   canManageWeight,
+  activeDayPasses,
   computeMembershipStatus,
-  extendMembership,
+  currentMembership,
   hasOverlap,
+  isDayPassPlan,
+  memberMembership,
+  planChangeCredit,
+  planPurchaseDates,
+  planPurchaseOutcome,
+  queuedMembership,
+  shiftQueuedMembership,
   isCheckInWindow,
   nextWaitlistPosition,
   pickWaitlistPromotion,
   reindexWaitlist,
+  RESCHEDULE_FULL_MESSAGE,
+  seatsTaken,
 } from '../domain/rules'
-import type { AuthCredentials, GymRepository } from './types'
+import {
+  SESSION_FULL_MESSAGE,
+  assertPlanSellableInApp,
+  isFeatureEnabled,
+  resolveRequestReference,
+} from '../domain/rules'
+import { RECOVERY_CODE_INVALID, RECOVERY_CODE_TTL_MS } from '../domain/rules/password'
+import { anonymizeDeletedMemberPayments } from '../domain/rules/accountDeletion'
+import { readPdfDataUrl, validateTermsPdf } from '../domain/rules/termsDocument'
+import { recurringRenewalFrom } from '../domain/rules/recurringRenewal'
+import { DISCARDED_REQUEST_NOTE } from '../domain/rules/planRequest'
+import type {
+  AuthCredentials,
+  GymRepository,
+  OnlinePaymentResult,
+  PagomediosDocumentType,
+} from './types'
 import { createSeedState, DEMO_PASSWORD } from './seed'
 import {
   hashSecret,
@@ -47,8 +75,24 @@ import {
 const STORAGE_KEY = 'reservasgym.intermedia.v2'
 const SESSION_KEY = 'reservasgym.session.v2'
 const CREDS_KEY = 'reservasgym.creds.v1'
-/** Solo demo: simula el enlace de recuperación que en prod manda Supabase. */
-const RECOVERY_KEY = 'reservasgym.recovery.v1'
+/** Solo demo: simula el código de recuperación que en prod llega por correo. */
+const RECOVERY_KEY = 'reservasgym.recovery.v2'
+
+type RecoveryPayload = { userId: string; code: string; expiresAt: number }
+
+function readRecovery(): RecoveryPayload | null {
+  try {
+    const raw = localStorage.getItem(RECOVERY_KEY)
+    return raw ? (JSON.parse(raw) as RecoveryPayload) : null
+  } catch {
+    return null
+  }
+}
+
+function newRecoveryCode(): string {
+  const n = crypto.getRandomValues(new Uint32Array(1))[0]! % 1_000_000
+  return String(n).padStart(6, '0')
+}
 /** Legacy key — cleared so plain user-id sessions cannot be forged. */
 const LEGACY_SESSION_KEY = 'reservasgym.sessionUserId'
 
@@ -162,7 +206,18 @@ export class LocalRepository implements GymRepository {
   }
 
   private persistState() {
+    this.assignReceiptNumbers()
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state))
+  }
+
+  /** Igual que la secuencia de la base: por fecha de creación, sin repetir números. */
+  private assignReceiptNumbers() {
+    const payments = this.state.payments ?? []
+    let last = payments.reduce((max, p) => Math.max(max, p.receiptNumber ?? 0), 0)
+    const missing = payments
+      .filter((p) => p.receiptNumber == null)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    for (const payment of missing) payment.receiptNumber = ++last
   }
 
   private persistSession() {
@@ -261,6 +316,20 @@ export class LocalRepository implements GymRepository {
     return { ...user }
   }
 
+  private pushConsents(userId: string, context: LegalConsentContext, consents: LegalConsentInput[]) {
+    if (!this.state.legalConsents) this.state.legalConsents = []
+    const acceptedAt = new Date().toISOString()
+    for (const c of consents) {
+      this.state.legalConsents.push({ id: uid('consent'), userId, context, acceptedAt, ...c })
+    }
+  }
+
+  async recordLegalConsents(context: LegalConsentContext, consents: LegalConsentInput[]): Promise<void> {
+    const user = await this.requireUser()
+    this.pushConsents(user.id, context, consents)
+    this.persistState()
+  }
+
   async signUp(creds: AuthCredentials): Promise<User> {
     await this.ensureReady()
     if (!creds.fullName?.trim()) throw new Error('Nombre requerido')
@@ -292,6 +361,7 @@ export class LocalRepository implements GymRepository {
     }
     writeCreds(store)
     this.state.users.push(user)
+    this.pushConsents(user.id, 'signup', creds.consents ?? [])
 
     if (user.initialWeightKg && user.initialWeightKg > 0) {
       this.state.measurements.push({
@@ -344,22 +414,56 @@ export class LocalRepository implements GymRepository {
       // registrados permitiría enumerar socios.
       return
     }
-    // En demo no hay correo. Se marca al usuario como "en recuperación"
-    // para que /recuperar pueda simular el flujo completo sin Supabase.
-    localStorage.setItem(RECOVERY_KEY, user.id)
+    // En demo no hay correo: el código queda guardado y la pantalla lo muestra
+    // (peekRecoveryCode). Pedir otro reemplaza al anterior.
+    const payload: RecoveryPayload = {
+      userId: user.id,
+      code: newRecoveryCode(),
+      expiresAt: Date.now() + RECOVERY_CODE_TTL_MS,
+    }
+    localStorage.setItem(RECOVERY_KEY, JSON.stringify(payload))
+  }
+
+  /** Solo demo: el código que en producción llegaría por correo. */
+  peekRecoveryCode(): string | null {
+    return readRecovery()?.code ?? null
+  }
+
+  async completePasswordReset(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<void> {
+    await this.ensureReady()
+    const recovery = readRecovery()
+    const user = this.state.users.find(
+      (u) => u.email.toLowerCase() === email.trim().toLowerCase(),
+    )
+    const valid =
+      recovery !== null &&
+      user !== undefined &&
+      recovery.userId === user.id &&
+      recovery.code === code.trim() &&
+      Date.now() <= recovery.expiresAt
+    if (!valid) throw new Error(RECOVERY_CODE_INVALID)
+    await this.writePassword(user.id, newPassword)
+    // Un solo uso, y sin sesión: el socio entra desde el login con la clave nueva.
+    localStorage.removeItem(RECOVERY_KEY)
+    this.clearSession()
+    this.persistState()
   }
 
   async updatePassword(newPassword: string): Promise<void> {
     await this.ensureReady()
-
-    // Puede venir de una sesión normal (cambio desde el perfil) o de una
-    // sesión de recuperación (volviendo del enlace).
-    const recoveringId = localStorage.getItem(RECOVERY_KEY)
-    const session = readSession()
-    const userId = recoveringId ?? session?.userId
-
+    const userId = readSession()?.userId
     if (!userId) throw new Error('No hay sesión activa')
+    await this.writePassword(userId, newPassword)
+    // Se vuelve a abrir la sesión de este dispositivo; las demás quedan cerradas.
+    await this.setSession(userId)
+    this.persistState()
+  }
 
+  private async writePassword(userId: string, newPassword: string): Promise<void> {
     const user = this.state.users.find((u) => u.id === userId)
     if (!user) throw new Error('Usuario no encontrado')
 
@@ -373,30 +477,22 @@ export class LocalRepository implements GymRepository {
       sessionToken: null,
     }
     writeCreds(creds)
-
-    localStorage.removeItem(RECOVERY_KEY)
-    // Deja la sesión abierta: tras fijar la contraseña el socio entra directo.
-    await this.setSession(userId)
-    this.persistState()
-  }
-
-  async hasRecoverySession(): Promise<boolean> {
-    await this.ensureReady()
-    return localStorage.getItem(RECOVERY_KEY) !== null
   }
 
   async deleteAccount(): Promise<void> {
     const actor = await this.requireUser()
     const userId = actor.id
 
-    // Remove user bookings, waitlist, check-ins, measurements, body goals, memberships, payments, and profile (Apple 5.1.1(v) & Google Play)
+    // Remove user bookings, waitlist, check-ins, measurements, body goals, memberships, consents and profile (Apple 5.1.1(v) & Google Play).
+    // Approved payments stay anonymized for accounting (accountDeletion.ts).
     this.state.bookings = this.state.bookings.filter((b) => b.userId !== userId)
     this.state.waitlist = this.state.waitlist.filter((w) => w.userId !== userId)
     this.state.checkIns = this.state.checkIns.filter((c) => c.userId !== userId)
     this.state.measurements = this.state.measurements.filter((m) => m.userId !== userId)
     this.state.bodyGoals = (this.state.bodyGoals ?? []).filter((g) => g.userId !== userId)
     this.state.memberships = (this.state.memberships ?? []).filter((m) => m.userId !== userId)
-    this.state.payments = (this.state.payments ?? []).filter((p) => p.userId !== userId)
+    this.state.payments = anonymizeDeletedMemberPayments(this.state.payments ?? [], userId)
+    this.state.legalConsents = (this.state.legalConsents ?? []).filter((c) => c.userId !== userId)
     this.state.users = this.state.users.filter((u) => u.id !== userId)
 
     const creds = readCreds()
@@ -416,6 +512,7 @@ export class LocalRepository implements GymRepository {
     if (patch.fullName !== undefined) user.fullName = patch.fullName.trim()
     if (patch.birthDate !== undefined) user.birthDate = patch.birthDate.trim() || undefined
     if (patch.residence !== undefined) user.residence = patch.residence.trim() || undefined
+    if (patch.phone !== undefined) user.phone = patch.phone.trim() || undefined
     if (patch.heightCm !== undefined) user.heightCm = patch.heightCm ? Number(patch.heightCm) : undefined
     if (patch.initialWeightKg !== undefined) {
       user.initialWeightKg = patch.initialWeightKg ? Number(patch.initialWeightKg) : undefined
@@ -440,10 +537,21 @@ export class LocalRepository implements GymRepository {
 
   async updateSettings(patch: Partial<GymSettings>): Promise<GymSettings> {
     const actor = await this.requireUser()
-    if (actor.role === 'member') throw new Error('Sin permiso')
+    if (actor.role !== 'admin') throw new Error('Solo admin')
     this.state.settings = { ...this.state.settings, ...patch }
     this.persistState()
     return { ...this.state.settings }
+  }
+
+  async publishTermsPdf(file: File, version: string): Promise<GymSettings> {
+    const actor = await this.requireUser()
+    if (actor.role !== 'admin') throw new Error('Solo admin')
+    await validateTermsPdf(file, version)
+    return this.updateSettings({
+      termsPdfUrl: await readPdfDataUrl(file),
+      termsVersion: version.trim(),
+      termsUpdatedAt: new Date().toISOString(),
+    })
   }
 
   async listZones(): Promise<Zone[]> {
@@ -539,6 +647,9 @@ export class LocalRepository implements GymRepository {
     }
     const session = this.state.sessions.find((s) => s.id === sessionId)
     if (!session) throw new Error('Sesión no encontrada')
+    if (actor.role === 'member' && new Date(session.startsAt).getTime() <= Date.now()) {
+      throw new Error('Esa clase ya empezó')
+    }
 
     const already = this.state.bookings.find(
       (b) =>
@@ -554,12 +665,15 @@ export class LocalRepository implements GymRepository {
 
     const subject = this.state.users.find((u) => u.id === userId)
     if (subject?.role === 'member' || actor.role === 'member') {
-      const allowed = this.memberBookingAllowed(userId, session.zoneId)
+      const allowed = this.memberBookingAllowed(userId, session.zoneId, session.startsAt)
       if (!allowed.ok) throw new Error(allowed.reason)
     }
 
     const capacity = canBookSession(session, this.state.bookings)
     if (!capacity.ok) {
+      if (!isFeatureEnabled(this.state.settings, 'waitlist')) {
+        throw new Error(SESSION_FULL_MESSAGE)
+      }
       const entry: WaitlistEntry = {
         id: uid('wl'),
         sessionId,
@@ -592,9 +706,7 @@ export class LocalRepository implements GymRepository {
       checkInCode: uid('QR').toUpperCase(),
     }
     this.state.bookings.push(booking)
-    session.bookedCount = this.state.bookings.filter(
-      (b) => b.sessionId === sessionId && b.status === 'confirmed',
-    ).length
+    session.bookedCount = seatsTaken(this.state.bookings, sessionId)
     this.persistState()
     return { ...booking }
   }
@@ -619,20 +731,61 @@ export class LocalRepository implements GymRepository {
 
     const session = this.state.sessions.find((s) => s.id === booking.sessionId)
     if (session) {
-      session.bookedCount = this.state.bookings.filter(
-        (b) => b.sessionId === session.id && b.status === 'confirmed',
-      ).length
+      session.bookedCount = seatsTaken(this.state.bookings, session.id)
     }
     this.persistState()
     return { ...booking }
   }
 
-  private memberBookingAllowed(userId: string, zoneId: string) {
-    const membership = (this.state.memberships ?? []).find((m) => m.userId === userId)
-    const plan = membership
-      ? (this.state.membershipPlans ?? []).find((p) => p.id === membership.planId)
-      : undefined
-    return assertMemberBookingAllowed(membership, plan, zoneId)
+  /** Plan vigente + pases del día activos que cubren la clase (empieza antes de que venza el pase). */
+  private memberBookingAllowed(userId: string, zoneId: string, sessionStartsAt?: string) {
+    const now = new Date()
+    const plans = this.state.membershipPlans ?? []
+    const mine = (this.state.memberships ?? []).filter((m) => m.userId === userId)
+    const membership = memberMembership(mine, plans, now)
+    const plan = membership ? plans.find((p) => p.id === membership.planId) : undefined
+    const passPlans = activeDayPasses(mine, plans, now)
+      .filter((pass) => !sessionStartsAt || new Date(pass.endsAt) >= new Date(sessionStartsAt))
+      .flatMap((pass) => plans.filter((p) => p.id === pass.planId))
+    return assertMemberBookingAllowed(membership, plan, zoneId, passPlans, now)
+  }
+
+  /** Aplica la compra según planPurchaseOutcome y devuelve la fila resultante. */
+  private applyPlanPurchase(userId: string, plan: MembershipPlan, now: Date): Membership {
+    if (!this.state.memberships) this.state.memberships = []
+    const all = this.state.memberships
+    const plans = this.state.membershipPlans ?? []
+    const outcome = planPurchaseOutcome({
+      memberships: all.filter((m) => m.userId === userId),
+      plans,
+      plan,
+      now,
+    })
+    if (outcome.kind === 'reject') throw new Error(outcome.reason)
+    const { shiftedQueued, ...dates } = planPurchaseDates(outcome, plan, now)
+
+    if (shiftedQueued) {
+      const idx = all.findIndex((m) => m.id === shiftedQueued.id)
+      if (idx >= 0) all[idx] = { ...all[idx]!, ...shiftedQueued }
+    }
+
+    let row: Membership
+    if (outcome.kind === 'extend') {
+      const idx = all.findIndex((m) => m.id === outcome.target.id)
+      row = { ...all[idx]!, ...dates, status: 'active' }
+      all[idx] = row
+    } else {
+      row = {
+        id: uid('mem'),
+        userId,
+        planId: plan.id,
+        ...dates,
+        status: 'active',
+        createdAt: now.toISOString(),
+      }
+      all.push(row)
+    }
+    return { ...row, status: computeMembershipStatus(row, now) }
   }
 
   /**
@@ -650,7 +803,7 @@ export class LocalRepository implements GymRepository {
           return false
         }
         const subject = this.state.users.find((u) => u.id === entry.userId)
-        return subject?.role !== 'member' || this.memberBookingAllowed(entry.userId, session.zoneId).ok
+        return subject?.role !== 'member' || this.memberBookingAllowed(entry.userId, session.zoneId, session.startsAt).ok
       },
     )
 
@@ -690,38 +843,66 @@ export class LocalRepository implements GymRepository {
     bookingId: string,
     newSessionId: string,
   ): Promise<Booking> {
+    // Igual que reschedule_booking en SQL: se valida todo en la sesión nueva
+    // antes de tocar la reserva original, así un fallo no deja nada a medias.
+    const actor = await this.requireUser()
     const old = this.state.bookings.find((b) => b.id === bookingId)
     if (!old) throw new Error('Reserva no encontrada')
+    if (actor.role === 'member' && old.userId !== actor.id) throw new Error('Sin permiso')
     const next = this.state.sessions.find((s) => s.id === newSessionId)
     if (!next) throw new Error('Sesión no encontrada')
     if (new Date(next.startsAt).getTime() <= Date.now()) {
       throw new Error('Esa clase ya empezó')
     }
-    const previousStatus = old.status
-    await this.cancelBooking(bookingId)
-    try {
-    const actor = await this.requireUser()
-    const userId = old.userId ?? actor.id
-    const result = await this.createBooking(newSessionId, userId)
-    if ('position' in result) {
-      throw new Error('La nueva sesión está llena; quedaste en lista de espera')
+    const userId = old.userId
+    if (!['confirmed', 'pending', 'waitlisted'].includes(old.status)) {
+      throw new Error('Esta reserva ya no está activa')
     }
-    return result
-    } catch (error) {
-      const current = this.state.bookings.find((b) => b.id === bookingId)
-      if (current?.status === 'cancelled') {
-        current.status = previousStatus
-        current.cancelledAt = null
-        const session = this.state.sessions.find((s) => s.id === current.sessionId)
-        if (session) {
-          session.bookedCount = this.state.bookings.filter(
-            (b) => b.sessionId === session.id && b.status === 'confirmed',
-          ).length
-        }
-        this.persistState()
+    const already = this.state.bookings.some(
+      (b) =>
+        b.sessionId === newSessionId &&
+        b.userId === userId &&
+        (b.status === 'confirmed' || b.status === 'pending' || b.status === 'waitlisted'),
+    )
+    if (already) throw new Error('Ya tienes reserva en esta sesión')
+    if (hasOverlap(this.state.sessions, this.state.bookings, userId, next, old.id)) {
+      throw new Error('Se solapa con otra reserva activa')
+    }
+    if (this.state.users.find((u) => u.id === userId)?.role === 'member') {
+      const allowed = this.memberBookingAllowed(userId, next.zoneId, next.startsAt)
+      if (!allowed.ok) throw new Error(allowed.reason)
+    }
+    if (!canBookSession(next, this.state.bookings).ok) {
+      throw new Error(RESCHEDULE_FULL_MESSAGE)
+    }
+
+    // Todo validado: recién ahora se mueve. No hay nada que deshacer.
+    const now = new Date().toISOString()
+    const wasConfirmed = old.status === 'confirmed'
+    old.status = 'cancelled'
+    old.cancelledAt = now
+    this.state.waitlist = this.state.waitlist.filter(
+      (w) => !(w.sessionId === old.sessionId && w.userId === userId),
+    )
+    const booking: Booking = {
+      id: uid('bk'),
+      sessionId: newSessionId,
+      userId,
+      status: 'confirmed',
+      createdAt: now,
+      cancelledAt: null,
+      checkInCode: uid('QR').toUpperCase(),
+    }
+    this.state.bookings.push(booking)
+    if (wasConfirmed) this.promoteFromWaitlist(old.sessionId)
+    this.state.waitlist = reindexWaitlist(this.state.waitlist, old.sessionId)
+    for (const session of this.state.sessions) {
+      if (session.id === old.sessionId || session.id === newSessionId) {
+        session.bookedCount = seatsTaken(this.state.bookings, session.id)
       }
-      throw error
     }
+    this.persistState()
+    return { ...booking }
   }
 
   async checkIn(bookingId: string, code: string): Promise<CheckIn> {
@@ -934,6 +1115,7 @@ export class LocalRepository implements GymRepository {
   ): Promise<MembershipPlan> {
     const actor = await this.requireUser()
     if (actor.role === 'member') throw new Error('Sin permiso')
+    if (actor.role !== 'admin') throw new Error('Solo admin')
     if (!this.state.membershipPlans) this.state.membershipPlans = []
     const existingIdx = plan.id
       ? this.state.membershipPlans.findIndex((p) => p.id === plan.id)
@@ -947,6 +1129,7 @@ export class LocalRepository implements GymRepository {
       visitQuota: plan.visitQuota !== undefined ? plan.visitQuota : (existing?.visitQuota ?? null),
       allowedZoneIds: plan.allowedZoneIds ?? existing?.allowedZoneIds ?? [],
       active: plan.active !== undefined ? plan.active : (existing?.active ?? true),
+      kind: plan.kind ?? existing?.kind ?? 'membership',
       createdAt: existing?.createdAt ?? new Date().toISOString(),
     }
     if (existingIdx >= 0) {
@@ -968,24 +1151,12 @@ export class LocalRepository implements GymRepository {
   async getMemberMembership(userId: string): Promise<Membership | null> {
     await this.ensureReady()
     const userMemberships = (this.state.memberships ?? []).filter((m) => m.userId === userId)
-    if (userMemberships.length === 0) return null
-    const active = userMemberships.find((m) => {
-      const s = computeMembershipStatus(m)
-      return s === 'active' || s === 'grace'
-    })
-    if (active) {
-      return { ...active, status: computeMembershipStatus(active) }
-    }
-    const sorted = [...userMemberships].sort(
-      (a, b) => new Date(b.endsAt).getTime() - new Date(a.endsAt).getTime(),
-    )
-    const latest = sorted[0]
-    if (!latest) return null
-    return { ...latest, status: computeMembershipStatus(latest) }
+    return memberMembership(userMemberships, this.state.membershipPlans ?? [])
   }
 
   async getMemberPayments(userId: string): Promise<Payment[]> {
     await this.ensureReady()
+    this.assignReceiptNumbers()
     return (this.state.payments ?? [])
       .filter((p) => p.userId === userId)
       .map((p) => ({ ...p }))
@@ -1011,6 +1182,7 @@ export class LocalRepository implements GymRepository {
 
   async listPayments(): Promise<Payment[]> {
     await this.ensureReady()
+    this.assignReceiptNumbers()
     const actor = this.currentUserId
       ? (this.state.users.find((u) => u.id === this.currentUserId) ?? null)
       : null
@@ -1026,6 +1198,8 @@ export class LocalRepository implements GymRepository {
   async requestPlanPayment(params: {
     planId: string
     manualMethod: ManualPaymentMethod
+    reference?: string
+    termsVersion: string
   }): Promise<Payment> {
     const actor = await this.requireUser()
     if (actor.role !== 'member') {
@@ -1035,6 +1209,13 @@ export class LocalRepository implements GymRepository {
       (p) => p.id === params.planId && p.active,
     )
     if (!plan) throw new Error('Plan no encontrado')
+    assertPlanSellableInApp(plan, this.state.settings)
+    const outcome = planPurchaseOutcome({
+      memberships: (this.state.memberships ?? []).filter((m) => m.userId === actor.id),
+      plans: this.state.membershipPlans ?? [],
+      plan,
+    })
+    if (outcome.kind === 'reject') throw new Error(outcome.reason)
     if (!this.state.payments) this.state.payments = []
 
     const existingIdx = this.state.payments.findIndex(
@@ -1054,7 +1235,8 @@ export class LocalRepository implements GymRepository {
       status: 'pending',
       provider: 'manual',
       manualMethod: params.manualMethod,
-      reference: null,
+      reference: resolveRequestReference(existing?.reference, params.reference),
+      receiptNumber: existing?.receiptNumber,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       approvedAt: null,
     }
@@ -1080,43 +1262,18 @@ export class LocalRepository implements GymRepository {
     const plan = (this.state.membershipPlans ?? []).find((p) => p.id === params.planId)
     if (!plan) throw new Error('Plan no encontrado')
 
-    const currentMembership = await this.getMemberMembership(params.userId)
-    const newDates = extendMembership(currentMembership, plan, new Date())
-
-    if (!this.state.memberships) this.state.memberships = []
+    await this.ensureReady()
+    const now = new Date()
+    const paidAt =
+      params.manualMethod === 'pagomedios_recurring'
+        ? recurringRenewalFrom(
+            (this.state.memberships ?? []).filter((m) => m.userId === params.userId),
+            plan,
+            now,
+          )
+        : now
+    const membership = this.applyPlanPurchase(params.userId, plan, paidAt)
     if (!this.state.payments) this.state.payments = []
-
-    let membership: Membership
-    const existingIdx = currentMembership
-      ? this.state.memberships.findIndex((m) => m.id === currentMembership.id)
-      : -1
-
-    if (existingIdx >= 0) {
-      const existing = this.state.memberships[existingIdx]!
-      membership = {
-        ...existing,
-        planId: plan.id,
-        startsAt: newDates.startsAt,
-        endsAt: newDates.endsAt,
-        graceEndsAt: newDates.graceEndsAt,
-        status: newDates.status,
-        visitsLeft: newDates.visitsLeft,
-      }
-      this.state.memberships[existingIdx] = membership
-    } else {
-      membership = {
-        id: uid('mem'),
-        userId: params.userId,
-        planId: plan.id,
-        startsAt: newDates.startsAt,
-        endsAt: newDates.endsAt,
-        graceEndsAt: newDates.graceEndsAt,
-        status: newDates.status,
-        visitsLeft: newDates.visitsLeft,
-        createdAt: new Date().toISOString(),
-      }
-      this.state.memberships.push(membership)
-    }
 
     const pendingIdx = this.state.payments.findIndex(
       (p) =>
@@ -1136,6 +1293,7 @@ export class LocalRepository implements GymRepository {
       provider: 'manual',
       manualMethod: params.manualMethod,
       reference: params.reference ?? pending?.reference ?? null,
+      receiptNumber: pending?.receiptNumber,
       createdAt: pending?.createdAt ?? new Date().toISOString(),
       approvedAt: new Date().toISOString(),
     }
@@ -1152,26 +1310,116 @@ export class LocalRepository implements GymRepository {
     }
   }
 
-  async createOnlineCheckout(_params: {
+  async changePlanNow(params: {
+    userId: string
     planId: string
+    amountCents: number
+    manualMethod: ManualPaymentMethod
+  }): Promise<{ payment: Payment; membership: Membership }> {
+    const actor = await this.requireUser()
+    if (actor.role === 'member') throw new Error('Sin permiso')
+    const plans = this.state.membershipPlans ?? []
+    const plan = plans.find((p) => p.id === params.planId)
+    if (!plan) throw new Error('Plan no encontrado')
+    if (isDayPassPlan(plan)) throw new Error('Un pase del día no reemplaza al plan.')
+
+    const now = new Date()
+    const all = (this.state.memberships ??= [])
+    const mine = all.filter((m) => m.userId === params.userId)
+    const current = currentMembership(mine, plans, now)
+    if (!current) throw new Error('El socio no tiene un plan vigente para cambiar.')
+    if (current.planId === plan.id) throw new Error('El socio ya tiene ese plan. Usa Renovar.')
+    const queued = queuedMembership(mine, plans, now)
+    const currentPlan = plans.find((p) => p.id === current.planId)
+    const credit = planChangeCredit(current, currentPlan, now)
+
+    const curIdx = all.findIndex((m) => m.id === current.id)
+    all[curIdx] = { ...all[curIdx]!, endsAt: now.toISOString(), graceEndsAt: now.toISOString() }
+
+    const membership: Membership = {
+      id: uid('mem'),
+      userId: params.userId,
+      planId: plan.id,
+      ...planPurchaseDates({ kind: 'new', startsAt: now.toISOString() }, plan, now),
+      status: 'active',
+      createdAt: now.toISOString(),
+    }
+    all.push(membership)
+
+    if (queued) {
+      const qIdx = all.findIndex((m) => m.id === queued.id)
+      all[qIdx] = { ...all[qIdx]!, ...shiftQueuedMembership(queued, membership.endsAt) }
+    }
+
+    const payment: Payment = {
+      id: uid('pay'),
+      userId: params.userId,
+      planId: plan.id,
+      membershipId: membership.id,
+      amountCents: params.amountCents,
+      status: 'approved',
+      provider: 'manual',
+      manualMethod: params.manualMethod,
+      reference: null,
+      notes: `Cambio de plan: ${currentPlan?.name ?? current.planId} → ${plan.name}. Crédito por días no usados: $${(credit / 100).toFixed(2)}.`,
+      createdAt: now.toISOString(),
+      approvedAt: now.toISOString(),
+    }
+    ;(this.state.payments ??= []).push(payment)
+    this.persistState()
+    return { payment: { ...payment }, membership: { ...membership } }
+  }
+
+  async discardPlanRequest(paymentId: string): Promise<Payment> {
+    const actor = await this.requireUser()
+    if (actor.role === 'member') throw new Error('Sin permiso')
+    const payments = this.state.payments ?? []
+    const idx = payments.findIndex((p) => p.id === paymentId)
+    const current = payments[idx]
+    if (!current || current.status !== 'pending' || current.provider !== 'manual') {
+      throw new Error('La solicitud ya no está pendiente.')
+    }
+    const payment: Payment = { ...current, status: 'rejected', notes: DISCARDED_REQUEST_NOTE }
+    payments[idx] = payment
+    this.persistState()
+    return { ...payment }
+  }
+
+  async refundPayment(params: { paymentId: string; cancelMembership: boolean }): Promise<Payment> {
+    const actor = await this.requireUser()
+    if (actor.role === 'member') throw new Error('Sin permiso')
+    const payments = this.state.payments ?? []
+    const idx = payments.findIndex((p) => p.id === params.paymentId)
+    if (idx < 0) throw new Error('Pago no encontrado')
+    if (payments[idx]!.status !== 'approved') {
+      throw new Error('Solo se pueden reembolsar pagos aprobados.')
+    }
+    const payment: Payment = { ...payments[idx]!, status: 'refunded' }
+    payments[idx] = payment
+    if (params.cancelMembership && payment.membershipId) {
+      const all = this.state.memberships ?? []
+      const mIdx = all.findIndex((m) => m.id === payment.membershipId)
+      if (mIdx >= 0) all[mIdx] = { ...all[mIdx]!, status: 'cancelled' }
+    }
+    this.persistState()
+    return { ...payment }
+  }
+
+  async createPagomediosPayment(_params: {
+    planId: string
+    document: string
+    documentType: PagomediosDocumentType
     phone: string
-    identification: string
-    street?: string
-  }): Promise<{
-    checkoutId: string
-    paymentId: string
-    widgetScriptUrl: string
-    shopperResultUrl: string
-  }> {
+    address: string
+    native?: boolean
+    recurring?: boolean
+  }): Promise<{ url: string; paymentId: string }> {
     throw new Error(
-      'El pago en línea (Datafast) requiere el ambiente Supabase (QA). Usa recepción en modo local.',
+      'El pago en línea (Pagomedios) requiere el ambiente Supabase (QA). Usa recepción en modo local.',
     )
   }
 
-  async verifyOnlinePayment(_params: {
-    paymentId: string
-    resourcePath: string
-  }): Promise<{ ok: boolean; description?: string }> {
-    throw new Error('Verificación Datafast solo en Supabase.')
+  async verifyPagomediosPayment(_params: { paymentId: string }): Promise<OnlinePaymentResult> {
+    throw new Error('Verificación Pagomedios solo en Supabase.')
   }
 }

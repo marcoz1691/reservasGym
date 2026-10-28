@@ -1,15 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Lock, UserCheck } from 'lucide-react'
 import {
-  useAppData,
-  useCurrentUser,
-  useRefresh,
+  useGymStateQuery,
+  useInvalidateGymState,
   useRepo,
 } from '@/data/RepositoryProvider'
 import type { Booking, Session, WaitlistEntry } from '@/domain/models'
-import { selectMyMembership } from '@/app/store'
-import { canBookMembership, canBookZone } from '@/domain/rules'
+import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
+import { canAccessZone, canBookMembership, canBookZone, isFeatureEnabled } from '@/domain/rules'
 import { getDisciplineMeta, ZONA_CERO_DISCIPLINES } from '@/domain/disciplines'
 import { ecuadorTodayYmd, formatDateSpanish, formatEcuadorTime } from '@/lib/format'
 import {
@@ -21,6 +20,7 @@ import {
 import { Button, PageHeader } from '@/ui/primitives'
 import { ButtonLink } from '@/ui/ButtonLink'
 import { BookingGateModal, type BookingGateType } from '@/features/memberships'
+import { hapticSuccess } from '@/lib/haptics'
 import { StaffBookingModal } from './StaffBookingModal'
 
 const ACTIVE_BOOKING = new Set(['confirmed', 'pending', 'waitlisted'])
@@ -44,10 +44,10 @@ function mineOnSession(
 }
 
 export function AgendaPage() {
-  const data = useAppData()
-  const user = useCurrentUser()
+  const { data, user } = useGymStateQuery()
+  const waitlistOn = isFeatureEnabled(data.settings, 'waitlist')
   const repo = useRepo()
-  const refresh = useRefresh()
+  const invalidateGymState = useInvalidateGymState()
   const [params, setParams] = useSearchParams()
 
   const isStaffOrAdmin = user?.role === 'staff' || user?.role === 'admin'
@@ -57,21 +57,40 @@ export function AgendaPage() {
     () => (user ? selectMyMembership(data, user.id) : null),
     [data, user],
   )
+  const passPlans = useMemo(
+    () => (user ? selectMyDayPassPlans(data, user.id) : []),
+    [data, user],
+  )
   const planStatus = useMemo(
     () => canBookMembership(membership).status,
     [membership],
   )
-  const neverHadPlan = isMember && planStatus === 'none'
+  const neverHadPlan = isMember && planStatus === 'none' && passPlans.length === 0
   const needsPlan =
     isMember &&
+    passPlans.length === 0 &&
     (planStatus === 'none' ||
       planStatus === 'expired' ||
       planStatus === 'cancelled')
   const memberPlan = membership
     ? (data.membershipPlans ?? []).find((p) => p.id === membership.planId)
     : undefined
+  const filtersByAccess = isMember && (!!memberPlan || passPlans.length > 0)
 
-  const [anchorYmd, setAnchorYmd] = useState(() => ecuadorTodayYmd())
+  // ?dia=YYYY-MM-DD&sesion=<id>: viene de Inicio, abre ese día y resalta la clase (ZCAPP-58)
+  const [anchorYmd, setAnchorYmd] = useState(() => {
+    const day = params.get('dia')
+    return day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : ecuadorTodayYmd()
+  })
+  const focusSessionId = params.get('sesion')
+  const scrolledToFocus = useRef(false)
+  useEffect(() => {
+    if (!focusSessionId || scrolledToFocus.current) return
+    const row = document.getElementById(`sesion-${focusSessionId}`)
+    if (!row) return
+    scrolledToFocus.current = true
+    row.scrollIntoView?.({ block: 'center' })
+  })
   const [zoneFilter, setZoneFilter] = useState(params.get('zone') ?? 'all')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [rowError, setRowError] = useState<{ sessionId: string; message: string } | null>(
@@ -104,10 +123,9 @@ export function AgendaPage() {
   }
 
   const selectedAreaBlocked =
-    isMember &&
-    !!memberPlan &&
+    filtersByAccess &&
     zoneFilter !== 'all' &&
-    !canBookZone(memberPlan, zoneFilter).allowed
+    !canAccessZone(memberPlan, passPlans, zoneFilter)
 
   const daySessions = useMemo(() => {
     return data.sessions
@@ -116,8 +134,8 @@ export function AgendaPage() {
         if (!sessionStillOpen(session.endsAt)) return false
         if (!matchesZone(session)) return false
         if (selectedAreaBlocked) return false
-        if (isMember && memberPlan && zoneFilter === 'all') {
-          return canBookZone(memberPlan, session.zoneId).allowed
+        if (filtersByAccess && zoneFilter === 'all') {
+          return canAccessZone(memberPlan, passPlans, session.zoneId)
         }
         return true
       })
@@ -129,8 +147,9 @@ export function AgendaPage() {
     data.zones,
     zoneFilter,
     anchorYmd,
-    isMember,
+    filtersByAccess,
     memberPlan,
+    passPlans,
     selectedAreaBlocked,
   ])
 
@@ -138,8 +157,8 @@ export function AgendaPage() {
     const visible = data.sessions.filter((session) => {
       if (!matchesZone(session)) return false
       if (selectedAreaBlocked) return false
-      if (isMember && memberPlan && zoneFilter === 'all') {
-        return canBookZone(memberPlan, session.zoneId).allowed
+      if (filtersByAccess && zoneFilter === 'all') {
+        return canAccessZone(memberPlan, passPlans, session.zoneId)
       }
       return true
     })
@@ -149,8 +168,9 @@ export function AgendaPage() {
     data.zones,
     zoneFilter,
     anchorYmd,
-    isMember,
+    filtersByAccess,
     memberPlan,
+    passPlans,
     selectedAreaBlocked,
   ])
 
@@ -179,6 +199,12 @@ export function AgendaPage() {
       }
 
       const currentMembership = selectMyMembership(data, user.id)
+      const coveringPasses = selectMyDayPassPlans(data, user.id, new Date(), session.startsAt)
+      if (coveringPasses.some((pass) => canBookZone(pass, session.zoneId).allowed)) {
+        await repo.createBooking(sessionId, user.id)
+        await invalidateGymState()
+        return
+      }
       const memCheck = canBookMembership(currentMembership)
       if (!memCheck.allowed) {
         const gateType: BookingGateType =
@@ -213,7 +239,8 @@ export function AgendaPage() {
       }
 
       await repo.createBooking(sessionId, user.id)
-      await refresh()
+      void hapticSuccess()
+      await invalidateGymState()
     } catch (error) {
       setRowError({
         sessionId,
@@ -260,13 +287,13 @@ export function AgendaPage() {
                 onClick={() => setAnchorYmd(ymd)}
                 className={`flex flex-col items-center rounded-2xl py-2 text-center transition ${
                   selected
-                    ? 'bg-acc text-[var(--color-acc-contrast)]'
+                    ? 'bg-cta text-cta-contrast'
                     : today
                       ? 'border border-line bg-surface text-ink'
                       : 'text-ink-3'
                 }`}
               >
-                <span className="text-[10px] font-bold uppercase">
+                <span className="text-[11px] font-bold uppercase">
                   {today ? 'Hoy' : weekday}
                 </span>
                 <span className="text-sm font-extrabold leading-none">
@@ -292,7 +319,7 @@ export function AgendaPage() {
           onClick={() => handleFilterChange('all')}
           className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${
             zoneFilter === 'all'
-              ? 'bg-acc text-[var(--color-acc-contrast)]'
+              ? 'bg-cta text-cta-contrast'
               : 'border border-line text-ink-2'
           }`}
         >
@@ -310,7 +337,7 @@ export function AgendaPage() {
               onClick={() => handleFilterChange(meta.defaultZoneId)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${
                 selected
-                  ? 'bg-acc text-[var(--color-acc-contrast)]'
+                  ? 'bg-cta text-cta-contrast'
                   : 'border border-line text-ink-2'
               }`}
             >
@@ -321,10 +348,10 @@ export function AgendaPage() {
       </div>
 
       <div className="space-y-2">
-        {selectedAreaBlocked && memberPlan ? (
+        {selectedAreaBlocked ? (
           <p className="py-10 text-center text-sm text-ink-3">
-            Tu plan ({memberPlan.name}) no incluye esta área. Esas clases no se
-            pueden reservar.
+            {memberPlan ? `Tu plan (${memberPlan.name})` : 'Tu pase del día'} no incluye esta
+            área. Esas clases no se pueden reservar.
           </p>
         ) : null}
 
@@ -367,11 +394,11 @@ export function AgendaPage() {
           const error = rowError?.sessionId === session.id ? rowError.message : null
           const busy = busyId === session.id
           const zoneBlocked =
-            isMember && memberPlan && !canBookZone(memberPlan, session.zoneId).allowed
+            filtersByAccess && !canAccessZone(memberPlan, passPlans, session.zoneId)
 
           let action: { label: string; disabled: boolean; loading: boolean } = {
-            label: full ? 'Lista de espera' : 'Reservar',
-            disabled: false,
+            label: full ? (waitlistOn ? 'Lista de espera' : 'Clase llena') : 'Reservar',
+            disabled: full && !waitlistOn,
             loading: false,
           }
           if (busy) {
@@ -389,7 +416,11 @@ export function AgendaPage() {
           return (
             <div
               key={session.id}
-              className="rounded-2xl border border-line bg-surface px-3 py-3"
+              id={`sesion-${session.id}`}
+              aria-current={session.id === focusSessionId ? 'true' : undefined}
+              className={`rounded-2xl border bg-surface px-3 py-3 ${
+                session.id === focusSessionId ? 'border-acc ring-2 ring-acc/30' : 'border-line'
+              }`}
             >
               <div className="flex items-center gap-3">
                 <div className="w-12 shrink-0 text-sm font-extrabold text-ink">
@@ -397,7 +428,7 @@ export function AgendaPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-ink">{session.title}</p>
-                  <p className="truncate text-[11px] text-ink-3">
+                  <p className="truncate text-xs text-ink-3">
                     {session.bookedCount}/{session.capacity}
                     {trainer ? ` · ${trainer.fullName}` : ''}
                     {meta.shortName ? ` · ${meta.shortName}` : ''}
@@ -472,9 +503,6 @@ export function AgendaPage() {
           isOpen={Boolean(staffModalSession)}
           onClose={() => setStaffModalSession(null)}
           session={staffModalSession}
-          onSuccess={() => {
-            void refresh()
-          }}
         />
       ) : null}
     </div>

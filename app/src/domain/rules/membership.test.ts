@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Membership, MembershipPlan } from '../models'
 import {
   EXPIRATION_WARNING_DAYS,
@@ -322,10 +322,23 @@ describe('domain/rules/membership', () => {
 
       const res = extendMembership(currentActive, basePlan, paidAt)
 
-      expect(res.startsAt).toBe('2026-10-01T00:00:00.000Z')
+      // Suma días al plan vigente: conserva la fecha de inicio original
+      expect(res.startsAt).toBe('2026-09-01T00:00:00.000Z')
       expect(res.endsAt).toBe('2026-10-31T00:00:00.000Z')
       expect(res.graceEndsAt).toBe('2026-11-03T00:00:00.000Z')
       expect(res.status).toBe('active')
+    })
+
+    it('en gracia suma desde el pago y conserva la fecha de inicio', () => {
+      const currentGrace: Membership = {
+        ...baseMembership,
+        endsAt: '2026-09-09T00:00:00.000Z',
+        graceEndsAt: '2026-09-12T00:00:00.000Z',
+      }
+      const res = extendMembership(currentGrace, basePlan, '2026-09-10T12:00:00.000Z')
+
+      expect(res.startsAt).toBe('2026-09-01T00:00:00.000Z')
+      expect(res.endsAt).toBe('2026-10-10T12:00:00.000Z')
     })
 
     it('starts from paidAt when current membership is expired or in grace', () => {
@@ -386,13 +399,46 @@ describe('domain/rules/membership', () => {
     })
   })
 
+  describe('plan en espera (scheduled)', () => {
+    const scheduled: Membership = {
+      ...baseMembership,
+      startsAt: '2026-10-01T00:00:00.000Z',
+      endsAt: '2026-10-31T00:00:00.000Z',
+      graceEndsAt: '2026-11-03T00:00:00.000Z',
+    }
+    const before = new Date('2026-09-20T00:00:00.000Z')
+
+    it('se calcula como scheduled antes de su inicio', () => {
+      expect(computeMembershipStatus(scheduled, before)).toBe('scheduled')
+      expect(computeMembershipStatus(scheduled, new Date('2026-10-02T00:00:00.000Z'))).toBe(
+        'active',
+      )
+    })
+
+    it('no da acceso a reservar mientras no empieza', () => {
+      const res = canBookMembership(scheduled, before)
+      expect(res.allowed).toBe(false)
+      expect(res.status).toBe('scheduled')
+    })
+  })
+
   describe('canUseBookingNav', () => {
     it('oculta agenda y reservas al socio sin plan activo', () => {
       expect(canUseBookingNav('member', null)).toBe(false)
     })
 
+    it('muestra agenda al socio sin plan con un pase del día activo', () => {
+      expect(canUseBookingNav('member', null, true)).toBe(true)
+    })
+
     it('muestra agenda al socio con plan vigente', () => {
-      expect(canUseBookingNav('member', baseMembership)).toBe(true)
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-09-15T15:00:00.000Z'))
+      try {
+        expect(canUseBookingNav('member', baseMembership)).toBe(true)
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it('staff y admin siempre ven agenda', () => {

@@ -163,6 +163,17 @@ select * from qa_mail.enlaces;
 Devuelve fecha, tipo (`recovery`, `signup`, `email_change`), correo destino, el
 enlace listo para abrir y el código OTP. Las filas se borran solas a los 7 días.
 
+**Olvido de contraseña:** la app pide un **código de 6 dígitos**, no un enlace.
+Para probarlo en QA, tras tocar «Enviar código» en la app:
+
+```sql
+select codigo_otp from qa_mail.enlaces where tipo = 'recovery' and correo = 'socio.staging@zonacero.test' limit 1;
+```
+
+La plantilla del correo con el código está en
+`app/supabase/email-templates/recovery.html` (Authentication → Email Templates →
+Reset Password) y el largo en Authentication → Email → **Email OTP Length = 6**.
+
 | Ítem | Valor |
 |------|-------|
 | Activación | Authentication → Hooks → Send Email → Postgres function `qa_mail.send_email_hook` |
@@ -183,16 +194,45 @@ enlace listo para abrir y el código OTP. Las filas se borran solas a los 7 día
 
 ---
 
-## 7. Producción — no tocar hasta Go-Live
+## 7. Producción
 
-Proyecto Supabase **prod** separado (`zona-cero-prod`); mismos SQL (`schema.sql`, seed adaptado). Sprint 7.
+Creado el 2026-09-27. Separado de QA en todo: otro proyecto de Vercel y otro de Supabase.
+
+| | QA | Producción |
+|---|---|---|
+| Vercel | `zona-cero-qa` | `zona-cero-prod` (antes `reservas-gym`) |
+| Rama | `main` (cada merge) | `production` (solo cuando QA aprueba) |
+| Build | `npm run build:staging` (login con cuentas demo) | `npm run build` (sin cuentas demo) |
+| Supabase | `zona-cero` · `kqhmclbexnnsbzbgerbx` | `zona-cero-prod` · `gvgqlmoulgcickxognto` |
+
+**Vercel `zona-cero-prod`:** preset Vite, Root Directory `app`, Branch Tracking `production`.
+Ignored Build Step:
+
+```bash
+if [ "$VERCEL_GIT_COMMIT_REF" = "production" ] && [ -n "$VITE_SUPABASE_URL" ]; then exit 1; else exit 0; fi
+```
+
+Solo compila la rama `production` y solo si tiene `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (Environment Variables → Production).
+
+**Supabase `zona-cero-prod`**, SQL aplicado en este orden:
+
+1. `app/supabase/schema.sql`
+2. `app/supabase/booking-rpc.sql`
+3. `app/supabase/seed-prod.sql` — configuración, 9 áreas y plantillas, **sin** entrenadores ni planes de ejemplo
+4. `app/supabase/planes-zona-cero.sql` — catálogo comercial real
+
+**No** aplicar `seed.sql`, `staging-users.sql` ni `qa-mail-hook.sql` en prod.
+
+En una base que ya existía (QA, o prod creada antes del 20 oct), aplicar además, después de `booking-rpc.sql`: `security-hardening.sql` y `plan-request-amount.sql`. Los dos son idempotentes.
+
+**Publicar una versión:** cuando QA valida `main`, abrir un PR `main` → `production` y hacer merge. Vercel despliega prod.
 
 ### Plan Supabase (decisión arquitectura)
 
 | Proyecto | Rol | Plan |
 |----------|-----|------|
 | `zona-cero` | Staging / QA | **Free** (ahora) |
-| `zona-cero-prod` | Gym real | **Pro** desde ~1–2 sem antes Go-Live |
+| `zona-cero-prod` | Gym real | **Free** hoy → **Pro** ≈ 05 Dic 2026 (ZCAPP-59) |
 
 Ver cronograma §8: [cronograma-desarrollo-avanzada.md](./cronograma-desarrollo-avanzada.md#8-decisión-de-arquitectura--supabase-plan-free-vs-pro).
 
@@ -210,7 +250,74 @@ el esquema. Antes del Go-Live hay que confirmar:
 - [ ] Authentication → Hooks **vacío** (sin Send Email hook)
 - [ ] Project Settings → Authentication → **SMTP propio** configurado y probado
 - [ ] El schema `qa_mail` **no** existe en prod
+- [ ] Email Templates → **Reset Password** con el código (`app/supabase/email-templates/recovery.html`). Supabase solo deja editarla con SMTP propio o plan Pro; sin ella el correo lleva un enlace y la recuperación de la app no funciona. Email OTP Length = 6 (ya aplicado).
 - [ ] Site URL y Redirect URLs apuntan al dominio real, no a QA
+
+---
+
+## 8. Pago en línea con Pagomedios (en desarrollo local)
+
+Alcance, flujo y exclusiones: [pagomedios-plan-1-pago-unico.md](./pagomedios-plan-1-pago-unico.md)
+y [pagomedios-plan-2-recurrencia.md](./pagomedios-plan-2-recurrencia.md).
+
+**Hoy corre solo en local.** No hay función desplegada ni variables en Vercel. En QA
+se aplicó únicamente `app/supabase/pagomedios-provider.sql` (agrega `'pagomedios'` a
+`payments_provider_check`).
+
+### Correrlo en local contra el sandbox de Pagomedios
+
+1. `app/.env.pagomedios.local` (git lo ignora):
+
+   ```bash
+   PAGOMEDIOS_TOKEN=<token de pruebas de Pagomedios>
+   SUPABASE_URL=https://kqhmclbexnnsbzbgerbx.supabase.co
+   SUPABASE_ANON_KEY=<anon de QA>
+   SUPABASE_SERVICE_ROLE_KEY=<service_role de QA>
+   APP_URL=http://localhost:5173
+   FUNCTION_PUBLIC_URL=http://localhost:8000
+   PAGOMEDIOS_TAX_RATE=0.15
+   ```
+
+2. `app/.env.staging.local`: las `VITE_SUPABASE_*` de QA más
+   `VITE_ONLINE_PAYMENTS=1`, `VITE_PAYMENT_PROVIDER=pagomedios` y
+   `VITE_FUNCTIONS_URL=http://localhost:8000`.
+3. En dos terminales, desde `app/`: `npm run pagomedios:fn` (Edge Function con Deno, puerto 8000) y
+   `npm run dev:staging` (app en `localhost:5173`).
+4. Entrar como `socio.staging`, ir a Mi Plan → **Pagar en línea**, y pagar con las tarjetas de
+   prueba que entrega Pagomedios.
+
+Sin credenciales: `npm run pagomedios:e2e` levanta un Supabase falso y un simulador de
+Pagomedios y prueba la función de punta a punta (aprobado, rechazado, notify repetido,
+concurrencia, seguridad, app nativa).
+
+**Sandbox:** se rechazan los montos $2, $3, $4, $5, $50, $999 y $1000. En QA sirven
+"Zero Start Mensual" ($15, aprobado) y "Zona Day Musculación" ($2, rechazado).
+
+**Qué observamos en el sandbox (30-sep-2026):**
+- El retorno (`notify_url`) lo envía el **navegador del socio** (form POST), no el servidor de
+  Pagomedios. Por eso funciona con `localhost`.
+- Un pago rechazado no vuelve a la app: Pagomedios muestra "Tarjeta Invalida" y deja al socio
+  en su página para reintentar. El pago queda "Pendiente" en Cobros.
+- La tarjeta Mastercard de prueba fue rechazada incluso con montos válidos; la Visa aprueba.
+  Confirmar con Pagomedios.
+
+### Pasos para activarlo en QA (cuando se apruebe, no antes)
+
+- [ ] `supabase functions deploy pagomedios-payment --no-verify-jwt --project-ref kqhmclbexnnsbzbgerbx`
+      (sin JWT del gateway porque el retorno de Pagomedios llega sin sesión; create/verify validan
+      la sesión dentro de la función).
+- [ ] Secrets de la función: `PAGOMEDIOS_TOKEN`, `APP_URL=https://zona-cero-qa.vercel.app`,
+      `PAGOMEDIOS_TAX_RATE=0.15`.
+- [ ] Vercel `zona-cero-qa`: `VITE_ONLINE_PAYMENTS=1`, `VITE_PAYMENT_PROVIDER=pagomedios`.
+
+### Go-Live (producción)
+
+- [ ] Aplicar `pagomedios-provider.sql` en `zona-cero-prod`.
+- [ ] Token **de producción** de Pagomedios (contrato del gimnasio) como secret; nunca el de pruebas.
+- [ ] Deploy de la función en prod con `APP_URL` del dominio real.
+- [ ] Variables `VITE_ONLINE_PAYMENTS` / `VITE_PAYMENT_PROVIDER` en `zona-cero-prod`.
+- [ ] Un pago real de monto bajo y su reverso desde el panel de Pagomedios.
+- [ ] Términos y condiciones de Zona Cero publicados: pegar el texto en `app/src/features/legal/termsContent.ts` (el socio los acepta antes de pagar; hoy la ventana dice "en preparación").
 
 ---
 

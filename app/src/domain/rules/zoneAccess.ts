@@ -37,13 +37,33 @@ export function canBookZone(
   }
 }
 
+/** Acceso a una zona = unión del plan vigente y los pases del día activos. */
+export function canAccessZone(
+  plan: MembershipPlan | null | undefined,
+  dayPassPlans: MembershipPlan[],
+  zoneId: string,
+): boolean {
+  if (dayPassPlans.some((pass) => canBookZone(pass, zoneId).allowed)) return true
+  return plan ? canBookZone(plan, zoneId).allowed : false
+}
+
+/** `dayPassPlans`: planes de los pases del día activos del socio. */
 export function assertMemberBookingAllowed(
   membership: Membership | null | undefined,
   plan: MembershipPlan | null | undefined,
   zoneId: string,
+  dayPassPlans: MembershipPlan[] = [],
+  now: Date = new Date(),
 ): { ok: true } | { ok: false; reason: string } {
-  const mem = canBookMembership(membership)
+  if (dayPassPlans.some((pass) => canBookZone(pass, zoneId).allowed)) {
+    return { ok: true }
+  }
+  const mem = canBookMembership(membership, now)
   if (!mem.allowed) {
+    if (dayPassPlans.length > 0) {
+      const names = dayPassPlans.map((pass) => pass.name).join(', ')
+      return { ok: false, reason: `Tu pase (${names}) no incluye acceso a esta zona.` }
+    }
     return { ok: false, reason: mem.reason ?? 'No puedes reservar ahora.' }
   }
   const zone = canBookZone(plan, zoneId)

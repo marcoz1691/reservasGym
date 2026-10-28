@@ -11,15 +11,23 @@ import type { MembershipPlan, Zone } from '@/domain/models'
 import { ZONE_LABELS } from '@/domain/models'
 import {
   groupPlansByFamily,
+  isDayPassPlan,
   planFamilyId,
   selectUpgradePlan,
   type PlanFamilyId,
 } from '@/domain/rules/membershipPlan'
-import { formatCurrency } from '@/lib/format'
+import { QUEUED_PLAN_LIMIT_MESSAGE } from '@/domain/rules/memberships'
+import { formatCurrency, formatDateSpanish } from '@/lib/format'
 
 interface PlansShowcaseProps {
   plans: MembershipPlan[]
   currentPlanId?: string | null
+  /** Plan pagado que empieza cuando termine el actual (máximo uno). */
+  queuedPlanId?: string | null
+  /** Comprar otro plan lo deja en espera (plan actual activo, no en gracia). */
+  queuesChanges?: boolean
+  /** Desde cuándo empezaría un plan comprado ahora (fin del plan actual). */
+  queueStartsAt?: string | null
   zones: Zone[]
   onPayOnline?: (planId: string) => void | Promise<void>
   onChoosePlan?: (planId: string) => void
@@ -57,11 +65,11 @@ function OfferBadge({ badge }: { badge: string }) {
     return (
       <span aria-label={badge} className={CHIP_CLASSES}>
         <ChipSheen />
-        <span className="font-display text-xs font-extrabold tabular-nums tracking-tight text-acc">
+        <span className="font-display text-xs font-extrabold tabular-nums tracking-tight text-acc-dark">
           −{percent}%
         </span>
         <span aria-hidden className="h-2.5 w-px bg-white/20" />
-        <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-white/70">
+        <span className="text-xs font-medium uppercase tracking-[0.1em] text-white/70">
           {period.trim()}
         </span>
       </span>
@@ -73,7 +81,7 @@ function OfferBadge({ badge }: { badge: string }) {
       <ChipSheen />
       {/* Punto sólido en vez de pictograma: a 12px cualquier icono se ve garabato */}
       <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-acc" />
-      <span className="text-[11px] font-semibold tracking-wide text-white">{badge}</span>
+      <span className="text-xs font-semibold tracking-wide text-white">{badge}</span>
     </span>
   )
 }
@@ -96,6 +104,9 @@ function FeatureRow({
 export function PlansShowcase({
   plans,
   currentPlanId,
+  queuedPlanId = null,
+  queuesChanges,
+  queueStartsAt = null,
   zones,
   onPayOnline,
   onChoosePlan,
@@ -122,6 +133,7 @@ export function PlansShowcase({
   if (!activeGroup) return null
 
   const currentPlan = plans.find((plan) => plan.id === currentPlanId) ?? null
+  const changesQueue = queuesChanges ?? Boolean(currentPlan)
   const upgrade = selectUpgradePlan(plans, currentPlanId)
   const offers = [...activeGroup.offers].sort((a, b) => {
     if (a.plan.id === upgrade?.id) return -1
@@ -185,12 +197,12 @@ export function PlansShowcase({
           <div className="flex items-start gap-3">
             <span
               aria-hidden
-              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-acc-soft text-acc"
+              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-acc-soft text-acc-dark"
             >
               <ArrowUpRight className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">
                 {currentPlan ? 'Mejorar plan' : 'Plan superior'}
               </p>
               <p className="mt-0.5 font-display text-lg font-bold tracking-tight text-ink">
@@ -207,7 +219,7 @@ export function PlansShowcase({
           {!upgradeInView ? (
             <button
               type="button"
-              onClick={() => setFamilyId(planFamilyId(upgrade.name))}
+              onClick={() => setFamilyId(planFamilyId(upgrade))}
               className="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-elevated active:scale-[0.98]"
             >
               Ver este nivel
@@ -226,6 +238,22 @@ export function PlansShowcase({
           const isUpgrade = plan.id === upgrade?.id
           const hasQuota = plan.visitQuota !== null && plan.visitQuota !== undefined
           const isPaying = payingPlanId === plan.id
+          const isDayPass = isDayPassPlan(plan)
+          const isQueued = plan.id === queuedPlanId
+          const blockedByQueue =
+            Boolean(queuedPlanId) && !isDayPass && !isQueued && !isCurrent
+          // Otro plan con el actual activo queda en espera: se dice desde cuándo empieza.
+          const startsLater =
+            changesQueue && Boolean(queueStartsAt) && !isDayPass && !isQueued && !isCurrent
+          const onlineLabel = isDayPass
+            ? 'Comprar pase del día'
+            : isCurrent
+              ? 'Renovar plan'
+              : isQueued
+                ? 'Extender plan en espera'
+                : changesQueue
+                  ? 'Elegir este plan'
+                  : 'Elegir plan'
           const title =
             offer.familyId === 'otros'
               ? plan.name
@@ -262,20 +290,25 @@ export function PlansShowcase({
               {/* Fila de etiquetas: altura fija para que los precios se alineen */}
               <div className="flex min-h-[28px] flex-wrap items-center gap-1.5">
                 {isUpgrade ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-acc/35 bg-acc-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-acc">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-acc/35 bg-acc-soft px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-acc-dark">
                     <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-acc" />
                     <span>{currentPlan ? 'Mejorar' : 'Recomendado'}</span>
                   </span>
                 ) : null}
                 {isCurrent ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white">
                     <Check className="h-3 w-3" />
                     <span>Tu plan actual</span>
                   </span>
                 ) : null}
+                {isQueued ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-ink/25 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-ink-2">
+                    <span>En espera</span>
+                  </span>
+                ) : null}
                 {offer.badge ? <OfferBadge badge={offer.badge} /> : null}
                 {offer.featured ? (
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-ink-3">
                     Más ahorro
                   </span>
                 ) : null}
@@ -312,55 +345,64 @@ export function PlansShowcase({
                   </p>
                 ) : null}
                 {savingsCents ? (
-                  <p className="inline-flex items-center rounded-lg border border-acc/25 bg-acc-soft px-2 py-0.5 text-[13px] font-semibold tabular-nums text-acc">
+                  <p className="inline-flex items-center rounded-lg border border-acc/25 bg-acc-soft px-2 py-0.5 text-[13px] font-semibold tabular-nums text-acc-dark">
                     Ahorras {formatCurrency(savingsCents)}
                   </p>
                 ) : null}
               </div>
 
               <div className="mt-4 space-y-2">
-                {onlinePayEnabled && onPayOnline && (!currentPlanId || isCurrent || isUpgrade) ? (
+                {onlinePayEnabled && onPayOnline ? (
                   <button
                     type="button"
-                    disabled={Boolean(payingPlanId)}
+                    disabled={Boolean(payingPlanId) || blockedByQueue}
                     onClick={() => void onPayOnline(plan.id)}
-                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 active:scale-[0.98] ${
-                      isUpgrade
-                        ? 'bg-acc text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] hover:bg-acc-hi'
-                        : isCurrent
-                          ? 'bg-ink text-white hover:bg-ink/90'
-                          : 'border border-line-strong bg-surface text-ink hover:bg-surface-elevated'
-                    }`}
+                    // Mismo botón en todas las tarjetas: sobrio y del mismo alto.
+                    // El plan recomendado se distingue por su etiqueta, no por el botón.
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-cta px-4 py-3 text-sm font-semibold text-cta-contrast transition hover:bg-cta-hi disabled:opacity-60 active:scale-[0.98]"
                   >
                     {isPaying ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Redirigiendo…
+                        Abriendo…
                       </>
                     ) : (
                       <>
                         <CreditCard className="h-4 w-4" />
-                        {isCurrent
-                          ? 'Renovar en línea'
-                          : isUpgrade && currentPlan
-                            ? 'Mejorar en línea'
-                            : 'Pagar en línea'}
+                        {onlineLabel}
                       </>
                     )}
                   </button>
                 ) : null}
+                {onlinePayEnabled && onPayOnline ? (
+                  <p className="text-center text-xs text-ink-3">
+                    {blockedByQueue
+                      ? QUEUED_PLAN_LIMIT_MESSAGE
+                      : startsLater
+                        ? `Empieza el ${formatDateSpanish(queueStartsAt!)}, al terminar tu plan actual`
+                        : 'Tarjeta, efectivo o transferencia'}
+                  </p>
+                ) : null}
                 {onChoosePlan && !onlinePayEnabled && !isCurrent ? (
                   <button
                     type="button"
+                    disabled={blockedByQueue}
                     onClick={() => onChoosePlan(plan.id)}
-                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 active:scale-[0.98] ${
                       isUpgrade
-                        ? 'bg-acc text-[var(--color-acc-contrast)] shadow-[var(--shadow-acc)] hover:bg-acc-hi'
+                        ? 'bg-cta text-cta-contrast shadow-sm hover:bg-cta-hi'
                         : 'border border-line-strong bg-surface text-ink hover:bg-surface-elevated'
                     }`}
                   >
-                    {isUpgrade && currentPlan ? 'Mejorar plan' : 'Elegir este plan'}
+                    {isDayPass
+                      ? 'Comprar pase del día'
+                      : isUpgrade && currentPlan
+                        ? 'Mejorar plan'
+                        : 'Elegir este plan'}
                   </button>
+                ) : null}
+                {onChoosePlan && !onlinePayEnabled && blockedByQueue ? (
+                  <p className="text-center text-xs text-ink-3">{QUEUED_PLAN_LIMIT_MESSAGE}</p>
                 ) : null}
                 {isCurrent && onChoosePlan && !onlinePayEnabled ? (
                   <button
@@ -406,7 +448,7 @@ export function PlansShowcase({
                           return (
                             <span
                               key={zid}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface-elevated px-2 py-0.5 text-[11px] font-medium text-ink-2"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface-elevated px-2 py-0.5 text-xs font-medium text-ink-2"
                             >
                               <span
                                 aria-hidden
@@ -430,7 +472,7 @@ export function PlansShowcase({
         Todos los planes incluyen reserva de clases desde la app, check-in con código y
         seguimiento de tu progreso.{' '}
         {onlinePayEnabled
-          ? 'Puedes pagar en línea con tarjeta o en recepción (efectivo, transferencia o Datafast).'
+          ? 'Puedes pagar en línea con tarjeta (pago único) o en recepción (efectivo, transferencia o datáfono).'
           : currentPlanId
             ? 'Elige el plan y cómo vas a pagar: recepción activa el cambio al registrar el cobro.'
             : 'Elige el plan y cómo vas a pagar: el cobro se completa en recepción.'}

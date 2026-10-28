@@ -15,6 +15,7 @@ create table if not exists profiles (
   role text not null check (role in ('member', 'staff', 'admin')) default 'member',
   birth_date date,
   residence text,
+  phone text,
   height_cm numeric(5,1),
   initial_weight_kg numeric(5,2),
   goals text,
@@ -30,7 +31,22 @@ create table if not exists gym_settings (
   accent_color text not null default '#2DD4A8',
   booking_window_hours int not null default 168,
   cancel_window_hours int not null default 2,
-  check_in_window_minutes int not null default 15
+  check_in_window_minutes int not null default 15,
+  -- Interruptores del admin (feature-flags.sql)
+  online_payments_enabled boolean not null default false,
+  waitlist_enabled boolean not null default true,
+  measurements_enabled boolean not null default true,
+  day_passes_enabled boolean not null default true,
+  recurring_payments_enabled boolean not null default false,
+  -- Datos de pago para transferencia y Deuna (manual-payments-deuna.sql)
+  whatsapp_payments text,
+  bank_name text,
+  bank_account_type text,
+  bank_account_number text,
+  bank_account_holder text,
+  bank_account_id text,
+  deuna_code text,
+  deuna_qr_url text
 );
 
 create table if not exists trainers (
@@ -96,7 +112,7 @@ begin
   set booked_count = (
     select count(*)::int
     from public.bookings
-    where session_id = sid and status = 'confirmed'
+    where session_id = sid and status in ('confirmed', 'pending', 'attended')
   )
   where id = sid;
   return coalesce(NEW, OLD);
@@ -109,7 +125,7 @@ after insert or update of status or delete on bookings
 for each row execute function public.sync_session_booked_count();
 
 -- Crear y cancelar reservas (cupo, lista de espera y promoción) va por las funciones
--- book_session / cancel_booking de booking-rpc.sql, que se ejecuta después de este archivo.
+-- book_session / cancel_booking / reschedule_booking de booking-rpc.sql, que se ejecuta después de este archivo.
 
 create table if not exists waitlist_entries (
   id text primary key,
@@ -130,7 +146,7 @@ create table if not exists check_ins (
 create table if not exists body_measurements (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles(id) on delete cascade,
-  recorded_by uuid not null references profiles(id),
+  recorded_by uuid references profiles(id) on delete set null,
   weight_kg numeric(6,2) not null,
   height_cm numeric(5,1),
   bmi numeric(4,1),
@@ -165,6 +181,8 @@ create table if not exists membership_plans (
   visit_quota int,
   allowed_zone_ids text[] not null default '{}',
   active boolean not null default true,
+  -- 'day_pass': pase del día (fila aparte hasta las 23:59 de Guayaquil). Ver plan-rules.sql.
+  kind text not null default 'membership' check (kind in ('membership', 'day_pass')),
   created_at timestamptz not null default now()
 );
 
@@ -182,25 +200,35 @@ create table if not exists memberships (
 
 create table if not exists payments (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references profiles(id) on delete cascade not null,
+  -- Nulo si el socio eliminó su cuenta: el cobro queda anonimizado (anonimizar-pagos-al-eliminar.sql)
+  user_id uuid references profiles(id) on delete set null,
   plan_id uuid references membership_plans(id) not null,
   membership_id uuid references memberships(id) on delete set null,
   amount_cents int not null,
   status text not null check (status in ('pending', 'approved', 'rejected', 'refunded')),
-  provider text not null check (provider in ('manual', 'datafast', 'mercadopago')),
-  manual_method text check (manual_method in ('cash', 'transfer', 'card_pos')),
+  provider text not null check (provider in ('manual', 'pagomedios')),
+  manual_method text check (manual_method in ('cash', 'transfer', 'card_pos', 'deuna', 'pagomedios_recurring')),
   reference text,
   mp_payment_id text,
+  notes text,
   created_at timestamptz not null default now(),
   approved_at timestamptz
 );
+-- Aceptación de términos por pago (trigger y detalle en terms-acceptance.sql)
+alter table payments add column if not exists terms_version text check (terms_version is null or char_length(terms_version) <= 40);
+alter table payments add column if not exists terms_accepted_at timestamptz;
+-- Número de comprobante corto que se muestra (ZCAPP-77); en bases existentes: payment-receipt-number.sql.
+create sequence if not exists payment_receipt_seq;
+alter table payments add column if not exists receipt_number bigint not null default nextval('payment_receipt_seq');
+alter sequence payment_receipt_seq owned by payments.receipt_number;
+create unique index if not exists payments_receipt_number_key on payments (receipt_number);
 
 -- Índices de optimización
 create index if not exists idx_memberships_user_id on memberships(user_id);
+create index if not exists idx_memberships_user_dates on memberships(user_id, starts_at, ends_at);
 create index if not exists idx_memberships_status on memberships(status);
 create index if not exists idx_payments_user_id on payments(user_id);
 create index if not exists idx_payments_status on payments(status);
-create unique index if not exists idx_payments_mp_payment_id on payments (mp_payment_id) where mp_payment_id is not null;
 
 -- ============================================================================
 -- 3. FUNCIONES Y PROCEDURES
@@ -226,6 +254,49 @@ $$;
 revoke all on function public.is_staff() from public;
 revoke all on function public.is_staff() from anon;
 grant execute on function public.is_staff() to authenticated;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from profiles p
+    where p.id = auth.uid() and p.role = 'admin'
+  );
+$$;
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+
+-- Solo admin asigna o cambia roles. Sin sesión (auth.uid() null) es SQL Editor,
+-- service_role o el alta de usuario.
+create or replace function public.guard_profile_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or public.is_admin() then
+    return new;
+  end if;
+  if tg_op = 'INSERT' and new.role is distinct from 'member' then
+    raise exception 'Solo un admin puede asignar roles';
+  end if;
+  if tg_op = 'UPDATE' and new.role is distinct from old.role then
+    raise exception 'Solo un admin puede cambiar roles';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.guard_profile_role() from public, anon, authenticated;
+
+drop trigger if exists profiles_guard_role on profiles;
+create trigger profiles_guard_role
+before insert or update of role on profiles
+for each row execute function public.guard_profile_role();
 
 -- Soporte de eliminación de cuenta (Apple App Store Guideline 5.1.1(v))
 create or replace function public.delete_user_account()
@@ -329,14 +400,14 @@ create policy "profiles read self or staff" on profiles for select using (
 
 create policy "profiles update self or staff" on profiles for update
   using (id = auth.uid() or public.is_staff())
-  with check (
-    (id = auth.uid() and role = (select p.role from profiles p where p.id = auth.uid()))
-    or public.is_staff()
-  );
+  -- Sin subconsulta a profiles (recursión 42P17): el rol lo protege profiles_guard_role.
+  with check (id = auth.uid() or public.is_staff());
 
--- Settings
+-- Settings: todos leen (incluye los interruptores de la app); solo admin escribe
 create policy "settings read all auth" on gym_settings for select to authenticated using (true);
-create policy "settings write staff" on gym_settings for all using (public.is_staff());
+create policy "settings write admin" on gym_settings for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- Catálogo (Zonas, Plantillas, Sesiones, Entrenadores)
 create policy "catalog read" on zones for select to authenticated using (true);
@@ -348,32 +419,29 @@ create policy "sessions write" on sessions for all using (public.is_staff());
 create policy "trainers read" on trainers for select to authenticated using (true);
 create policy "trainers write" on trainers for all using (public.is_staff());
 
--- Reservas
+-- Reservas, lista de espera y check-ins: el socio solo lee. Escribe vía RPC
+-- (book_session, cancel_booking, reschedule_booking, check_in_booking en booking-rpc.sql).
 create policy "bookings own or staff" on bookings for select using (
   user_id = auth.uid() or public.is_staff()
 );
-create policy "bookings insert own" on bookings for insert with check (
-  user_id = auth.uid() or public.is_staff()
-);
-create policy "bookings update own or staff" on bookings for update using (
-  user_id = auth.uid() or public.is_staff()
-);
+create policy "bookings insert staff" on bookings for insert to authenticated
+  with check (public.is_staff());
+create policy "bookings update staff" on bookings for update to authenticated
+  using (public.is_staff())
+  with check (public.is_staff());
 
--- Lista de espera
 create policy "waitlist own or staff" on waitlist_entries for select using (
   user_id = auth.uid() or public.is_staff()
 );
-create policy "waitlist write" on waitlist_entries for all using (
-  user_id = auth.uid() or public.is_staff()
-);
+create policy "waitlist write staff" on waitlist_entries for all to authenticated
+  using (public.is_staff())
+  with check (public.is_staff());
 
--- Check-ins
 create policy "checkins own or staff" on check_ins for select using (
   user_id = auth.uid() or public.is_staff()
 );
-create policy "checkins write" on check_ins for insert with check (
-  user_id = auth.uid() or public.is_staff()
-);
+create policy "checkins write staff" on check_ins for insert to authenticated
+  with check (public.is_staff());
 
 -- Mediciones de peso y antropometría
 create policy "weight own or staff" on body_measurements for select using (
@@ -403,13 +471,18 @@ create policy "body_goals delete" on body_goals for delete using (
   user_id = auth.uid() or public.is_staff()
 );
 
--- Planes de membresía: lectura pública/autenticada de planes activos; escritura solo staff/admin
+-- Planes de membresía: lectura de planes activos; escritura solo admin
 create policy "membership_plans read active or staff" on membership_plans for select using (
-  active = true or public.is_staff()
+  active = true
+  or public.is_staff()
+  or exists (
+    select 1 from memberships m
+    where m.plan_id = membership_plans.id and m.user_id = auth.uid()
+  )
 );
-create policy "membership_plans write staff" on membership_plans for all using (
-  public.is_staff()
-);
+create policy "membership_plans write admin" on membership_plans for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- Membresías: socio ve la suya; staff ve y gestiona todas
 create policy "memberships select own or staff" on memberships for select using (
@@ -426,6 +499,8 @@ create policy "payments select own or staff" on payments for select using (
 create policy "payments write staff" on payments for all using (
   public.is_staff()
 );
+-- plan_sellable_in_app (feature-flags.sql) y plan_purchase_block_reason (plan-rules.sql)
+-- se agregan al aplicar esas migraciones.
 create policy "payments insert own plan request" on payments for insert with check (
   user_id = auth.uid()
   and status = 'pending'
@@ -440,3 +515,35 @@ create policy "payments update own plan request" on payments for update using (
   and provider = 'manual'
   and membership_id is null
 );
+
+-- El socio no decide el monto ni los campos de servidor de su solicitud (plan-request-amount.sql).
+create or replace function public.guard_member_plan_request()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or public.is_staff() then
+    return new;
+  end if;
+  -- Solo solicitudes pendientes: delete_user_account() anonimiza cobros aprobados sin tocar el monto.
+  if not (new.status = 'pending' and new.provider = 'manual' and new.membership_id is null) then
+    return new;
+  end if;
+  select price_cents into new.amount_cents from membership_plans where id = new.plan_id;
+  if new.amount_cents is null then
+    raise exception 'Plan no encontrado';
+  end if;
+  new.approved_at := null;
+  new.mp_payment_id := null;
+  new.notes := null;
+  return new;
+end;
+$$;
+revoke all on function public.guard_member_plan_request() from public, anon, authenticated;
+
+drop trigger if exists payments_guard_member_request on payments;
+create trigger payments_guard_member_request
+before insert or update on payments
+for each row execute function public.guard_member_plan_request();

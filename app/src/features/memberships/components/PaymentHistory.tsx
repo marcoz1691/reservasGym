@@ -26,7 +26,7 @@ export function PaymentHistory({ payments, plans }: PaymentHistoryProps) {
           <Receipt className="h-8 w-8 text-ink-3 mx-auto" />
           <p className="text-sm font-bold text-ink">Sin registros de pago</p>
           <p className="text-xs text-ink-3 max-w-sm mx-auto">
-            Aún no tienes comprobantes registrados. Los pagos efectuados en recepción aparecerán aquí.
+            Aún no tienes pagos registrados. Tus pagos en línea y en recepción aparecerán aquí.
           </p>
         </div>
       ) : (
@@ -35,7 +35,8 @@ export function PaymentHistory({ payments, plans }: PaymentHistoryProps) {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-line bg-surface/60 text-[11px] font-bold uppercase tracking-wider text-ink-3">
+                <tr className="border-b border-line bg-surface/60 text-xs font-bold uppercase tracking-wider text-ink-3">
+                  <th className="py-3 px-4">N.º</th>
                   <th className="py-3 px-4">Fecha</th>
                   <th className="py-3 px-4">Plan / Concepto</th>
                   <th className="py-3 px-4">Monto</th>

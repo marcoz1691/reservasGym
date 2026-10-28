@@ -20,6 +20,43 @@ describe('Admin Billing & Membership Plans UI', () => {
     resetRepositoryForTests(repo)
   })
 
+  describe('AdminPage — accesos rápidos en móvil', () => {
+    function renderDashboard() {
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin']}>
+            <Routes>
+              <Route path="/admin" element={<AdminPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+    }
+
+    it('el admin llega a Planes, Sesiones y Personalización desde el Dashboard', async () => {
+      await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+      renderDashboard()
+
+      expect(await screen.findByRole('link', { name: /Personalización/i })).toHaveAttribute(
+        'href',
+        '/admin/marca',
+      )
+      expect(screen.getByRole('link', { name: /^Planes$/i })).toHaveAttribute('href', '/admin/planes')
+      expect(screen.getByRole('link', { name: /^Sesiones$/i })).toHaveAttribute(
+        'href',
+        '/admin/sesiones',
+      )
+    })
+
+    it('el staff no ve Personalización', async () => {
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      renderDashboard()
+
+      expect(await screen.findByRole('link', { name: /^Planes$/i })).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Personalización/i })).not.toBeInTheDocument()
+    })
+  })
+
   describe('CobrosPage', () => {
     it('renders tabs and POS form for admin user', async () => {
       await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
@@ -34,10 +71,31 @@ describe('Admin Billing & Membership Plans UI', () => {
         </RepositoryProvider>,
       )
 
-      expect(await screen.findByText(/Panel de Cobros & POS/i)).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'Cobros' })).toBeInTheDocument()
       expect(screen.getByText(/Registrar Cobro \(POS\)/i)).toBeInTheDocument()
       expect(screen.getByText(/Socios por Vencer y Vencidos/i)).toBeInTheDocument()
       expect(screen.getByText(/Historial General de Cobros/i)).toBeInTheDocument()
+    })
+
+    it('la barra de confirmar solo queda fija con un socio elegido, para no tapar la lista (ZCAPP-85)', async () => {
+      const user = userEvent.setup()
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/cobros']}>
+            <Routes>
+              <Route path="/admin/cobros" element={<CobrosPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+
+      expect(await screen.findByText('Ana Socio')).toBeInTheDocument()
+      expect(screen.getByTestId('pos-confirm-bar')).not.toHaveClass('sticky')
+
+      await user.click(screen.getByText('Ana Socio'))
+      expect(screen.getByTestId('pos-confirm-bar')).toHaveClass('sticky')
     })
 
     it('allows staff to select a member, plan, payment method and submit manual payment', async () => {
@@ -89,6 +147,43 @@ describe('Admin Billing & Membership Plans UI', () => {
       ).toBeInTheDocument()
       expect(screen.getByText(/POS-TX-998811/i)).toBeInTheDocument()
       expect(screen.getAllByText(/\$45\.00 USD/i).length).toBeGreaterThan(0)
+
+      // ZCAPP-77: comprobante con número corto, sin el id interno
+      const [saved] = (await repo.listPayments()).filter((p) => p.reference === 'POS-TX-998811')
+      expect(screen.getByText(/^N\.º \d{6}$/)).toHaveTextContent(
+        `N.º ${String(saved!.receiptNumber).padStart(6, '0')}`,
+      )
+      expect(screen.queryByText(saved!.id, { exact: false })).toBeNull()
+    })
+
+    it('busca un cobro del historial por su número de comprobante (ZCAPP-77)', async () => {
+      const user = userEvent.setup()
+      await repo.signIn({ email: 'staff@gym.local', password: DEMO_PASSWORD })
+      const { payment } = await repo.registerManualPayment({
+        userId: 'user_member_2',
+        planId: 'plan-trimestral',
+        amountCents: 12000,
+        manualMethod: 'cash',
+        reference: 'CAJA-77',
+      })
+      const number = String(payment.receiptNumber).padStart(6, '0')
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/cobros']}>
+            <Routes>
+              <Route path="/admin/cobros" element={<CobrosPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+      await user.click(await screen.findByText(/Historial General de Cobros/i))
+      await user.type(screen.getByPlaceholderText(/Buscar por socio/i), number)
+
+      const rows = screen.getAllByRole('row').slice(1)
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toHaveTextContent(number)
+      expect(rows[0]).toHaveTextContent('CAJA-77')
     })
 
     it('navigates to expiring members tab and allows quick renewal', async () => {
@@ -112,6 +207,90 @@ describe('Admin Billing & Membership Plans UI', () => {
       // Should show filter pills
       expect(screen.getByText(/Por Vencer \(≤ 7 días\)/i)).toBeInTheDocument()
       expect(screen.getByText(/En Periodo de Gracia \(3 días\)/i)).toBeInTheDocument()
+    })
+
+    it('ofrece recordar por WhatsApp a los socios por vencer que tienen celular', async () => {
+      const user = userEvent.setup()
+      await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+      const state = (
+        repo as unknown as {
+          state: {
+            users: { id: string; role: string; phone?: string }[]
+            memberships: { userId: string; endsAt: string }[]
+          }
+        }
+      ).state
+      const expiring = state.memberships[0]!
+      expiring.endsAt = new Date(Date.now() + 3 * 86_400_000).toISOString()
+      const member = state.users.find((u) => u.id === expiring.userId)!
+      member.phone = '0991234567'
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/cobros']}>
+            <Routes>
+              <Route path="/admin/cobros" element={<CobrosPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+      await user.click(await screen.findByText(/Socios por Vencer y Vencidos/i))
+
+      const link = await screen.findByRole('link', { name: /Recordar por WhatsApp/i })
+      expect(link.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/593991234567\?text=/)
+    })
+
+    it('avisa que falta el celular cuando el socio por vencer no lo tiene', async () => {
+      const user = userEvent.setup()
+      await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+      const state = (
+        repo as unknown as { state: { memberships: { endsAt: string }[] } }
+      ).state
+      state.memberships[0]!.endsAt = new Date(Date.now() + 3 * 86_400_000).toISOString()
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/cobros']}>
+            <Routes>
+              <Route path="/admin/cobros" element={<CobrosPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+      await user.click(await screen.findByText(/Socios por Vencer y Vencidos/i))
+
+      expect(await screen.findByText(/Sin celular registrado/i)).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Recordar por WhatsApp/i })).toBeNull()
+    })
+
+    it('avisa que el celular no es válido en lugar de ocultar el recordatorio (ZCAPP-83)', async () => {
+      const user = userEvent.setup()
+      await repo.signIn({ email: 'admin@gym.local', password: DEMO_PASSWORD })
+      const state = (
+        repo as unknown as {
+          state: {
+            users: { id: string; phone?: string }[]
+            memberships: { userId: string; endsAt: string }[]
+          }
+        }
+      ).state
+      const expiring = state.memberships[0]!
+      expiring.endsAt = new Date(Date.now() + 3 * 86_400_000).toISOString()
+      state.users.find((u) => u.id === expiring.userId)!.phone = 'sin número'
+
+      render(
+        <RepositoryProvider>
+          <MemoryRouter initialEntries={['/admin/cobros']}>
+            <Routes>
+              <Route path="/admin/cobros" element={<CobrosPage />} />
+            </Routes>
+          </MemoryRouter>
+        </RepositoryProvider>,
+      )
+      await user.click(await screen.findByText(/Socios por Vencer y Vencidos/i))
+
+      expect(await screen.findByText(/Celular no válido \(sin número\)/i)).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Recordar por WhatsApp/i })).toBeNull()
     })
 
     it('displays history metrics and table on Historial tab', async () => {
@@ -171,7 +350,7 @@ describe('Admin Billing & Membership Plans UI', () => {
       )
 
       expect(
-        await screen.findByText(/Gestión de Planes de Membresía/i),
+        await screen.findByRole('heading', { name: 'Planes' }),
       ).toBeInTheDocument()
 
       // Verify existing seeded plans exist
@@ -308,7 +487,7 @@ describe('Admin Billing & Membership Plans UI', () => {
       )
 
       expect(await screen.findByText(/Acceso restringido/i)).toBeInTheDocument()
-      expect(screen.queryByText('Marca del gym')).not.toBeInTheDocument()
+      expect(screen.queryByText('Personalización')).not.toBeInTheDocument()
     })
 
     it('deja entrar a staff al panel de administración', async () => {
@@ -324,7 +503,7 @@ describe('Admin Billing & Membership Plans UI', () => {
         </RepositoryProvider>,
       )
 
-      expect(await screen.findByText('Panel de Administración')).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
     })
   })
 })

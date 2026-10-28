@@ -53,6 +53,7 @@ function createMockRepo(user: User, state: Partial<GymState>): GymRepository {
     signUp: vi.fn(),
     signOut: vi.fn(),
     resetPassword: vi.fn(),
+    completePasswordReset: vi.fn(),
     updatePassword: vi.fn(),
     deleteAccount: vi.fn(),
     listBookingsForUser: vi.fn().mockResolvedValue([]),
@@ -246,7 +247,7 @@ describe('Multizone Agenda — 9 Disciplines in Zona Cero', () => {
     )
 
     expect(await screen.findByText(/Explorar áreas/i)).toBeInTheDocument()
-    expect(screen.getByText(/Disciplinas de Zona Cero/i)).toBeInTheDocument()
+    expect(screen.getByText(/disciplinas incluidas en tu plan/i)).toBeInTheDocument()
 
     // Verify all 9 disciplines are present in zone list
     for (const z of all9Zones) {

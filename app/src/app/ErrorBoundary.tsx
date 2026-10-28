@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle, RotateCcw } from 'lucide-react'
 import { Button } from '@/ui/primitives'
+import { reportError } from './monitoring'
 
 interface Props {
   children: ReactNode
@@ -22,8 +23,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Punto único para enviar a un servicio de monitoreo más adelante.
     console.error('[ErrorBoundary]', error, info.componentStack)
+    reportError(error, info.componentStack)
   }
 
   private handleReload = () => {
@@ -36,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children
 
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-line bg-surface-elevated text-danger">
           <AlertTriangle className="h-7 w-7" />
         </div>
@@ -58,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <RotateCcw className="h-4 w-4" />
           Volver al inicio
         </Button>
-      </div>
+      </main>
     )
   }
 }

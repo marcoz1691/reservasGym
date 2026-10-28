@@ -224,15 +224,21 @@ describe('Senior QA Engineer - Full Exploratory & Edge-Case Testing Cycle', () =
       })
 
       const sessions = await repo.listSessions()
-      const targetSession = sessions.find((s) => s.bookedCount < s.capacity)!
+      // Elegir una clase futura, independientemente de la hora de ejecución.
+      const tomorrow = Date.now() + 24 * 60 * 60 * 1000
+      const targetSession = sessions.find(
+        (s) => new Date(s.startsAt).getTime() > tomorrow && s.bookedCount < s.capacity,
+      )
+      expect(targetSession).toBeDefined()
 
       // First booking succeeds
-      const first = await repo.createBooking(targetSession.id, member.id)
+      const first = await repo.createBooking(targetSession!.id, member.id)
       expect(first).toHaveProperty('id')
+      expect(first).toHaveProperty('status', 'confirmed')
 
       // Second booking attempt on same session must be rejected
       await expect(
-        repo.createBooking(targetSession.id, member.id),
+        repo.createBooking(targetSession!.id, member.id),
       ).rejects.toThrow(/Ya tienes reserva/i)
     })
 

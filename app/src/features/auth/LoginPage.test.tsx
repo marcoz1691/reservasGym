@@ -69,6 +69,45 @@ describe('Login · ojo para ver la contraseña', () => {
   })
 })
 
+describe('Login · cuentas de prueba', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetRepositoryForTests()
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  async function renderBuild(env: { MODE: string; DEV: boolean }) {
+    vi.stubEnv('MODE', env.MODE)
+    vi.stubEnv('DEV', env.DEV)
+    const { LoginPage: Page } = await import('./LoginPage')
+    const { RepositoryProvider: Provider } = await import('@/data/RepositoryProvider')
+    return render(
+      <MemoryRouter>
+        <Provider>
+          <Page />
+        </Provider>
+      </MemoryRouter>,
+    )
+  }
+
+  it('QA (staging) no precarga usuarios ni muestra el acceso rápido', async () => {
+    await renderBuild({ MODE: 'staging', DEV: true })
+
+    expect(await screen.findByLabelText(/correo electrónico/i)).toHaveValue('')
+    expect(screen.getByLabelText(/^contraseña$/i)).toHaveValue('')
+    expect(screen.queryByText(/acceso rápido/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^admin$/i })).not.toBeInTheDocument()
+  })
+
+  it('el desarrollo local con datos demo conserva el acceso rápido', async () => {
+    await renderBuild({ MODE: 'development', DEV: true })
+
+    expect(await screen.findByText(/acceso rápido demo/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/correo electrónico/i)).toHaveValue('socio@gym.local')
+  })
+})
+
 describe('Login · acceso biométrico', () => {
   beforeEach(() => {
     localStorage.clear()

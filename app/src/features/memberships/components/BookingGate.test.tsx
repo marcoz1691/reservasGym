@@ -52,6 +52,7 @@ function createMockRepo(user: User, state: Partial<GymState>): GymRepository {
     signUp: vi.fn(),
     signOut: vi.fn(),
     resetPassword: vi.fn(),
+    completePasswordReset: vi.fn(),
     updatePassword: vi.fn(),
     deleteAccount: vi.fn(),
     listBookingsForUser: vi.fn().mockResolvedValue([]),
@@ -251,7 +252,7 @@ describe('Booking Gate in ExplorePage & AgendaPage', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByText('No incluida')).toBeInTheDocument()
+    expect((await screen.findAllByLabelText('No incluida')).length).toBeGreaterThan(0)
     const blocked = await screen.findByRole('link', {
       name: /No incluido en tu plan: CrossFit WOD/i,
     })

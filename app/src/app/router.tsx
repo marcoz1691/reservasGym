@@ -3,7 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './AppLayout'
 import { RequireAuth } from './RequireAuth'
 import { NotFoundPage } from './NotFoundPage'
-import { useCurrentUser, useGym } from '@/data/RepositoryProvider'
+import { useAppData, useCurrentUser, useGym } from '@/data/RepositoryProvider'
+import { isFeatureEnabled } from '@/domain/rules'
 import { Skeleton, SkeletonCard, Spinner } from '@/ui/primitives'
 
 function RouteFallback() {
@@ -21,9 +22,9 @@ function RouteFallback() {
 const LoginPage = lazy(() =>
   import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
-const ResetPasswordPage = lazy(() =>
-  import('@/features/auth/ResetPasswordPage').then((m) => ({
-    default: m.ResetPasswordPage,
+const ForgotPasswordPage = lazy(() =>
+  import('@/features/auth/ForgotPasswordPage').then((m) => ({
+    default: m.ForgotPasswordPage,
   })),
 )
 const HomePage = lazy(() =>
@@ -79,14 +80,19 @@ const MiPlanPage = lazy(() =>
     default: m.MiPlanPage,
   })),
 )
-const DatafastCheckoutPage = lazy(() =>
-  import('@/features/memberships/DatafastCheckoutPage').then((m) => ({
-    default: m.DatafastCheckoutPage,
+const PagomediosCheckoutPage = lazy(() =>
+  import('@/features/memberships/PagomediosCheckoutPage').then((m) => ({
+    default: m.PagomediosCheckoutPage,
   })),
 )
 const WelcomeFichaPage = lazy(() =>
   import('@/features/profile/WelcomeFichaPage').then((m) => ({
     default: m.WelcomeFichaPage,
+  })),
+)
+const LegalPage = lazy(() =>
+  import('@/features/legal/LegalPage').then((m) => ({
+    default: m.LegalPage,
   })),
 )
 
@@ -98,25 +104,38 @@ function RootRedirect() {
   return <Navigate to={user.role === 'member' ? '/' : '/admin'} replace />
 }
 
+/** Con medidas apagadas por el admin, /peso devuelve al inicio de cada rol. */
+function WeightRoute() {
+  const user = useCurrentUser()
+  const { settings } = useAppData()
+  if (!isFeatureEnabled(settings, 'measurements')) {
+    return <Navigate to={user?.role === 'member' ? '/' : '/admin'} replace />
+  }
+  return <WeightPage />
+}
+
 export function AppRouter() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         {/* Pública: se llega desde el enlace del correo, sin sesión iniciada. */}
-        <Route path="/recuperar" element={<ResetPasswordPage />} />
+        <Route path="/recuperar" element={<ForgotPasswordPage />} />
+        {/* Públicas: las tiendas y el registro enlazan aquí sin sesión. */}
+        <Route path="/legal/:slug" element={<LegalPage />} />
         <Route element={<RequireAuth />}>
           <Route path="bienvenida" element={<WelcomeFichaPage />} />
+          {/* Pago a pantalla completa (fuera del menú), como en las apps de compra. */}
+          <Route path="membresia/pago" element={<PagomediosCheckoutPage />} />
           <Route element={<AppLayout />}>
             <Route index element={<HomePage />} />
             <Route path="membresia" element={<MiPlanPage />} />
-            <Route path="membresia/pago" element={<DatafastCheckoutPage />} />
             <Route path="explorar" element={<ExplorePage />} />
             <Route path="catalogo" element={<ExplorePage />} />
             <Route path="agenda" element={<AgendaPage />} />
             <Route path="reservas" element={<MyBookingsPage />} />
             <Route path="check-in" element={<CheckInPage />} />
-            <Route path="peso" element={<WeightPage />} />
+            <Route path="peso" element={<WeightRoute />} />
             <Route path="perfil" element={<ProfilePage />} />
             <Route path="admin" element={<AdminPage />} />
             <Route path="admin/cobros" element={<CobrosPage />} />
