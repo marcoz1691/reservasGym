@@ -1,0 +1,14 @@
+<!--
+  Plantilla "Confirm signup" de Supabase Auth (Authentication → Email Templates).
+  Asunto: Tu código para confirmar la cuenta — Zona Cero
+  Lleva el código ({{ .Token }}), no un enlace: el socio lo escribe en la app
+  justo después de crear la cuenta y sigue dentro (también en la app nativa).
+  Aplicar en zona-cero y zona-cero-prod.
+-->
+<div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #0b1f17;">
+  <h2 style="margin: 0 0 8px; color: #0B3D2E;">Zona Cero Performance Center</h2>
+  <p style="margin: 0 0 16px;">¡Bienvenido! Para activar tu cuenta, escribe este código en la app:</p>
+  <p style="margin: 0 0 16px; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #f2740d;">{{ .Token }}</p>
+  <p style="margin: 0 0 16px; font-size: 13px; color: #4b5b54;">El código vence en una hora y sirve una sola vez.</p>
+  <p style="margin: 0; font-size: 13px; color: #4b5b54;">Si no creaste una cuenta en Zona Cero, ignora este correo.</p>
+</div>

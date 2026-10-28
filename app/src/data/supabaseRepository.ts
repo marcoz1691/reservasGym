@@ -735,13 +735,34 @@ export class SupabaseRepository implements GymRepository {
 
     const user = await this.getCurrentUser()
     if (!user) {
-      // Email confirmation activo: cuenta creada sin sesión.
-      // No es un fallo técnico — la UI lo muestra como éxito.
+      // Email confirmation activo: cuenta creada sin sesión. No es un fallo
+      // técnico: la UI pide el código del correo (confirmSignUp).
       throw new Error(
-        'PENDING_EMAIL_CONFIRMATION:Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.',
+        'PENDING_EMAIL_CONFIRMATION:Cuenta creada. Te enviamos un código a tu correo para confirmarla.',
       )
     }
     return user
+  }
+
+  /**
+   * La plantilla "Confirm signup" lleva el código ({{ .Token }}), no un enlace:
+   * un enlace abre el navegador y deja la sesión ahí, fuera de la app nativa.
+   */
+  async confirmSignUp(email: string, code: string): Promise<User> {
+    const { error } = await this.client.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: 'signup',
+    })
+    if (error) throw new Error(RECOVERY_CODE_INVALID)
+    const user = await this.getCurrentUser()
+    if (!user) throw new Error(RECOVERY_CODE_INVALID)
+    return user
+  }
+
+  async resendSignUpCode(email: string): Promise<void> {
+    const { error } = await this.client.auth.resend({ type: 'signup', email: email.trim() })
+    if (error) throw new Error(error.message)
   }
 
   async signOut(): Promise<void> {

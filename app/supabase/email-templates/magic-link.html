@@ -1,0 +1,14 @@
+<!--
+  Plantilla "Magic Link" de Supabase Auth (Authentication → Email Templates).
+  Asunto: Tu enlace para entrar — Zona Cero
+  La app no usa magic link hoy; se traduce por si Supabase lo envía.
+  Aplicar en zona-cero y zona-cero-prod.
+-->
+<div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #0b1f17;">
+  <h2 style="margin: 0 0 8px; color: #0B3D2E;">Zona Cero Performance Center</h2>
+  <p style="margin: 0 0 16px;">Usa este enlace para entrar a tu cuenta:</p>
+  <p style="margin: 0 0 24px;">
+    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #f2740d; color: #ffffff; text-decoration: none; font-weight: bold; padding: 12px 24px; border-radius: 10px;">Entrar a Zona Cero</a>
+  </p>
+  <p style="margin: 0; font-size: 13px; color: #4b5b54;">Si no pediste este enlace, ignora este correo.</p>
+</div>
