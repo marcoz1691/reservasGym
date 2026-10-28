@@ -54,6 +54,13 @@ export interface GymRepository {
    * cerrada: el socio entra luego desde el login con la clave nueva.
    */
   completePasswordReset(email: string, code: string, newPassword: string): Promise<void>
+  /**
+   * Confirma la cuenta nueva con el código del correo y deja la sesión abierta.
+   * Solo Supabase: el modo demo crea la cuenta ya confirmada.
+   */
+  confirmSignUp?(email: string, code: string): Promise<User>
+  /** Reenvía el código de confirmación de la cuenta nueva. */
+  resendSignUpCode?(email: string): Promise<void>
   /** Fija una contraseña nueva para la sesión activa (cambio con sesión iniciada). */
   updatePassword(newPassword: string): Promise<void>
   deleteAccount(): Promise<void>
