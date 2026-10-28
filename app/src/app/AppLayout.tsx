@@ -39,6 +39,7 @@ import {
 import { Button } from '@/ui/primitives'
 import { accentTextColor } from '@/lib/format'
 import { clearCheckoutDraft } from '@/features/memberships/checkoutDraft'
+import { OfflineBanner } from './OfflineBanner'
 
 const memberDesktopNav = [
   { to: '/', label: 'Inicio', icon: Home, end: true },
@@ -315,6 +316,8 @@ export function AppLayout() {
             </Button>
           </div>
         </header>
+
+        <OfflineBanner />
 
         {/* Main scroll area — height is viewport minus header + tab bar (flex, not fixed overlay) */}
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-4 sm:p-6 lg:p-8">

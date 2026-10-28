@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle, RotateCcw } from 'lucide-react'
 import { Button } from '@/ui/primitives'
+import { reportError } from './monitoring'
 
 interface Props {
   children: ReactNode
@@ -22,8 +23,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Punto único para enviar a un servicio de monitoreo más adelante.
     console.error('[ErrorBoundary]', error, info.componentStack)
+    reportError(error, info.componentStack)
   }
 
   private handleReload = () => {

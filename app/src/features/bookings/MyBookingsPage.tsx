@@ -5,10 +5,8 @@ import QRCode from 'qrcode'
 import { rescheduleChoices } from '@/features/agenda/agendaSchedule'
 import { formatSessionWhen } from '@/lib/format'
 import {
-  useAppData,
-  useCurrentUser,
-  useGym,
-  useRefresh,
+  useGymStateQuery,
+  useInvalidateGymState,
   useRepo,
 } from '@/data/RepositoryProvider'
 import { ZONE_LABELS, type MembershipPlan, type Session } from '@/domain/models'
@@ -25,16 +23,15 @@ import {
   SkeletonCard,
 } from '@/ui/primitives'
 import { TicketCheck } from 'lucide-react'
+import { hapticLight } from '@/lib/haptics'
 
 /** Clases pasadas que se muestran en el historial (las más recientes). */
 const HISTORY_LIMIT = 10
 
 export function MyBookingsPage() {
-  const user = useCurrentUser()
-  const data = useAppData()
+  const { data, user, isPending: loading } = useGymStateQuery()
   const repo = useRepo()
-  const refresh = useRefresh()
-  const { loading } = useGym()
+  const invalidateGymState = useInvalidateGymState()
   const [msg, setMsg] = useState('')
   const [qrMap, setQrMap] = useState<Record<string, string>>({})
   const [rescheduleId, setRescheduleId] = useState<string | null>(null)
@@ -170,7 +167,8 @@ export function MyBookingsPage() {
                       void (async () => {
                         try {
                           await repo.cancelBooking(booking.id)
-                          await refresh()
+                          void hapticLight()
+                          await invalidateGymState()
                           setMsg('Reserva cancelada')
                         } catch (e) {
                           setMsg(e instanceof Error ? e.message : 'Error')
@@ -215,7 +213,7 @@ export function MyBookingsPage() {
                       try {
                         await repo.rescheduleBooking(booking.id, newSessionId)
                         setRescheduleId(null)
-                        await refresh()
+                        await invalidateGymState()
                         setMsg('Reserva reagendada')
                       } catch (e) {
                         setMsg(e instanceof Error ? e.message : 'Error')
