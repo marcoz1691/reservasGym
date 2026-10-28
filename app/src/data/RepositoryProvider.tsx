@@ -6,10 +6,19 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import {
+  QueryClientProvider,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query'
 import type { GymState, User } from '@/domain/models'
 import { getRepository } from '@/data/repository'
 import { LocalRepository } from '@/data/localRepository'
 import type { GymRepository } from '@/data/types'
+import { gymStateQueryOptions } from '@/data/gymQueries'
+import { queryKeys } from '@/data/queryKeys'
+import { createQueryClient, installNativeFocusRefetch } from '@/data/queryClient'
 
 type Ctx = {
   repo: GymRepository
@@ -46,43 +55,54 @@ const EMPTY_STATE: GymState = {
   payments: [],
 }
 
-export function RepositoryProvider({ children }: { children: ReactNode }) {
+/**
+ * Cada provider crea su QueryClient (en la app hay uno solo; en los tests,
+ * uno por render, así la caché no se cruza entre casos).
+ */
+export function RepositoryProvider({
+  children,
+  queryClient,
+}: {
+  children: ReactNode
+  queryClient?: QueryClient
+}) {
+  const [client] = useState(() => queryClient ?? createQueryClient())
+  useEffect(() => {
+    void installNativeFocusRefetch()
+  }, [])
+  return (
+    <QueryClientProvider client={client}>
+      <GymStateProvider>{children}</GymStateProvider>
+    </QueryClientProvider>
+  )
+}
+
+function GymStateProvider({ children }: { children: ReactNode }) {
   const repo = getRepository()
-  const [state, setState] = useState<GymState | null>(null)
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const query = useQuery(gymStateQueryOptions(repo, queryClient))
+  // `loading` sigue el contrato de antes (carga inicial o refresh() manual);
+  // los refrescos en segundo plano de la caché no muestran esqueletos.
+  const [manualRefreshes, setManualRefreshes] = useState(0)
 
   const refresh = useCallback(async () => {
+    setManualRefreshes((n) => n + 1)
     try {
-      setLoading(true)
-      const u = await repo.getCurrentUser()
-      const s = await repo.load()
-      setUser(u)
-      setState(s)
-    } catch (err) {
-      console.error('[ReservasGym] refresh failed:', err)
-      try {
-        const u = await repo.getCurrentUser()
-        setUser(u)
-        if (!u) setState(null)
-      } catch {
-        setUser(null)
-        setState(null)
-      }
+      await queryClient.refetchQueries({ queryKey: queryKeys.gymState() })
     } finally {
-      setLoading(false)
+      setManualRefreshes((n) => n - 1)
     }
-  }, [repo])
+  }, [queryClient])
 
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
+  const value: Ctx = {
+    repo,
+    state: query.data?.state ?? null,
+    user: query.data?.user ?? null,
+    refresh,
+    loading: query.isPending || manualRefreshes > 0,
+  }
 
-  return (
-    <GymContext.Provider value={{ repo, state, user, refresh, loading }}>
-      {children}
-    </GymContext.Provider>
-  )
+  return <GymContext.Provider value={value}>{children}</GymContext.Provider>
 }
 
 export function useGym() {
@@ -105,6 +125,35 @@ export function useCurrentUser() {
 
 export function useRefresh() {
   return useGym().refresh
+}
+
+/**
+ * Estado del gimnasio leído desde la caché de TanStack Query. A diferencia de
+ * `useAppData()`, la pantalla se suscribe a la consulta: al montarse con datos
+ * vencidos (más de 30 s) los refresca en segundo plano.
+ */
+export function useGymStateQuery(): {
+  data: GymState
+  user: User | null
+  isPending: boolean
+} {
+  const repo = useRepo()
+  const queryClient = useQueryClient()
+  const query = useQuery(gymStateQueryOptions(repo, queryClient))
+  return {
+    data: query.data?.state ?? EMPTY_STATE,
+    user: query.data?.user ?? null,
+    isPending: query.isPending,
+  }
+}
+
+/** Marca vencido el estado del gimnasio y espera a que se vuelva a cargar. */
+export function useInvalidateGymState(): () => Promise<void> {
+  const queryClient = useQueryClient()
+  return useCallback(
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.gymState() }),
+    [queryClient],
+  )
 }
 
 export function useLocalRepo(): LocalRepository | null {

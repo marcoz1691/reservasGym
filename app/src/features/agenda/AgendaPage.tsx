@@ -2,9 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Lock, UserCheck } from 'lucide-react'
 import {
-  useAppData,
-  useCurrentUser,
-  useRefresh,
+  useGymStateQuery,
+  useInvalidateGymState,
   useRepo,
 } from '@/data/RepositoryProvider'
 import type { Booking, Session, WaitlistEntry } from '@/domain/models'
@@ -21,6 +20,7 @@ import {
 import { Button, PageHeader } from '@/ui/primitives'
 import { ButtonLink } from '@/ui/ButtonLink'
 import { BookingGateModal, type BookingGateType } from '@/features/memberships'
+import { hapticSuccess } from '@/lib/haptics'
 import { StaffBookingModal } from './StaffBookingModal'
 
 const ACTIVE_BOOKING = new Set(['confirmed', 'pending', 'waitlisted'])
@@ -44,11 +44,10 @@ function mineOnSession(
 }
 
 export function AgendaPage() {
-  const data = useAppData()
+  const { data, user } = useGymStateQuery()
   const waitlistOn = isFeatureEnabled(data.settings, 'waitlist')
-  const user = useCurrentUser()
   const repo = useRepo()
-  const refresh = useRefresh()
+  const invalidateGymState = useInvalidateGymState()
   const [params, setParams] = useSearchParams()
 
   const isStaffOrAdmin = user?.role === 'staff' || user?.role === 'admin'
@@ -203,7 +202,7 @@ export function AgendaPage() {
       const coveringPasses = selectMyDayPassPlans(data, user.id, new Date(), session.startsAt)
       if (coveringPasses.some((pass) => canBookZone(pass, session.zoneId).allowed)) {
         await repo.createBooking(sessionId, user.id)
-        await refresh()
+        await invalidateGymState()
         return
       }
       const memCheck = canBookMembership(currentMembership)
@@ -240,7 +239,8 @@ export function AgendaPage() {
       }
 
       await repo.createBooking(sessionId, user.id)
-      await refresh()
+      void hapticSuccess()
+      await invalidateGymState()
     } catch (error) {
       setRowError({
         sessionId,
@@ -503,9 +503,6 @@ export function AgendaPage() {
           isOpen={Boolean(staffModalSession)}
           onClose={() => setStaffModalSession(null)}
           session={staffModalSession}
-          onSuccess={() => {
-            void refresh()
-          }}
         />
       ) : null}
     </div>

@@ -14,7 +14,7 @@ import {
   Check,
 } from 'lucide-react'
 import type { Booking, Session, User, WaitlistEntry } from '@/domain/models'
-import { useAppData, useRefresh, useRepo } from '@/data/RepositoryProvider'
+import { useAppData, useInvalidateGymState, useRepo } from '@/data/RepositoryProvider'
 import { selectMyDayPassPlans, selectMyMembership } from '@/app/store'
 import { canBookMembership, canBookZone, isFeatureEnabled } from '@/domain/rules'
 import { getDisciplineMeta } from '@/domain/disciplines'
@@ -37,7 +37,7 @@ export function StaffBookingModal({
   const data = useAppData()
   const waitlistOn = isFeatureEnabled(data.settings, 'waitlist')
   const repo = useRepo()
-  const refresh = useRefresh()
+  const invalidateGymState = useInvalidateGymState()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMember, setSelectedMember] = useState<User | null>(null)
@@ -160,7 +160,7 @@ export function StaffBookingModal({
 
     try {
       const result = await repo.createBooking(session.id, selectedMember.id)
-      await refresh()
+      await invalidateGymState()
       setBookingResult({ booking: result, member: selectedMember })
       if (onSuccess) {
         onSuccess(result, selectedMember)

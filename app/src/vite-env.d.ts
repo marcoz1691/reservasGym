@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly VITE_ONLINE_PAYMENTS?: string
   /** Solo dev: URL de pagomedios-payment corriendo con Deno (simulador local). */
   readonly VITE_FUNCTIONS_URL?: string
+  /** DSN de Sentry. Sin valor, el reporte de errores queda apagado. */
+  readonly VITE_SENTRY_DSN?: string
 }
 
 interface ImportMeta {
