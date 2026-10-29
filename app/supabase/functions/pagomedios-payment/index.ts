@@ -51,6 +51,8 @@ const PAGOMEDIOS_API = (
 const DOCUMENT_TYPES = ["04", "05", "06", "08"] as const
 const QA_PROJECT_REF = "kqhmclbexnnsbzbgerbx"
 const QA_APP_URL = "https://zona-cero-qa.vercel.app"
+const CREATE_MAX_ATTEMPTS = 5
+const CREATE_WINDOW_MS = 10 * 60 * 1000
 
 // Toda llamada a Pagomedios lleva timeout: si la pasarela se cuelga, la función responde con error
 // en vez de quedarse esperando. El cobro con tarjeta trata el timeout como "en revisión", sin reintentar.
@@ -182,10 +184,7 @@ async function handleRequest(req: Request): Promise<Response> {
     return json({ error: "Acción inválida" }, 400)
   } catch (err) {
     console.error(err)
-    return json(
-      { error: err instanceof Error ? err.message : "Error interno" },
-      500,
-    )
+    return json({ error: "Error interno. Intenta de nuevo en unos minutos." }, 500)
   }
 }
 
@@ -211,6 +210,24 @@ async function handleCreate(
   }
 
   const { admin } = env
+  // Cada intento crea un pago y una solicitud real en Pagomedios: se limita por socio.
+  const { count: recentAttempts, error: rateError } = await admin
+    .from("payments")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("provider", "pagomedios")
+    .gte("created_at", new Date(Date.now() - CREATE_WINDOW_MS).toISOString())
+  if (rateError) {
+    console.error("rate limit query failed", rateError)
+    return json({ error: "No se pudo validar la compra. Intenta de nuevo." }, 500)
+  }
+  if ((recentAttempts ?? 0) >= CREATE_MAX_ATTEMPTS) {
+    return json(
+      { error: "Demasiados intentos de pago. Espera unos minutos e intenta de nuevo.", code: "RATE_LIMITED" },
+      429,
+    )
+  }
+
   const { data: settings } = await admin
     .from("gym_settings")
     .select("*")
@@ -256,7 +273,10 @@ async function handleCreate(
     "plan_purchase_block_reason",
     { p_user_id: user.id, p_plan_id: plan.id },
   )
-  if (blockError) return json({ error: blockError.message }, 500)
+  if (blockError) {
+    console.error("plan_purchase_block_reason failed", blockError)
+    return json({ error: "No se pudo validar la compra. Intenta de nuevo." }, 500)
+  }
   if (blockReason) return json({ error: blockReason, code: "PLAN_QUEUE_LIMIT" }, 409)
   if (recurring) {
     // Un primer mes que quizá ya se cobró (sin respuesta clara) no se vuelve a intentar
@@ -306,7 +326,8 @@ async function handleCreate(
     .select("id")
     .single()
   if (payError || !payment) {
-    return json({ error: payError?.message ?? "No se pudo crear el pago" }, 500)
+    console.error("payments insert failed", payError)
+    return json({ error: "No se pudo crear el pago" }, 500)
   }
 
   const amounts = splitTax(plan.price_cents, env.taxRate)
@@ -354,11 +375,9 @@ async function handleCreate(
   const pmUrl = pmBody?.data?.url
   if (!pmRes.ok || !pmBody?.success || !pmToken || !pmUrl) {
     await admin.from("payments").update({ status: "rejected" }).eq("id", payment.id)
+    console.error("Pagomedios rechazó la solicitud", pmRes.status, pmBody)
     return json(
-      {
-        error: pmBody?.message ?? "Pagomedios rechazó la solicitud de pago",
-        detail: pmBody,
-      },
+      { error: pmBody?.message ?? "Pagomedios rechazó la solicitud de pago" },
       502,
     )
   }
