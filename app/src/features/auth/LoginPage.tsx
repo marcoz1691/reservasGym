@@ -114,7 +114,9 @@ export function LoginPage() {
       await refresh()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al iniciar sesión'
-      setError(msg.includes('recursion') ? `${msg} — ejecuta fix-is-staff-rls.sql en Supabase` : msg)
+      if (!msg.includes('recursion')) setError(msg)
+      else if (import.meta.env.MODE === 'staging') setError(`${msg} — ejecuta fix-is-staff-rls.sql en Supabase`)
+      else setError('No se pudo iniciar sesión. Intenta de nuevo en unos minutos.')
     } finally {
       setSubmitting(false)
     }
@@ -227,7 +229,9 @@ export function LoginPage() {
       const lower = msg.toLowerCase()
       if (lower.includes('rate limit') || lower.includes('over_email_send')) {
         setError(
-          'Se alcanzó el límite de correos de prueba en QA. En Supabase → Authentication → Providers → Email, desactiva «Confirm email» (solo staging) o espera ~1 hora.',
+          import.meta.env.MODE === 'staging'
+            ? 'Se alcanzó el límite de correos de prueba en QA. En Supabase → Authentication → Providers → Email, desactiva «Confirm email» (solo staging) o espera ~1 hora.'
+            : 'Demasiados intentos. Espera unos minutos e intenta de nuevo.',
         )
         return
       }
