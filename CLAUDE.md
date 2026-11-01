@@ -14,3 +14,5 @@ App de reservas, aforo, check-in QR y control de peso para gimnasios, paquete In
 ## Skills del proyecto
 
 En `.claude/skills/`: `reservasgym-tiendas` (publicar en App Store/Play con Capacitor) y `reservasgym-carga` (pruebas de carga k6).
+
+Subagente: `tests-runner` (carga `automated-tests-zona-cero` en su propio contexto). Los subagentes no heredan skills: se declaran con `skills:` en `.claude/agents/`.
