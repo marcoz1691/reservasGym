@@ -8,12 +8,14 @@ allowed-tools: Read, Grep, Glob, Bash
 
 Documentación en `app/load/README.md`, objetivos en `app/load/slo.md`, inventario en `app/load/inventory.md`. Requiere `app/.env.load.local` (no lo crees ni lo imprimas).
 
-Orden, desde `app/`:
+Orden, desde `app/`. `<run>` es un nombre libre de la corrida (letras, números, `.`, `_`, `-`), p. ej. `2026-11-01-smoke`; los reportes van a `app/load/reports/<run>/`.
 
-1. `npm run load:seed` — crea usuarios de prueba.
-2. `npm run load:mint` — genera tokens.
-3. `npm run load:a` o `npm run load:b` — escenarios k6.
-4. `npm run load:check` — verifica integridad de datos.
-5. `npm run load:cleanup` — **borra** los usuarios de prueba. Confirma con el usuario el entorno (staging vs producción) antes de sembrar o limpiar.
+1. `npm run load:seed` — crea usuarios de prueba (idempotente).
+2. `npm run load:mint` — genera tokens. El escenario B los exige.
+3. `npm run load:a -- <run>` o `npm run load:b -- <run>` — escenarios k6. Sin `<run>` el script aborta. `SMOKE=1` hace una corrida corta de humo.
+4. `npm run load:check -- --run <run>` — verifica integridad de datos. Sin `--run` aborta.
+5. `npm run load:cleanup` — **solo simula (dry-run)**: lista qué borraría y no modifica nada. Para borrar de verdad: `npm run load:cleanup -- --yes`. Muestra primero el dry-run al usuario y pide confirmación antes de usar `--yes`.
+
+Por defecto todo apunta a QA. Producción exige `LOAD_TARGET=prod` y `LOAD_PROD_CONFIRM` en la línea de comandos y que prod no tenga usuarios reales (ver `app/load/README.md`). No actives producción por tu cuenta: confirma con el usuario el entorno antes de sembrar o limpiar.
 
 Compara resultados con `slo.md` y reporta cumplimiento por métrica. Reportes quedan en `app/load/reports/`.
