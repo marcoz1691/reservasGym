@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle, RotateCcw } from 'lucide-react'
 import { Button } from '@/ui/primitives'
 import { reportError } from './monitoring'
+import { isChunkLoadError, reloadOnceForStaleChunk } from './chunkReload'
 
 interface Props {
   children: ReactNode
@@ -23,6 +24,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    // Chunk obsoleto tras un deploy: recargar lo resuelve, no es un fallo a reportar.
+    if (isChunkLoadError(error) && reloadOnceForStaleChunk()) return
     console.error('[ErrorBoundary]', error, info.componentStack)
     reportError(error, info.componentStack)
   }

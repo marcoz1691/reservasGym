@@ -8,6 +8,7 @@ import { ErrorBoundary } from './app/ErrorBoundary'
 import { installAndroidBackButton } from './app/androidBackButton'
 import { hideSplash, installNativeShell } from './app/nativeShell'
 import { initMonitoring } from './app/monitoring'
+import { installChunkReload } from './app/chunkReload'
 // Fuentes empaquetadas con la app (sin red en Capacitor). Solo latin y los pesos en uso.
 import '@fontsource/ibm-plex-sans/latin-400.css'
 import '@fontsource/ibm-plex-sans/latin-500.css'
@@ -25,6 +26,7 @@ const base = import.meta.env.BASE_URL
 const routerBasename = base.startsWith('/') ? base.replace(/\/$/, '') || undefined : undefined
 
 void initMonitoring()
+installChunkReload()
 installSpanishFormValidation()
 void installAndroidBackButton()
 void installNativeShell()
