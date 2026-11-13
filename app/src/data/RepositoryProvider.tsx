@@ -105,6 +105,11 @@ function GymStateProvider({ children }: { children: ReactNode }) {
   return <GymContext.Provider value={value}>{children}</GymContext.Provider>
 }
 
+/** Configuración del gimnasio si ya se cargó (sin sesión, p. ej. en el login, es null). */
+export function useOptionalSettings(): GymState['settings'] | null {
+  return useContext(GymContext)?.state?.settings ?? null
+}
+
 export function useGym() {
   const ctx = useContext(GymContext)
   if (!ctx) throw new Error('RepositoryProvider missing')

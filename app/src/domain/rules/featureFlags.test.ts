@@ -5,6 +5,7 @@ import {
   assertPlanSellableInApp,
   isFeatureEnabled,
   plansForAppSale,
+  showsRefundPolicy,
 } from './featureFlags'
 
 const base: GymSettings = {
@@ -93,5 +94,17 @@ describe('pases diarios en la app', () => {
     expect(() => assertPlanSellableInApp(zonaDay, off)).toThrow(DAY_PASSES_APP_DISABLED_MESSAGE)
     expect(() => assertPlanSellableInApp(monthly, off)).not.toThrow()
     expect(() => assertPlanSellableInApp(zonaDay, base)).not.toThrow()
+  })
+})
+
+describe('showsRefundPolicy', () => {
+  it('se oculta si no hay pago en línea único ni recurrente', () => {
+    expect(showsRefundPolicy(null)).toBe(false)
+    expect(showsRefundPolicy({ onlinePaymentsEnabled: false, recurringPaymentsEnabled: false })).toBe(false)
+  })
+  it('aparece si está encendido al menos uno de los dos pagos en línea', () => {
+    expect(showsRefundPolicy({ onlinePaymentsEnabled: true })).toBe(true)
+    expect(showsRefundPolicy({ recurringPaymentsEnabled: true })).toBe(true)
+    expect(showsRefundPolicy({ onlinePaymentsEnabled: true, recurringPaymentsEnabled: true })).toBe(true)
   })
 })

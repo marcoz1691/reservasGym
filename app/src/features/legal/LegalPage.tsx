@@ -2,6 +2,10 @@ import { Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { formatDateSpanish } from '@/lib/format'
 import { LEGAL_DOCUMENTS, legalPath } from './legalDocuments'
+import { useOptionalSettings } from '@/data/RepositoryProvider'
+import { showsRefundPolicy } from '@/domain/rules'
+
+const REFUND_SLUG = 'reembolsos'
 
 /**
  * Documentos legales públicos (sin sesión): términos, privacidad, reembolsos y
@@ -56,9 +60,11 @@ export function LegalPage() {
 
 /** Enlaces a los documentos legales, para el pie del login, el perfil y cada documento. */
 export function LegalLinks({ current, className = '' }: { current?: string; className?: string }) {
+  // Sin pago en línea (único ni recurrente) no hay reembolsos que explicar.
+  const refunds = showsRefundPolicy(useOptionalSettings())
   return (
     <nav aria-label="Documentos legales" className={`flex flex-wrap gap-x-4 gap-y-1 text-xs ${className}`}>
-      {LEGAL_DOCUMENTS.filter((d) => d.slug !== current).map((d) => (
+      {LEGAL_DOCUMENTS.filter((d) => d.slug !== current && (d.slug !== REFUND_SLUG || refunds)).map((d) => (
         <Link key={d.slug} to={legalPath(d)} className="inline-flex min-h-8 items-center font-semibold text-ink-3 underline hover:text-ink">
           {d.title}
         </Link>
