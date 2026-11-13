@@ -27,4 +27,10 @@ end
 
 post_install do |installer|
   assertDeploymentTarget(installer)
+  # Xcode 27 ya no admite pods con iOS 14: se alinea con el mínimo de la app (15.0).
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
 end
