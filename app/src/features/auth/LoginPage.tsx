@@ -355,7 +355,7 @@ export function LoginPage() {
                 type="password"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Tu contraseña"
                 required
               />
               <div className="mt-1.5 text-right">
@@ -471,7 +471,7 @@ export function LoginPage() {
                 type="password"
                 value={registerPassword}
                 onChange={(e) => setRegisterPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Crea una contraseña"
                 required
                 minLength={8}
               />
@@ -481,7 +481,7 @@ export function LoginPage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Repite la contraseña"
                 required
                 minLength={8}
               />
