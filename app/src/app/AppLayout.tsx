@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import {
   CalendarClock,
@@ -24,6 +24,7 @@ import {
   useRepo,
 } from '@/data/RepositoryProvider'
 import { selectMyDayPasses, selectMyMembership } from '@/app/store'
+import { clearStaffActivity, useIdleLogout } from '@/app/idleLogout'
 import {
   canUseBookingNav,
   displayInitials,
@@ -92,6 +93,13 @@ export function AppLayout() {
   const repo = useRepo()
   const refresh = useRefresh()
   const { state, loading } = useGym()
+  const logout = useCallback(async () => {
+    clearCheckoutDraft()
+    clearStaffActivity()
+    await repo.signOut()
+    await refresh()
+  }, [repo, refresh])
+  useIdleLogout(user, logout)
   const { settings, bookings, sessions } = useAppData()
   const [noPlanReminderDismissed, setNoPlanReminderDismissed] = useState(
     wasNoPlanReminderDismissed,
@@ -238,11 +246,7 @@ export function AppLayout() {
             size="sm"
             className="w-full justify-start text-xs font-medium text-ink-3 hover:text-danger"
             onClick={() => {
-              void (async () => {
-                clearCheckoutDraft()
-                await repo.signOut()
-                await refresh()
-              })()
+              void logout()
             }}
           >
             <LogOut className="h-3.5 w-3.5" />
@@ -305,11 +309,7 @@ export function AppLayout() {
               aria-label="Cerrar sesión"
               className="h-10 w-10 justify-center p-0 text-xs text-ink-3"
               onClick={() => {
-                void (async () => {
-                  clearCheckoutDraft()
-                  await repo.signOut()
-                  await refresh()
-                })()
+                void logout()
               }}
             >
               <LogOut className="h-3.5 w-3.5" />

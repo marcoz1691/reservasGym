@@ -1,14 +1,46 @@
 <!--
   Plantilla "Reset Password" de Supabase Auth (Authentication → Email Templates).
-  Asunto: Tu código para cambiar la contraseña — Zona Cero
+  Asunto: Código para restablecer tu contraseña de Zona Cero
   Lleva el código ({{ .Token }}), no un enlace: el socio lo escribe dentro de la
-  app, que funciona igual en la app nativa. Aplicar en zona-cero y zona-cero-prod.
+  app, que funciona igual en la app nativa. Vigencia = mailer_otp_exp (3600 s).
+  Sin enlaces a propósito (mejor entregabilidad y evita phishing).
+  Aplicar en zona-cero y zona-cero-prod.
 -->
-<div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #0b1f17;">
-  <h2 style="margin: 0 0 8px; color: #0B3D2E;">Zona Cero Performance Center</h2>
-  <p style="margin: 0 0 16px;">Recibimos una solicitud para cambiar la contraseña de tu cuenta.</p>
-  <p style="margin: 0 0 8px;">Escribe este código en la app:</p>
-  <p style="margin: 0 0 16px; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #f2740d;">{{ .Token }}</p>
-  <p style="margin: 0 0 16px; font-size: 13px; color: #4b5b54;">El código vence pronto y sirve una sola vez.</p>
-  <p style="margin: 0; font-size: 13px; color: #4b5b54;">Si no pediste este cambio, ignora este correo: tu contraseña sigue igual.</p>
-</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f3; padding:24px 12px; font-family:Arial, Helvetica, sans-serif;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px; background:#ffffff; border-radius:12px; border:1px solid #e3e6e2;">
+      <tr><td style="padding:20px 28px; border-bottom:3px solid #f2740d;">
+        <span style="font-size:18px; font-weight:bold; color:#0B3D2E;">Zona Cero</span>
+        <span style="font-size:13px; color:#4b5b54;">&nbsp;Performance Center</span>
+      </td></tr>
+      <tr><td style="padding:28px 28px 8px; color:#0b1f17;">
+        <h1 style="margin:0 0 16px; font-size:20px; color:#0b1f17;">Restablece tu contraseña</h1>
+        <p style="margin:0 0 16px; font-size:15px; line-height:1.5;">Hola:</p>
+        <p style="margin:0 0 20px; font-size:15px; line-height:1.5;">Recibimos una solicitud para restablecer la contraseña de la cuenta <strong>{{ .Email }}</strong>. Escribe este código de verificación en la app Zona Cero:</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 12px;">
+          <tr><td style="background:#fff4ec; border:1px solid #f9c9a3; border-radius:8px; padding:14px 24px; font-size:32px; font-weight:bold; letter-spacing:8px; color:#0b1f17;">{{ .Token }}</td></tr>
+        </table>
+        <p style="margin:0 0 24px; font-size:13px; line-height:1.5; color:#4b5b54;">El código vence en <strong>60 minutos</strong> y solo se puede usar una vez. Si vence, pide uno nuevo desde la app.</p>
+
+        <h2 style="margin:0 0 8px; font-size:15px; color:#0b1f17;">Crea una contraseña segura</h2>
+        <ul style="margin:0 0 24px; padding-left:20px; font-size:13px; line-height:1.6; color:#4b5b54;">
+          <li>Usa al menos 8 caracteres; mejor si combinas mayúsculas, minúsculas, números y símbolos.</li>
+          <li>No uses tu nombre, tu cédula, tu fecha de nacimiento ni contraseñas que ya usas en otros sitios.</li>
+          <li>No la compartas con nadie, ni siquiera con el personal del gimnasio.</li>
+        </ul>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+          <tr><td style="background:#f4f5f3; border-left:4px solid #0B3D2E; border-radius:6px; padding:14px 16px; font-size:13px; line-height:1.6; color:#0b1f17;">
+            <strong>¿No fuiste tú?</strong> Ignora este correo: tu contraseña no cambia mientras nadie use este código. Si recibes estos correos sin haberlos pedido, alguien podría estar intentando entrar a tu cuenta; cambia tu contraseña desde la app y avisa en recepción.<br><br>
+            <strong>Zona Cero nunca te pedirá este código</strong> por teléfono, WhatsApp, redes sociales ni correo. No lo compartas con nadie.
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:16px 28px 24px; border-top:1px solid #e3e6e2; font-size:11px; line-height:1.5; color:#7a8781;">
+        Este es un mensaje automático de seguridad; no respondas a este correo.<br>
+        Recibes este correo porque se solicitó un cambio de contraseña para tu cuenta en Zona Cero.<br>
+        Zona Cero Performance Center · Plaza Comercial Mitad del Mundo · Quito, Ecuador
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
