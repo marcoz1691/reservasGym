@@ -557,9 +557,9 @@ export function FichaTecnicaModal({
                       🔒 Privacidad y protección de datos (LOPDP Ecuador)
                     </p>
                     <p className="mt-1">
-                      Usamos tus datos para tu ficha de entrenamiento. Se alojan en Supabase,
-                      nuestro proveedor de almacenamiento en São Paulo, Brasil, lo que implica
-                      una transferencia internacional. No comercializamos tus datos.
+                      Usamos tus datos solo para tu ficha de entrenamiento. Se guardan cifrados
+                      y solo tú y el personal autorizado del gimnasio pueden verlos. No
+                      comercializamos tus datos.
                     </p>
                   </div>
                 </div>
