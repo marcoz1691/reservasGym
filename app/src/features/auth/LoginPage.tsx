@@ -23,6 +23,7 @@ import { LegalDocumentDialog } from '@/features/legal/LegalDocumentDialog'
 import { LegalLinks } from '@/features/legal/LegalPage'
 import { PRIVACY, TERMS_DOCUMENT, type LegalDocument } from '@/features/legal/legalDocuments'
 import { SignupCodeStep } from './SignupCodeStep'
+import { clearIdleLogoutNotice, idleLogoutNoticeMinutes } from '@/app/idleLogout'
 
 // Solo para `npm run dev` con datos locales en memoria. QA y producción son
 // públicos: ahí no se muestran ni se embeben credenciales.
@@ -68,7 +69,13 @@ export function LoginPage() {
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [success, setSuccess] = useState(() => {
+    const minutes = idleLogoutNoticeMinutes()
+    return minutes
+      ? `Por seguridad cerramos tu sesión tras ${minutes} minutos sin uso. Vuelve a ingresar.`
+      : ''
+  })
+  useEffect(() => clearIdleLogoutNotice(), [])
   const [bioUser, setBioUser] = useState<{ fullName: string; email: string; userId: string } | null>(null)
   const [bioAvailable, setBioAvailable] = useState(false)
   const [bioWaiting, setBioWaiting] = useState(false)
