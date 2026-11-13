@@ -555,7 +555,7 @@ export function SessionsPage() {
       {/* CREATE / EDIT SESSION MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 backdrop-blur-xs sm:items-center sm:p-4">
-          <div className="relative w-full max-w-lg max-h-[calc(100dvh-1rem)] overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-bg-2 p-5 shadow-2xl space-y-5 sm:max-h-[90dvh] sm:rounded-3xl sm:p-6">
+          <div className="relative w-full max-w-lg max-h-[calc(100dvh-max(env(safe-area-inset-top),1rem))] overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-bg-2 p-5 shadow-2xl space-y-5 sm:max-h-[90dvh] sm:rounded-3xl sm:p-6">
             <button
               type="button"
               onClick={() => !submitting && setIsModalOpen(false)}
@@ -784,7 +784,7 @@ export function SessionsPage() {
 
       {/* DELETE CONFIRMATION MODAL */}
       {sessionToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 overlay-safe backdrop-blur-xs">
           <div className="relative w-full max-w-md rounded-3xl border border-danger/40 bg-bg-2 p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-danger">
               <ShieldAlert className="h-6 w-6" />

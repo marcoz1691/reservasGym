@@ -23,25 +23,27 @@ export function ConsentCheckbox({
 }) {
   const id = useId()
   return (
-    <div className="flex flex-wrap items-center gap-x-1 text-sm text-ink-2">
-      <label htmlFor={id} className="flex min-h-11 cursor-pointer items-center gap-3">
-        <input
-          id={id}
-          type="checkbox"
-          aria-label={label}
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          className="h-6 w-6 shrink-0 rounded border-line-strong accent-[var(--color-cta)]"
-        />
-        <span>{children}</span>
-      </label>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-2"
-      >
-        {linkText}
-      </button>
+    <div className="flex items-start gap-3 py-1.5 text-sm text-ink-2">
+      <input
+        id={id}
+        type="checkbox"
+        aria-label={label}
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-6 w-6 shrink-0 cursor-pointer rounded border-line-strong accent-[var(--color-cta)]"
+      />
+      <p className="min-w-0 leading-relaxed">
+        <label htmlFor={id} className="cursor-pointer">
+          {children}
+        </label>{' '}
+        <button
+          type="button"
+          onClick={onOpen}
+          className="inline font-semibold text-ink underline underline-offset-2"
+        >
+          {linkText}
+        </button>
+      </p>
     </div>
   )
 }

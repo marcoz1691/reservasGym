@@ -173,7 +173,7 @@ export function StaffBookingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 overlay-safe backdrop-blur-xs">
       <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-line bg-bg-2 p-6 shadow-2xl space-y-5">
         {/* Close Button */}
         <button

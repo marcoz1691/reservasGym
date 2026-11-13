@@ -249,7 +249,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-bg p-4 py-10">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-bg px-4 py-safe-page">
       <Card className="w-full max-w-lg space-y-6 p-6 sm:p-8">
         {/* Brand header — imagotipo centrado, como en la maqueta del login */}
         <div className="text-center">
@@ -355,7 +355,7 @@ export function LoginPage() {
                 type="password"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Tu contraseña"
                 required
               />
               <div className="mt-1.5 text-right">
@@ -471,7 +471,7 @@ export function LoginPage() {
                 type="password"
                 value={registerPassword}
                 onChange={(e) => setRegisterPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Crea una contraseña"
                 required
                 minLength={8}
               />
@@ -481,7 +481,7 @@ export function LoginPage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Repite la contraseña"
                 required
                 minLength={8}
               />

@@ -303,7 +303,7 @@ export function ForgotPasswordPage() {
   const Icon = step === 'done' ? CheckCircle2 : step === 'code' ? MailCheck : KeyRound
 
   return (
-    <main className="flex min-h-dvh items-center justify-center p-4">
+    <main className="flex min-h-dvh items-center justify-center px-4 py-safe-page">
       <div className="w-full max-w-md rounded-3xl border border-line bg-surface p-6 shadow-2xl sm:p-8">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-acc/15 text-acc-dark">
