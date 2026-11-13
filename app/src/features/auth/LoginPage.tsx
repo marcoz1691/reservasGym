@@ -249,7 +249,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-bg p-4 py-10">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-bg px-4 py-safe-page">
       <Card className="w-full max-w-lg space-y-6 p-6 sm:p-8">
         {/* Brand header — imagotipo centrado, como en la maqueta del login */}
         <div className="text-center">

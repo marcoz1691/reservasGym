@@ -104,7 +104,7 @@ export function GoalModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 overlay-safe backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-md rounded-3xl border border-line bg-surface p-6 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line pb-4">

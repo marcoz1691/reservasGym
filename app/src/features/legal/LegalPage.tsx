@@ -15,7 +15,7 @@ export function LegalPage() {
 
   if (!doc) {
     return (
-      <main className="mx-auto max-w-2xl space-y-4 p-6">
+      <main className="mx-auto max-w-2xl space-y-4 px-6 py-safe-page">
         <h1 className="text-2xl font-black text-ink">Documento no encontrado</h1>
         <LegalLinks />
       </main>
@@ -23,8 +23,8 @@ export function LegalPage() {
   }
 
   return (
-    <main className="min-h-dvh bg-bg">
-      <article className="mx-auto max-w-2xl space-y-5 px-4 py-6 sm:py-10">
+    <main className="min-h-dvh bg-bg py-safe-page">
+      <article className="mx-auto max-w-2xl space-y-5 px-4 sm:py-4">
         <button type="button" onClick={() => { if ((window.history.state?.idx ?? 0) > 0 || location.key !== 'default') navigate(-1); else navigate('/login', { replace: true }) }} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-2 hover:text-ink">
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Volver

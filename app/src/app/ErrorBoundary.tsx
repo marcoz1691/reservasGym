@@ -40,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children
 
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-5 px-6 py-safe-page text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-line bg-surface-elevated text-danger">
           <AlertTriangle className="h-7 w-7" />
         </div>

@@ -416,7 +416,7 @@ export function PlanesPage() {
 
       {/* CREATE / EDIT PLAN MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 px-4 overlay-safe backdrop-blur-xs">
           <div className="mx-auto flex min-h-full max-w-xl items-center justify-center py-4">
           <div className="relative w-full max-h-[90vh] min-h-0 overflow-y-auto rounded-3xl border border-line bg-bg-2 p-6 shadow-2xl">
             <button
@@ -685,7 +685,7 @@ export function PlanesPage() {
 
       {/* DELETE CONFIRMATION MODAL */}
       {planToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 overlay-safe backdrop-blur-xs">
           <div className="relative w-full max-w-md rounded-3xl border border-danger/40 bg-bg-2 p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-danger">
               <ShieldAlert className="h-6 w-6" />

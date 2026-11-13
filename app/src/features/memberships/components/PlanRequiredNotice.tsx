@@ -13,7 +13,7 @@ export function PlanRequiredNotice({ onDismiss }: PlanRequiredNoticeProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="plan-required-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overlay-safe backdrop-blur-xs"
     >
       <div className="relative w-full max-w-md rounded-3xl border border-warn/40 bg-bg-2 p-6 shadow-2xl">
         {onDismiss ? (

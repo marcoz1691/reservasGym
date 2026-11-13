@@ -160,6 +160,16 @@
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
   }
+  /* Pantallas completas fuera del layout (login, legales…): respetan la barra de estado y el borde inferior. */
+  .py-safe-page {
+    padding-top: max(env(safe-area-inset-top), 1.5rem);
+    padding-bottom: max(env(safe-area-inset-bottom), 1.5rem);
+  }
+  /* Fondos de modales centrados: el contenido no queda bajo la barra de estado del iPhone. */
+  .overlay-safe {
+    padding-top: max(env(safe-area-inset-top), 1rem);
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
   .pb-safe-nav {
     padding-bottom: calc(max(env(safe-area-inset-bottom), 0.75rem) + 4.5rem);
   }
