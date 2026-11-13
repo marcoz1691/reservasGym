@@ -2,6 +2,10 @@ import { Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { formatDateSpanish } from '@/lib/format'
 import { LEGAL_DOCUMENTS, legalPath } from './legalDocuments'
+import { useOptionalSettings } from '@/data/RepositoryProvider'
+import { showsRefundPolicy } from '@/domain/rules'
+
+const REFUND_SLUG = 'reembolsos'
 
 /**
  * Documentos legales públicos (sin sesión): términos, privacidad, reembolsos y
@@ -15,7 +19,7 @@ export function LegalPage() {
 
   if (!doc) {
     return (
-      <main className="mx-auto max-w-2xl space-y-4 p-6">
+      <main className="mx-auto max-w-2xl space-y-4 px-6 py-safe-page">
         <h1 className="text-2xl font-black text-ink">Documento no encontrado</h1>
         <LegalLinks />
       </main>
@@ -23,8 +27,8 @@ export function LegalPage() {
   }
 
   return (
-    <main className="min-h-dvh bg-bg">
-      <article className="mx-auto max-w-2xl space-y-5 px-4 py-6 sm:py-10">
+    <main className="min-h-dvh bg-bg py-safe-page">
+      <article className="mx-auto max-w-2xl space-y-5 px-4 sm:py-4">
         <button type="button" onClick={() => { if ((window.history.state?.idx ?? 0) > 0 || location.key !== 'default') navigate(-1); else navigate('/login', { replace: true }) }} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-2 hover:text-ink">
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Volver
@@ -56,9 +60,11 @@ export function LegalPage() {
 
 /** Enlaces a los documentos legales, para el pie del login, el perfil y cada documento. */
 export function LegalLinks({ current, className = '' }: { current?: string; className?: string }) {
+  // Sin pago en línea (único ni recurrente) no hay reembolsos que explicar.
+  const refunds = showsRefundPolicy(useOptionalSettings())
   return (
     <nav aria-label="Documentos legales" className={`flex flex-wrap gap-x-4 gap-y-1 text-xs ${className}`}>
-      {LEGAL_DOCUMENTS.filter((d) => d.slug !== current).map((d) => (
+      {LEGAL_DOCUMENTS.filter((d) => d.slug !== current && (d.slug !== REFUND_SLUG || refunds)).map((d) => (
         <Link key={d.slug} to={legalPath(d)} className="inline-flex min-h-8 items-center font-semibold text-ink-3 underline hover:text-ink">
           {d.title}
         </Link>

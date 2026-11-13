@@ -37,6 +37,7 @@ import { ButtonLink } from '@/ui/ButtonLink'
 const DAY_MS = 24 * 60 * 60 * 1000
 
 function greeting(hour: number): string {
+  if (hour < 5) return 'Buenas noches'
   if (hour < 12) return 'Buenos días'
   if (hour < 19) return 'Buenas tardes'
   return 'Buenas noches'

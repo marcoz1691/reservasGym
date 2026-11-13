@@ -57,7 +57,10 @@ describe('Funciones de la app (interruptores del admin)', () => {
     const settings = (await repo.load()).settings
     expect(settings.termsVersion).toBe('1.1')
     expect(settings.termsPdfUrl).toMatch(/^data:application\/pdf;base64,/)
-    expect(screen.getByRole('link', { name: 'Abrir PDF publicado' })).toHaveAttribute('href', settings.termsPdfUrl)
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir PDF publicado' }))
+    expect(open).toHaveBeenCalledWith(settings.termsPdfUrl, '_blank', 'noopener,noreferrer')
+    open.mockRestore()
     await userEvent.click(screen.getByRole('button', { name: 'Usar documento incluido' }))
     expect(await screen.findByText('Se usa el documento incluido de Zona Cero')).toBeInTheDocument()
     expect((await repo.load()).settings.termsPdfUrl).toBeNull()

@@ -48,7 +48,7 @@ export function BookingGateModal({
   return (
     <div
       data-testid="booking-gate-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 overlay-safe backdrop-blur-xs animate-in fade-in duration-200"
     >
       <div className="relative w-full max-w-md rounded-3xl border border-line bg-bg-2 p-6 shadow-2xl">
         <button

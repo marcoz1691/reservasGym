@@ -48,7 +48,7 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 overlay-safe backdrop-blur-xs">
       <div className="relative w-full max-w-lg rounded-3xl border border-danger/40 bg-bg-2 p-6 shadow-[0_16px_50px_rgba(255,92,92,0.15)]">
         <button
           type="button"

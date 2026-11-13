@@ -34,3 +34,12 @@ it('vuelve al perfil si existe una entrada anterior', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Volver' }))
   expect(screen.getByText('Perfil destino')).toBeInTheDocument()
 })
+
+it('sin pagos en línea no muestra la política de reembolsos en los enlaces', async () => {
+  render(<MemoryRouter initialEntries={['/legal/privacidad']}>
+    <RepositoryProvider><AppRouter /></RepositoryProvider>
+  </MemoryRouter>)
+  const nav = await screen.findByRole('navigation', { name: 'Documentos legales' })
+  expect(nav).toHaveTextContent('Términos')
+  expect(nav).not.toHaveTextContent(/reembolsos/i)
+})

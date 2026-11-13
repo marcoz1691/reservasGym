@@ -71,7 +71,7 @@ export const PRIVACY: LegalDocument = {
     {
       title: '6. Con quién compartimos datos',
       paragraphs: [
-        'Supabase Inc.: base de datos y autenticación. Los servidores están en São Paulo, Brasil. Esto constituye una transferencia internacional de datos, que se realiza con un proveedor que aplica cifrado en tránsito y en reposo y controles de acceso.',
+        'Proveedor de infraestructura en la nube: base de datos y autenticación, con servidores fuera de Ecuador. Esto constituye una transferencia internacional de datos, que se realiza con un proveedor que aplica cifrado en tránsito y en reposo y controles de acceso. El titular puede pedir por correo el detalle del proveedor y la ubicación de los servidores.',
         'Vercel Inc.: alojamiento de la versión web de la aplicación (Estados Unidos). No guarda la base de datos de socios.',
         'Pagomedios (Abitmedia S.A., Ecuador): procesamiento de pagos con tarjeta. Recibe los datos de facturación y los de la tarjeta para procesar el cobro.',
         'Apple y Google: distribución de la app en sus tiendas, según sus propias políticas.',

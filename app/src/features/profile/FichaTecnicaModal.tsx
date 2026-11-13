@@ -233,7 +233,7 @@ export function FichaTecnicaModal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 overlay-safe backdrop-blur-md">
       <Card className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden border border-line bg-surface p-0 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line bg-surface p-5 sm:px-6">

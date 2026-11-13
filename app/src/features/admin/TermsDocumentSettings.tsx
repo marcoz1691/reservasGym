@@ -3,6 +3,7 @@ import type { GymSettings } from '@/domain/models'
 import type { GymRepository } from '@/data/types'
 import { resolveTermsDocument } from '@/domain/rules/termsDocument'
 import { Button, Card, Input } from '@/ui/primitives'
+import { openPdfDocument } from '@/lib/openDocument'
 
 export function TermsDocumentSettings({ settings, repo, onPublished }: {
   settings: GymSettings
@@ -65,9 +66,9 @@ export function TermsDocumentSettings({ settings, repo, onPublished }: {
       <div>
         <h2 className="font-display text-lg font-bold text-ink">Términos y condiciones</h2>
         <p className="text-sm text-ink-2">Versión publicada: {document.version}</p>
-        <a href={document.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-semibold text-ink underline">
+        <button type="button" onClick={() => void openPdfDocument(document.url, 'Términos y condiciones')} className="inline-flex min-h-11 items-center text-sm font-semibold text-ink underline">
           Abrir PDF publicado
-        </a>
+        </button>
         <p className="text-xs text-ink-3">El documento aparece en el pago. Publica un PDF de hasta 5 MB e identifica su versión.</p>
       </div>
       <form onSubmit={(e) => void publish(e)} className="space-y-3">

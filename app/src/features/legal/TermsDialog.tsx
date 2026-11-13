@@ -1,4 +1,6 @@
+import { Capacitor } from '@capacitor/core'
 import { X } from 'lucide-react'
+import { openPdfDocument } from '@/lib/openDocument'
 import { formatDateSpanish } from '@/lib/format'
 import { Button } from '@/ui/primitives'
 import { TERMS } from './termsContent'
@@ -36,10 +38,22 @@ export function TermsDialog({ onClose, settings }: { onClose: () => void; settin
           </button>
         </div>
         <div className="space-y-4 overflow-y-auto px-5 py-4 text-sm leading-relaxed text-ink-2">
-          <div className="flex flex-wrap gap-3">
-            <a href={document.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center font-semibold text-ink underline">Abrir PDF para imprimir</a>
-            <a href={document.url} target="_blank" rel="noopener noreferrer" download="Terminos-Condiciones-Zona-Cero.pdf" className="inline-flex min-h-11 items-center font-semibold text-ink underline">Descargar PDF</a>
-          </div>
+          {Capacitor.isNativePlatform() ? (
+            // En la app nativa un enlace al PDF dejaba al socio sin forma de volver:
+            // se abre en una ventana interna con «Cerrar» y «Compartir» (imprimir o guardar).
+            <button
+              type="button"
+              onClick={() => void openPdfDocument(document.url, TERMS.title)}
+              className="inline-flex min-h-11 items-center font-semibold text-ink underline"
+            >
+              Ver PDF (imprimir o guardar)
+            </button>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              <a href={document.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center font-semibold text-ink underline">Abrir PDF para imprimir</a>
+              <a href={document.url} target="_blank" rel="noopener noreferrer" download="Terminos-Condiciones-Zona-Cero.pdf" className="inline-flex min-h-11 items-center font-semibold text-ink underline">Descargar PDF</a>
+            </div>
+          )}
           {document.custom ? (
             <p>Consulta el PDF publicado para leer las condiciones de esta versión. Al abrirlo conservas los datos de tu formulario de pago.</p>
           ) : TERMS.sections.map((section) => (

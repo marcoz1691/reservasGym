@@ -32,6 +32,14 @@ export function isFeatureEnabled(
     : value !== false
 }
 
+/**
+ * La política de reembolsos solo aplica si se cobra en línea: se muestra cuando el admin
+ * encendió el pago único, el recurrente o ambos.
+ */
+export function showsRefundPolicy(settings: FeatureSettings | null | undefined): boolean {
+  return isFeatureEnabled(settings, 'onlinePayments') || isFeatureEnabled(settings, 'recurringPayments')
+}
+
 /** Mismo texto que el create de pagomedios-payment. */
 export const DAY_PASSES_APP_DISABLED_MESSAGE = 'Los pases diarios se venden en recepción'
 
