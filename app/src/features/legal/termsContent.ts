@@ -125,7 +125,7 @@ export const TERMS = {
     {
       "title": "18. Proveedores tecnológicos y comunicación de datos",
       "paragraphs": [
-        "La aplicación utiliza servicios tecnológicos para autenticación, base de datos y procesamiento de pagos, incluidos Supabase y Pagomedios en los componentes correspondientes. Los proveedores reciben la información necesaria para su función. El uso de servicios de infraestructura no autoriza a compartir datos para fines ajenos al servicio ni a utilizar información de salud para publicidad.",
+        "La aplicación utiliza servicios tecnológicos para autenticación, base de datos y procesamiento de pagos, como proveedores de infraestructura en la nube y de procesamiento de pagos en los componentes correspondientes. Los proveedores reciben la información necesaria para su función. El uso de servicios de infraestructura no autoriza a compartir datos para fines ajenos al servicio ni a utilizar información de salud para publicidad.",
         "Cuando exista tratamiento o comunicación internacional de datos, deberán cumplirse las condiciones y garantías aplicables. El titular puede solicitar a recepción información sobre los destinatarios, finalidades y garantías de esas comunicaciones. Si el usuario elige enviar un comprobante por WhatsApp, interviene además ese servicio externo y se aplican sus condiciones al canal de mensajería; no deben enviarse contraseñas ni datos completos de tarjeta."
       ]
     },
