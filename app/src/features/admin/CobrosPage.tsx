@@ -1486,7 +1486,7 @@ export function CobrosPage() {
               description="No se encontraron transacciones en el historial que coincidan con la búsqueda."
             />
           ) : (
-            <div className="overflow-x-auto rounded-3xl border border-line bg-bg-2">
+            <div className="relative overflow-x-auto rounded-3xl border border-line bg-bg-2">
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-line bg-surface/50 text-xs uppercase tracking-wider text-ink-3 font-bold">
                   <tr>
