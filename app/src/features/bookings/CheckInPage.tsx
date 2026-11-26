@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import QRCode from 'qrcode'
@@ -13,8 +13,16 @@ import {
   computeMembershipStatus,
   GRACE_PERIOD_DAYS,
 } from '@/domain/rules/membership'
+import {
+  findActiveBookingByCheckInCode,
+  normalizeCheckInCode,
+} from '@/domain/rules/checkInCode'
 import type { Membership } from '@/domain/models'
 import { Badge, Button, Card, Input, PageHeader } from '@/ui/primitives'
+
+const QrCameraScanner = lazy(() =>
+  import('./QrCameraScanner').then((m) => ({ default: m.QrCameraScanner })),
+)
 
 export function getMemberMembershipChip(
   membership: Membership | null | undefined,
@@ -52,6 +60,7 @@ export function CheckInPage() {
   const [code, setCode] = useState('')
   const [bookingId, setBookingId] = useState('')
   const [qrMap, setQrMap] = useState<Record<string, string>>({})
+  const [cameraOpen, setCameraOpen] = useState(false)
 
   const memberBookings = useMemo(
     () => {
@@ -74,7 +83,7 @@ export function CheckInPage() {
     [data, user?.id],
   )
 
-  const staffCandidates = useMemo(
+  const allStaffCandidates = useMemo(
     () =>
       data.bookings
         .filter((b) => b.status === 'confirmed' || b.status === 'pending')
@@ -94,15 +103,31 @@ export function CheckInPage() {
         .filter((x) => x.session)
         .sort((a, b) =>
           a.session!.startsAt.localeCompare(b.session!.startsAt),
-        )
-        .slice(0, 40),
+        ),
     [data],
   )
 
-  const selectedCandidate = useMemo(
-    () => staffCandidates.find((c) => c.booking.id === bookingId),
-    [staffCandidates, bookingId],
+  const staffCandidates = useMemo(
+    () => allStaffCandidates.slice(0, 40),
+    [allStaffCandidates],
   )
+
+  // Se busca en todas las reservas activas: la escaneada puede no estar entre
+  // las 40 que se listan.
+  const selectedCandidate = useMemo(
+    () => allStaffCandidates.find((c) => c.booking.id === bookingId),
+    [allStaffCandidates, bookingId],
+  )
+
+  const selectOptions = useMemo(
+    () =>
+      selectedCandidate && !staffCandidates.includes(selectedCandidate)
+        ? [selectedCandidate, ...staffCandidates]
+        : staffCandidates,
+    [selectedCandidate, staffCandidates],
+  )
+
+  const codeNotFound = code.trim().length > 0 && !selectedCandidate
 
   useEffect(() => {
     if (isStaff) return
@@ -128,6 +153,32 @@ export function CheckInPage() {
     setCode(candCode)
   }
 
+  /** Código escrito, pegado, de lector QR o de la cámara: busca la reserva sola. */
+  function handleCodeInput(raw: string) {
+    const found = findActiveBookingByCheckInCode(data.bookings, raw)
+    setMsg('')
+    if (found) {
+      setCode(found.checkInCode)
+      setBookingId(found.id)
+    } else {
+      setCode(raw.toUpperCase())
+      setBookingId('')
+    }
+  }
+
+  async function handleValidate() {
+    if (!bookingId || !code.trim()) return
+    try {
+      await repo.checkIn(bookingId, normalizeCheckInCode(code))
+      await refresh()
+      setMsg('Check-in registrado con éxito')
+      setCode('')
+      setBookingId('')
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'Error al registrar check-in')
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -143,12 +194,44 @@ export function CheckInPage() {
       {isStaff ? (
         <div className="space-y-6">
           <Card className="space-y-3">
+            {cameraOpen ? (
+              <Suspense
+                fallback={<p className="text-sm text-ink-3">Abriendo cámara…</p>}
+              >
+                <QrCameraScanner
+                  onResult={(text) => {
+                    setCameraOpen(false)
+                    handleCodeInput(text)
+                  }}
+                  onClose={() => setCameraOpen(false)}
+                />
+              </Suspense>
+            ) : (
+              <Button variant="secondary" onClick={() => setCameraOpen(true)}>
+                Escanear con cámara
+              </Button>
+            )}
             <Input
               label="Código del socio"
               value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              onChange={(e) => handleCodeInput(e.target.value)}
+              onKeyDown={(e) => {
+                // Los lectores QR USB/Bluetooth terminan con Enter.
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  void handleValidate()
+                }
+              }}
               placeholder="QR-…"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
             />
+            {codeNotFound ? (
+              <p className="text-xs text-ink-3" data-testid="code-not-found">
+                No hay una reserva activa con ese código.
+              </p>
+            ) : null}
             <label className="block space-y-1.5">
               <span className="text-xs font-bold uppercase tracking-wide text-ink-3">
                 Reserva
@@ -166,7 +249,7 @@ export function CheckInPage() {
                 }}
               >
                 <option value="">Seleccionar…</option>
-                {staffCandidates.map(({ booking, session, member, chip }) => (
+                {selectOptions.map(({ booking, session, member, chip }) => (
                   <option key={booking.id} value={booking.id}>
                     [{chip.label}] {member?.fullName ?? 'Socio'} · {session!.title} ·{' '}
                     {format(parseISO(session!.startsAt), 'EEE HH:mm', {
@@ -199,19 +282,7 @@ export function CheckInPage() {
 
             <Button
               disabled={!bookingId || !code.trim()}
-              onClick={() => {
-                void (async () => {
-                  try {
-                    await repo.checkIn(bookingId, code.trim())
-                    await refresh()
-                    setMsg('Check-in registrado con éxito')
-                    setCode('')
-                    setBookingId('')
-                  } catch (e) {
-                    setMsg(e instanceof Error ? e.message : 'Error al registrar check-in')
-                  }
-                })()
-              }}
+              onClick={() => void handleValidate()}
             >
               Validar check-in
             </Button>
