@@ -61,8 +61,8 @@ export function clearIdleLogoutNotice() {
 }
 
 /**
- * Cierra la sesión tras un rato sin tocar la app (admin y recepción 30 min, socio 5 min;
- * ver IDLE_LIMIT_MINUTES). La última actividad
+ * Cierra la sesión tras un rato sin tocar la app (admin y recepción 30 min; el socio
+ * no tiene límite, ver IDLE_LIMIT_MINUTES). La última actividad
  * se guarda en el dispositivo, así que también cuenta el tiempo con la app cerrada o en
  * segundo plano (al volver se revisa de inmediato).
  */
