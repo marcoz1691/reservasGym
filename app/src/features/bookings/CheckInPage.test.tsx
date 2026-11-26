@@ -401,5 +401,32 @@ describe('CheckInPage & Membership Chips', () => {
       expect(screen.getByRole('button', { name: /validar check-in/i })).not.toBeDisabled()
       expect(screen.getByRole('button', { name: /escanear con cámara/i })).toBeInTheDocument()
     })
+
+    it('en computadora deja el cursor en el código al abrir y después de validar', async () => {
+      const original = window.matchMedia
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(pointer: fine)',
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        onchange: null,
+        dispatchEvent: vi.fn(),
+      }))
+      try {
+        const mockRepo = renderStaff([bookingActive])
+        await screen.findByText('Juan Activo')
+        const input = screen.getByLabelText(/código del socio/i)
+        await waitFor(() => expect(input).toHaveFocus())
+
+        await userEvent.keyboard('QR-ACT123{Enter}')
+        await waitFor(() => expect(mockRepo.checkIn).toHaveBeenCalledWith('bk_active', 'QR-ACT123'))
+        await waitFor(() => expect(input).toHaveFocus())
+        expect(input).toHaveValue('')
+      } finally {
+        window.matchMedia = original
+      }
+    })
   })
 })

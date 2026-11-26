@@ -20,6 +20,18 @@ import {
 import type { Membership } from '@/domain/models'
 import { Badge, Button, Card, Input, PageHeader } from '@/ui/primitives'
 
+const CODE_INPUT_ID = 'checkin-code'
+
+/**
+ * En computadora (mouse/lector USB) deja el cursor en el código para leer un
+ * QR tras otro. En celular/tablet no, para no abrir el teclado en pantalla.
+ */
+function focusCodeInput() {
+  if (typeof window === 'undefined') return
+  if (!window.matchMedia?.('(pointer: fine)').matches) return
+  document.getElementById(CODE_INPUT_ID)?.focus()
+}
+
 const QrCameraScanner = lazy(() =>
   import('./QrCameraScanner').then((m) => ({ default: m.QrCameraScanner })),
 )
@@ -148,6 +160,10 @@ export function CheckInPage() {
     }
   }, [isStaff, memberBookings])
 
+  useEffect(() => {
+    if (isStaff) focusCodeInput()
+  }, [isStaff])
+
   function handleSelectCandidate(candBookingId: string, candCode: string) {
     setBookingId(candBookingId)
     setCode(candCode)
@@ -176,6 +192,8 @@ export function CheckInPage() {
       setBookingId('')
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Error al registrar check-in')
+    } finally {
+      focusCodeInput()
     }
   }
 
@@ -203,7 +221,10 @@ export function CheckInPage() {
                     setCameraOpen(false)
                     handleCodeInput(text)
                   }}
-                  onClose={() => setCameraOpen(false)}
+                  onClose={() => {
+                    setCameraOpen(false)
+                    focusCodeInput()
+                  }}
                 />
               </Suspense>
             ) : (
@@ -212,6 +233,7 @@ export function CheckInPage() {
               </Button>
             )}
             <Input
+              id={CODE_INPUT_ID}
               label="Código del socio"
               value={code}
               onChange={(e) => handleCodeInput(e.target.value)}
