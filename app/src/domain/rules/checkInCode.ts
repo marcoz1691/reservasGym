@@ -33,3 +33,27 @@ export function findActiveBookingByCheckInCode(
     ) ?? null
   )
 }
+
+export type CheckInTiming =
+  | { kind: 'early'; opensAt: Date }
+  | { kind: 'open'; minutesToStart: number }
+  | { kind: 'closed' }
+
+/**
+ * En qué momento de la ventana de check-in está una clase. Usa las mismas
+ * reglas que la base (check_in_booking): desde `minutesBefore` antes del
+ * inicio hasta `minutesAfter` después.
+ */
+export function getCheckInTiming(
+  sessionStartsAt: string,
+  now: Date,
+  minutesBefore = 15,
+  minutesAfter = 10,
+): CheckInTiming {
+  const start = new Date(sessionStartsAt).getTime()
+  const t = now.getTime()
+  const opensAt = start - minutesBefore * 60_000
+  if (t < opensAt) return { kind: 'early', opensAt: new Date(opensAt) }
+  if (t > start + minutesAfter * 60_000) return { kind: 'closed' }
+  return { kind: 'open', minutesToStart: Math.round((start - t) / 60_000) }
+}

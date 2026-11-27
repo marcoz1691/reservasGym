@@ -2,17 +2,29 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { CheckInPage, getMemberMembershipChip } from './CheckInPage'
+import { CheckInPage } from './CheckInPage'
+import { getMemberMembershipChip } from './membershipChip'
 import { RepositoryProvider } from '@/data/RepositoryProvider'
 import { resetRepositoryForTests } from '@/data/repository'
 import type { GymRepository } from '@/data/types'
 import type { GymState, User, Membership, Session, Booking } from '@/domain/models'
 
 vi.mock('./QrCameraScanner', () => ({
-  QrCameraScanner: ({ onResult }: { onResult: (text: string) => void }) => (
-    <button type="button" onClick={() => onResult('qr-act123')}>
-      Simular lectura QR
-    </button>
+  QrCameraScanner: ({
+    onResult,
+    onClose,
+  }: {
+    onResult: (text: string) => void
+    onClose: () => void
+  }) => (
+    <div>
+      <button type="button" onClick={() => onResult('qr-act123')}>
+        Simular lectura QR
+      </button>
+      <button type="button" onClick={onClose}>
+        Apagar cámara
+      </button>
+    </div>
   ),
 }))
 
@@ -192,8 +204,9 @@ describe('CheckInPage & Membership Chips', () => {
       zoneId: 'zone-gimnasio',
       title: 'Musculación y Fuerza',
       kind: 'open',
-      startsAt: new Date(Date.now() + 3600000).toISOString(),
-      endsAt: new Date(Date.now() + 7200000).toISOString(),
+      // Empieza en 5 min: dentro de la ventana de check-in (20 min en los ajustes).
+      startsAt: new Date(Date.now() + 5 * 60000).toISOString(),
+      endsAt: new Date(Date.now() + 65 * 60000).toISOString(),
       capacity: 20,
       trainerId: null,
       bookedCount: 4,
@@ -346,10 +359,11 @@ describe('CheckInPage & Membership Chips', () => {
       expect(await screen.findByText(/Check-in registrado con éxito/i)).toBeInTheDocument()
     })
 
-    function renderStaff(bookings: Booking[]) {
+    function renderStaff(bookings: Booking[], sessions: Session[] = [session]) {
+      window.localStorage.removeItem('zc-checkin-camera')
       const mockRepo = createMockRepo(staffUser, {
         users: [staffUser, memberActive, memberGrace],
-        sessions: [session],
+        sessions,
         bookings,
         memberships,
       })
@@ -364,11 +378,62 @@ describe('CheckInPage & Membership Chips', () => {
       return mockRepo
     }
 
-    it('al escribir el código (lector USB) selecciona la reserva y valida con Enter', async () => {
+    async function openManual() {
+      await userEvent.click(
+        screen.getByRole('button', { name: /escribir código o buscar por nombre/i }),
+      )
+      return screen.getByLabelText(/código del socio/i)
+    }
+
+    it('la cámara está abierta por defecto y al leer un QR registra la entrada de una', async () => {
       const mockRepo = renderStaff([bookingActive, bookingGrace])
       await screen.findByText('Juan Activo')
 
-      const input = screen.getByLabelText(/código del socio/i)
+      await userEvent.click(await screen.findByRole('button', { name: /simular lectura qr/i }))
+
+      await waitFor(() => {
+        expect(mockRepo.checkIn).toHaveBeenCalledWith('bk_active', 'QR-ACT123')
+      })
+      expect(await screen.findByText(/Juan Activo puede pasar/i)).toBeInTheDocument()
+      expect(screen.getByText(/Check-in registrado con éxito/i)).toBeInTheDocument()
+    })
+
+    it('apagar la cámara deja el modo lector y se recuerda', async () => {
+      renderStaff([bookingActive])
+      await userEvent.click(await screen.findByRole('button', { name: /apagar cámara/i }))
+
+      expect(screen.getByText(/pasa el qr por el lector/i)).toBeInTheDocument()
+      expect(window.localStorage.getItem('zc-checkin-camera')).toBe('off')
+      expect(screen.getByRole('button', { name: /encender cámara/i })).toBeInTheDocument()
+    })
+
+    it('el lector USB funciona sin abrir el campo de texto', async () => {
+      const mockRepo = renderStaff([bookingActive, bookingGrace])
+      await screen.findByText('Juan Activo')
+
+      await userEvent.keyboard('QR-GRA456{Enter}')
+
+      await waitFor(() => {
+        expect(mockRepo.checkIn).toHaveBeenCalledWith('bk_grace', 'QR-GRA456')
+      })
+      expect(await screen.findByText(/Maria Gracia puede pasar/i)).toBeInTheDocument()
+    })
+
+    it('un QR desconocido muestra el motivo y no registra nada', async () => {
+      const mockRepo = renderStaff([bookingActive])
+      await screen.findByText('Juan Activo')
+
+      await userEvent.keyboard('QR-NOEXISTE{Enter}')
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(/no hay una reserva activa/i)
+      expect(mockRepo.checkIn).not.toHaveBeenCalled()
+    })
+
+    it('escribir el código es la segunda opción: selecciona la reserva y valida con Enter', async () => {
+      const mockRepo = renderStaff([bookingActive, bookingGrace])
+      await screen.findByText('Juan Activo')
+
+      const input = await openManual()
       await userEvent.type(input, 'qr-gra456')
       expect(screen.getByTestId('selected-member-chip')).toBeInTheDocument()
 
@@ -379,54 +444,58 @@ describe('CheckInPage & Membership Chips', () => {
       expect(await screen.findByText(/Check-in registrado con éxito/i)).toBeInTheDocument()
     })
 
-    it('avisa cuando el código no corresponde a una reserva activa', async () => {
+    it('avisa cuando el código escrito no corresponde a una reserva activa', async () => {
       const mockRepo = renderStaff([bookingActive])
       await screen.findByText('Juan Activo')
 
-      await userEvent.type(screen.getByLabelText(/código del socio/i), 'QR-NOEXISTE{Enter}')
+      const input = await openManual()
+      await userEvent.type(input, 'QR-NOEXISTE{Enter}')
 
-      expect(screen.getByTestId('code-not-found')).toBeInTheDocument()
+      expect(screen.getByTestId('code-not-found')).toHaveTextContent(/no hay una reserva activa/i)
+      expect(screen.queryByRole('button', { name: /validar check-in/i })).toBeNull()
+      expect(mockRepo.checkIn).not.toHaveBeenCalled()
+    })
+
+    it('busca por nombre y con Enter elige al único socio que coincide', async () => {
+      renderStaff([bookingActive, bookingGrace])
+      await screen.findByText('Juan Activo')
+
+      const input = await openManual()
+      await userEvent.type(input, 'maria{Enter}')
+
+      expect(screen.queryByText('Juan Activo')).toBeNull()
+      expect(screen.getByTestId('selected-booking')).toHaveTextContent('Maria Gracia')
+      expect(screen.getByRole('button', { name: /validar check-in/i })).not.toBeDisabled()
+    })
+
+    it('si la clase aún no abre el check-in, lo dice y no registra', async () => {
+      const later: Session = {
+        ...session,
+        id: 'sess_later',
+        startsAt: new Date(Date.now() + 3 * 3600000).toISOString(),
+        endsAt: new Date(Date.now() + 4 * 3600000).toISOString(),
+      }
+      const mockRepo = renderStaff([{ ...bookingActive, sessionId: later.id }], [later])
+      await screen.findByText('Juan Activo')
+
+      await userEvent.keyboard('QR-ACT123{Enter}')
+
+      expect(await screen.findByTestId('selected-booking')).toHaveTextContent(
+        /aún no · check-in desde las/i,
+      )
       expect(screen.getByRole('button', { name: /validar check-in/i })).toBeDisabled()
       expect(mockRepo.checkIn).not.toHaveBeenCalled()
     })
 
-    it('la lectura con cámara llena el código y selecciona la reserva', async () => {
-      renderStaff([bookingActive, bookingGrace])
+    it('marca a quien ya entró y avisa si se vuelve a escanear su código', async () => {
+      renderStaff([{ ...bookingActive, status: 'attended' }, bookingGrace])
       await screen.findByText('Juan Activo')
 
-      await userEvent.click(screen.getByRole('button', { name: /escanear con cámara/i }))
-      await userEvent.click(await screen.findByRole('button', { name: /simular lectura qr/i }))
+      expect(screen.getByText('Entró')).toBeInTheDocument()
+      expect(screen.getByText(/1\/2 entraron/)).toBeInTheDocument()
 
-      expect(screen.getByLabelText(/código del socio/i)).toHaveValue('QR-ACT123')
-      expect(screen.getByRole('button', { name: /validar check-in/i })).not.toBeDisabled()
-      expect(screen.getByRole('button', { name: /escanear con cámara/i })).toBeInTheDocument()
-    })
-
-    it('en computadora deja el cursor en el código al abrir y después de validar', async () => {
-      const original = window.matchMedia
-      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-        matches: query === '(pointer: fine)',
-        media: query,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        onchange: null,
-        dispatchEvent: vi.fn(),
-      }))
-      try {
-        const mockRepo = renderStaff([bookingActive])
-        await screen.findByText('Juan Activo')
-        const input = screen.getByLabelText(/código del socio/i)
-        await waitFor(() => expect(input).toHaveFocus())
-
-        await userEvent.keyboard('QR-ACT123{Enter}')
-        await waitFor(() => expect(mockRepo.checkIn).toHaveBeenCalledWith('bk_active', 'QR-ACT123'))
-        await waitFor(() => expect(input).toHaveFocus())
-        expect(input).toHaveValue('')
-      } finally {
-        window.matchMedia = original
-      }
+      await userEvent.keyboard('QR-ACT123{Enter}')
+      expect(await screen.findByRole('alert')).toHaveTextContent(/ya hizo check-in/i)
     })
   })
 })

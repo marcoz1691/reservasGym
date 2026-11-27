@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Booking } from '../models'
 import {
   findActiveBookingByCheckInCode,
+  getCheckInTiming,
   normalizeCheckInCode,
 } from './checkInCode'
 
@@ -63,5 +64,33 @@ describe('findActiveBookingByCheckInCode', () => {
   it('devuelve null si no hay código o no coincide', () => {
     expect(findActiveBookingByCheckInCode(bookings, '')).toBeNull()
     expect(findActiveBookingByCheckInCode(bookings, 'QR-99999999')).toBeNull()
+  })
+})
+
+describe('getCheckInTiming', () => {
+  const start = '2026-11-26T12:00:00.000Z'
+  const at = (iso: string) => new Date(iso)
+
+  it('antes de abrir la ventana dice desde qué hora', () => {
+    const t = getCheckInTiming(start, at('2026-11-26T11:44:00.000Z'), 15, 10)
+    expect(t.kind).toBe('early')
+    if (t.kind === 'early') expect(t.opensAt.toISOString()).toBe('2026-11-26T11:45:00.000Z')
+  })
+
+  it('dentro de la ventana da los minutos que faltan para empezar', () => {
+    expect(getCheckInTiming(start, at('2026-11-26T11:45:00.000Z'), 15, 10)).toEqual({
+      kind: 'open',
+      minutesToStart: 15,
+    })
+    expect(getCheckInTiming(start, at('2026-11-26T12:10:00.000Z'), 15, 10)).toEqual({
+      kind: 'open',
+      minutesToStart: -10,
+    })
+  })
+
+  it('después de la ventana queda cerrada', () => {
+    expect(getCheckInTiming(start, at('2026-11-26T12:10:01.000Z'), 15, 10)).toEqual({
+      kind: 'closed',
+    })
   })
 })

@@ -1,78 +1,16 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import QRCode from 'qrcode'
-import {
-  useAppData,
-  useCurrentUser,
-  useRefresh,
-  useRepo,
-} from '@/data/RepositoryProvider'
-import { selectMyMembership } from '@/app/store'
-import {
-  computeMembershipStatus,
-  GRACE_PERIOD_DAYS,
-} from '@/domain/rules/membership'
-import {
-  findActiveBookingByCheckInCode,
-  normalizeCheckInCode,
-} from '@/domain/rules/checkInCode'
-import type { Membership } from '@/domain/models'
-import { Badge, Button, Card, Input, PageHeader } from '@/ui/primitives'
-
-const CODE_INPUT_ID = 'checkin-code'
-
-/**
- * En computadora (mouse/lector USB) deja el cursor en el código para leer un
- * QR tras otro. En celular/tablet no, para no abrir el teclado en pantalla.
- */
-function focusCodeInput() {
-  if (typeof window === 'undefined') return
-  if (!window.matchMedia?.('(pointer: fine)').matches) return
-  document.getElementById(CODE_INPUT_ID)?.focus()
-}
-
-const QrCameraScanner = lazy(() =>
-  import('./QrCameraScanner').then((m) => ({ default: m.QrCameraScanner })),
-)
-
-export function getMemberMembershipChip(
-  membership: Membership | null | undefined,
-  now: Date = new Date(),
-): { label: string; tone: 'neutral' | 'ok' | 'warn' | 'danger' } {
-  if (!membership) {
-    return { label: 'Sin Plan', tone: 'neutral' }
-  }
-
-  const status = computeMembershipStatus(membership, now)
-  if (status === 'active') {
-    return { label: 'Vigente', tone: 'ok' }
-  }
-
-  if (status === 'grace') {
-    const endsAtMs = new Date(membership.endsAt).getTime()
-    const graceEndsAtMs = membership.graceEndsAt
-      ? new Date(membership.graceEndsAt).getTime()
-      : endsAtMs + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000
-    const diffMs = graceEndsAtMs - now.getTime()
-    const graceDays = Math.max(1, Math.ceil(diffMs / (24 * 60 * 60 * 1000)))
-    return { label: `En Gracia (${graceDays} d)`, tone: 'warn' }
-  }
-
-  return { label: 'Vencido', tone: 'danger' }
-}
+import { useAppData, useCurrentUser } from '@/data/RepositoryProvider'
+import { Card, PageHeader } from '@/ui/primitives'
+import { StaffCheckIn } from './StaffCheckIn'
 
 export function CheckInPage() {
   const user = useCurrentUser()
   const data = useAppData()
-  const repo = useRepo()
-  const refresh = useRefresh()
   const isStaff = user ? user.role === 'staff' || user.role === 'admin' : false
-  const [msg, setMsg] = useState('')
-  const [code, setCode] = useState('')
-  const [bookingId, setBookingId] = useState('')
   const [qrMap, setQrMap] = useState<Record<string, string>>({})
-  const [cameraOpen, setCameraOpen] = useState(false)
 
   const memberBookings = useMemo(
     () => {
@@ -95,52 +33,6 @@ export function CheckInPage() {
     [data, user?.id],
   )
 
-  const allStaffCandidates = useMemo(
-    () =>
-      data.bookings
-        .filter((b) => b.status === 'confirmed' || b.status === 'pending')
-        .map((b) => {
-          const session = data.sessions.find((s) => s.id === b.sessionId)
-          const member = data.users.find((u) => u.id === b.userId)
-          const membership = member ? selectMyMembership(data, member.id) : null
-          const chip = getMemberMembershipChip(membership)
-          return {
-            booking: b,
-            session,
-            member,
-            membership,
-            chip,
-          }
-        })
-        .filter((x) => x.session)
-        .sort((a, b) =>
-          a.session!.startsAt.localeCompare(b.session!.startsAt),
-        ),
-    [data],
-  )
-
-  const staffCandidates = useMemo(
-    () => allStaffCandidates.slice(0, 40),
-    [allStaffCandidates],
-  )
-
-  // Se busca en todas las reservas activas: la escaneada puede no estar entre
-  // las 40 que se listan.
-  const selectedCandidate = useMemo(
-    () => allStaffCandidates.find((c) => c.booking.id === bookingId),
-    [allStaffCandidates, bookingId],
-  )
-
-  const selectOptions = useMemo(
-    () =>
-      selectedCandidate && !staffCandidates.includes(selectedCandidate)
-        ? [selectedCandidate, ...staffCandidates]
-        : staffCandidates,
-    [selectedCandidate, staffCandidates],
-  )
-
-  const codeNotFound = code.trim().length > 0 && !selectedCandidate
-
   useEffect(() => {
     if (isStaff) return
     let cancelled = false
@@ -160,250 +52,41 @@ export function CheckInPage() {
     }
   }, [isStaff, memberBookings])
 
-  useEffect(() => {
-    if (isStaff) focusCodeInput()
-  }, [isStaff])
-
-  function handleSelectCandidate(candBookingId: string, candCode: string) {
-    setBookingId(candBookingId)
-    setCode(candCode)
-  }
-
-  /** Código escrito, pegado, de lector QR o de la cámara: busca la reserva sola. */
-  function handleCodeInput(raw: string) {
-    const found = findActiveBookingByCheckInCode(data.bookings, raw)
-    setMsg('')
-    if (found) {
-      setCode(found.checkInCode)
-      setBookingId(found.id)
-    } else {
-      setCode(raw.toUpperCase())
-      setBookingId('')
-    }
-  }
-
-  async function handleValidate() {
-    if (!bookingId || !code.trim()) return
-    try {
-      await repo.checkIn(bookingId, normalizeCheckInCode(code))
-      await refresh()
-      setMsg('Check-in registrado con éxito')
-      setCode('')
-      setBookingId('')
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'Error al registrar check-in')
-    } finally {
-      focusCodeInput()
-    }
-  }
+  if (isStaff) return <StaffCheckIn />
 
   return (
     <div>
-      <PageHeader
-        title="Check-in"
-        subtitle={
-          isStaff
-            ? 'Validar código QR del socio en recepción'
-            : 'Muestra tu QR al llegar a la clase'
-        }
-      />
-      {msg ? <p className="mb-3 text-sm text-acc-dark">{msg}</p> : null}
-
-      {isStaff ? (
-        <div className="space-y-6">
-          <Card className="space-y-3">
-            {cameraOpen ? (
-              <Suspense
-                fallback={<p className="text-sm text-ink-3">Abriendo cámara…</p>}
-              >
-                <QrCameraScanner
-                  onResult={(text) => {
-                    setCameraOpen(false)
-                    handleCodeInput(text)
-                  }}
-                  onClose={() => {
-                    setCameraOpen(false)
-                    focusCodeInput()
-                  }}
-                />
-              </Suspense>
-            ) : (
-              <Button variant="secondary" onClick={() => setCameraOpen(true)}>
-                Escanear con cámara
-              </Button>
-            )}
-            <Input
-              id={CODE_INPUT_ID}
-              label="Código del socio"
-              value={code}
-              onChange={(e) => handleCodeInput(e.target.value)}
-              onKeyDown={(e) => {
-                // Los lectores QR USB/Bluetooth terminan con Enter.
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  void handleValidate()
-                }
-              }}
-              placeholder="QR-…"
-              autoComplete="off"
-              autoCapitalize="characters"
-              spellCheck={false}
-            />
-            {codeNotFound ? (
-              <p className="text-xs text-ink-3" data-testid="code-not-found">
-                No hay una reserva activa con ese código.
-              </p>
-            ) : null}
-            <label className="block space-y-1.5">
-              <span className="text-xs font-bold uppercase tracking-wide text-ink-3">
-                Reserva
-              </span>
-              <select
-                className="focus-ring w-full rounded-2xl border border-line bg-bg-2 px-3.5 py-2.5 text-sm"
-                value={bookingId}
-                onChange={(e) => {
-                  const id = e.target.value
-                  setBookingId(id)
-                  const found = staffCandidates.find((c) => c.booking.id === id)
-                  if (found) {
-                    setCode(found.booking.checkInCode)
-                  }
-                }}
-              >
-                <option value="">Seleccionar…</option>
-                {selectOptions.map(({ booking, session, member, chip }) => (
-                  <option key={booking.id} value={booking.id}>
-                    [{chip.label}] {member?.fullName ?? 'Socio'} · {session!.title} ·{' '}
-                    {format(parseISO(session!.startsAt), 'EEE HH:mm', {
-                      locale: es,
-                    })}{' '}
-                    ({booking.checkInCode})
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {selectedCandidate ? (
-              <div className="flex items-center justify-between rounded-2xl border border-line bg-surface/50 p-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-ink">
-                    {selectedCandidate.member?.fullName ?? 'Socio'}
-                  </span>
-                  <Badge
-                    tone={selectedCandidate.chip.tone}
-                    data-testid="selected-member-chip"
-                  >
-                    {selectedCandidate.chip.label}
-                  </Badge>
-                </div>
-                <span className="font-mono text-xs text-acc-dark font-bold">
-                  {selectedCandidate.booking.checkInCode}
-                </span>
-              </div>
-            ) : null}
-
-            <Button
-              disabled={!bookingId || !code.trim()}
-              onClick={() => void handleValidate()}
-            >
-              Validar check-in
-            </Button>
+      <PageHeader title="Check-in" subtitle="Muestra tu QR al llegar a la clase" />
+      <div className="space-y-3">
+        {memberBookings.length === 0 ? (
+          <Card>
+            <p className="text-ink-3">No tienes reservas confirmadas próximas.</p>
           </Card>
-
-          <div>
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-ink-3">
-              Próximos socios para check-in ({staffCandidates.length})
-            </h2>
-
-            {staffCandidates.length === 0 ? (
-              <Card>
-                <p className="text-sm text-ink-3">No hay reservas pendientes de check-in.</p>
-              </Card>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {staffCandidates.map(({ booking, session, member, chip }) => {
-                  const isSelected = booking.id === bookingId
-                  return (
-                    <Card
-                      key={booking.id}
-                      className={`flex flex-col justify-between gap-3 transition cursor-pointer hover:border-acc/40 ${
-                        isSelected ? 'border-acc bg-acc/10' : ''
-                      }`}
-                      onClick={() => handleSelectCandidate(booking.id, booking.checkInCode)}
-                    >
-                      <div className="space-y-1.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="font-bold text-sm text-ink">
-                            {member?.fullName ?? 'Socio'}
-                          </span>
-                          <Badge
-                            tone={chip.tone}
-                            data-testid={`membership-chip-${booking.id}`}
-                          >
-                            {chip.label}
-                          </Badge>
-                        </div>
-                        <p className="text-xs font-medium text-ink-2">
-                          {session!.title}
-                        </p>
-                        <p className="text-xs text-ink-3">
-                          {format(parseISO(session!.startsAt), 'EEE d MMM · HH:mm', {
-                            locale: es,
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between pt-1 border-t border-line/40 text-xs">
-                        <span className="font-mono font-bold text-acc-dark">
-                          {booking.checkInCode}
-                        </span>
-                        <span className="text-xs text-ink-3">
-                          {isSelected ? 'Seleccionado' : 'Tocar para elegir'}
-                        </span>
-                      </div>
-                    </Card>
-                  )
-                })}
+        ) : (
+          memberBookings.map(({ booking, session }) => (
+            <Card key={booking.id} className="flex flex-wrap items-center gap-4">
+              {qrMap[booking.id] ? (
+                <img
+                  src={qrMap[booking.id]}
+                  alt={`QR ${booking.checkInCode}`}
+                  className="h-36 w-36 rounded-2xl bg-white p-2"
+                />
+              ) : null}
+              <div>
+                <p className="font-bold">{session!.title}</p>
+                <p className="text-sm text-ink-3">
+                  {format(parseISO(session!.startsAt), 'EEE d MMM · HH:mm', {
+                    locale: es,
+                  })}
+                </p>
+                <p className="mt-2 font-mono text-sm font-bold tracking-wider text-acc-dark">
+                  {booking.checkInCode}
+                </p>
               </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {memberBookings.length === 0 ? (
-            <Card>
-              <p className="text-ink-3">
-                No tienes reservas confirmadas próximas.
-              </p>
             </Card>
-          ) : (
-            memberBookings.map(({ booking, session }) => (
-              <Card
-                key={booking.id}
-                className="flex flex-wrap items-center gap-4"
-              >
-                {qrMap[booking.id] ? (
-                  <img
-                    src={qrMap[booking.id]}
-                    alt={`QR ${booking.checkInCode}`}
-                    className="h-36 w-36 rounded-2xl bg-white p-2"
-                  />
-                ) : null}
-                <div>
-                  <p className="font-bold">{session!.title}</p>
-                  <p className="text-sm text-ink-3">
-                    {format(parseISO(session!.startsAt), 'EEE d MMM · HH:mm', {
-                      locale: es,
-                    })}
-                  </p>
-                  <p className="mt-2 font-mono text-sm font-bold tracking-wider text-acc-dark">
-                    {booking.checkInCode}
-                  </p>
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   )
 }

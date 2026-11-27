@@ -6,6 +6,8 @@ type Props = {
   /** Texto leído del QR. El escáner se cierra después de una lectura. */
   onResult: (text: string) => void
   onClose: () => void
+  /** La cámara no se pudo abrir (sin permiso o sin cámara). */
+  onUnavailable?: () => void
 }
 
 function cameraErrorMessage(err: unknown): string {
@@ -23,15 +25,17 @@ function cameraErrorMessage(err: unknown): string {
  * Lector QR con la cámara para recepción. La librería se carga solo al abrir,
  * así no pesa en el resto de la app.
  */
-export function QrCameraScanner({ onResult, onClose }: Props) {
+export function QrCameraScanner({ onResult, onClose, onUnavailable }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const onResultRef = useRef(onResult)
+  const onUnavailableRef = useRef(onUnavailable)
   const [error, setError] = useState('')
   const [starting, setStarting] = useState(true)
 
   useEffect(() => {
     onResultRef.current = onResult
-  }, [onResult])
+    onUnavailableRef.current = onUnavailable
+  }, [onResult, onUnavailable])
 
   useEffect(() => {
     let scanner: QrScanner | null = null
@@ -71,6 +75,7 @@ export function QrCameraScanner({ onResult, onClose }: Props) {
         if (!cancelled) {
           setStarting(false)
           setError(cameraErrorMessage(err))
+          onUnavailableRef.current?.()
         }
       }
     })()
@@ -87,7 +92,7 @@ export function QrCameraScanner({ onResult, onClose }: Props) {
       <div className="relative overflow-hidden rounded-2xl bg-ink">
         <video
           ref={videoRef}
-          className="aspect-square w-full object-cover"
+          className="aspect-[4/3] max-h-[60vh] w-full object-cover"
           muted
           playsInline
           aria-label="Vista de la cámara para leer el QR"
@@ -106,7 +111,7 @@ export function QrCameraScanner({ onResult, onClose }: Props) {
         <p className="text-xs text-ink-3">Apunta al QR del socio.</p>
       )}
       <Button variant="ghost" onClick={onClose}>
-        Cerrar cámara
+        Apagar cámara
       </Button>
     </div>
   )

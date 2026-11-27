@@ -12,7 +12,7 @@ import {
   isCheckInWindow,
 } from '../domain/rules'
 import { getDisciplineMeta, ZONA_CERO_DISCIPLINES } from '../domain/disciplines'
-import { getMemberMembershipChip } from '../features/bookings/CheckInPage'
+import { getMemberMembershipChip } from '../features/bookings/membershipChip'
 import type { Session } from '../domain/models'
 
 describe('Zona Cero Performance Center - Comprehensive End-to-End Flow', () => {
