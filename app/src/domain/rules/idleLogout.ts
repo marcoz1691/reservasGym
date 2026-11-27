@@ -4,20 +4,23 @@ const MINUTE_MS = 60 * 1000
 
 /**
  * Minutos sin uso antes de cerrar la sesión. Admin y recepción manejan cobros y datos
- * de socios; el socio se protege por si pierde o le roban el celular (el QR abre el gym).
+ * de socios. El socio no tiene límite (null): abre la app en el gym varias veces al día
+ * y pedirle la clave cada vez le resulta más incómodo que útil; su sesión dura lo que
+ * permita la autenticación.
  */
-export const IDLE_LIMIT_MINUTES: Record<UserRole, number> = {
+export const IDLE_LIMIT_MINUTES: Record<UserRole, number | null> = {
   admin: 30,
   staff: 30,
-  member: 5,
+  member: null,
 }
 
 /** Compatibilidad: límite del personal. */
-export const STAFF_IDLE_LIMIT_MS = IDLE_LIMIT_MINUTES.staff * MINUTE_MS
+export const STAFF_IDLE_LIMIT_MS = 30 * MINUTE_MS
 
 export function idleLimitMs(role: UserRole | null | undefined): number | null {
   if (!role) return null
-  return IDLE_LIMIT_MINUTES[role] * MINUTE_MS
+  const minutes = IDLE_LIMIT_MINUTES[role]
+  return minutes === null ? null : minutes * MINUTE_MS
 }
 
 export function hasIdleLimit(role: UserRole | null | undefined): boolean {

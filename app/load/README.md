@@ -18,11 +18,13 @@ Documentos relacionados: `inventory.md` (hot paths y gaps de índices), `slo.md`
 - **Prod solo antes del lanzamiento** (`gvgqlmoulgcickxognto`, Pro), para medir la capacidad real con la base vacía. Exige las tres cosas:
   1. `app/.env.load.prod.local` (mismas variables que el de QA, con las claves de prod; git lo ignora).
   2. `LOAD_TARGET=prod` y `LOAD_PROD_CONFIRM=gvgqlmoulgcickxognto-sin-usuarios-reales` **en la línea de comandos**.
-  3. Prod sin usuarios reales: seed, mint, check y `run-k6.sh` abortan si hay un solo usuario Auth fuera de `load.*@zonacero.test`. Una vez lanzada la app, este modo deja de servir.
+  3. Usuarios reales solo si están en la **lista blanca aprobada**. Prod ya tiene testers (prueba cerrada de Google Play) que no se pueden borrar ni tocar. `load/allowlist-real-users.mjs` (solo lectura) los guarda en `load/.tmp-prod/allowed-real-users.json` y muestra un hash. Tras revisar la lista, se aprueba con `export LOAD_ALLOWLIST_SHA256=<hash>`. Seed, mint, check, cleanup y `run-k6.sh` abortan si falta la lista o el hash, si la lista tiene más de 24 h o fue editada, o si los usuarios reales no coinciden exactamente (uno nuevo, uno menos o un email distinto). La limpieza solo borra usuarios `load.*@zonacero.test` marcados con `load_test`.
 
   Meta y tokens van a `load/.tmp-prod/`, separados de QA. Ejemplo:
   ```
   export LOAD_TARGET=prod LOAD_PROD_CONFIRM=gvgqlmoulgcickxognto-sin-usuarios-reales
+  node --env-file=.env.load.prod.local load/allowlist-real-users.mjs     # revisar la lista
+  export LOAD_ALLOWLIST_SHA256=<hash que imprimió>
   node --env-file=.env.load.prod.local load/seed-load-users.mjs
   node --env-file=.env.load.prod.local load/mint-tokens.mjs --limit 300
   SMOKE=1 FETCH_MODE=rpc bash load/run-k6.sh a <run>-smoke
