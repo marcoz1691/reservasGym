@@ -69,7 +69,7 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
               Eliminar cuenta y datos personales
             </h2>
             <p className="text-xs text-danger font-semibold">
-              Acción permanente e irreversible (Apple 5.1.1 / Google Safety)
+              Acción permanente e irreversible
             </p>
           </div>
         </div>

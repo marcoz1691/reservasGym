@@ -203,3 +203,17 @@
     }
   }
 }
+
+/*
+ * iPhone hace zoom al enfocar un campo con letra menor a 16 px y no lo quita
+ * al salir (p. ej. "ELIMINAR" en borrar cuenta, que hereda text-xs). En
+ * pantallas táctiles todos los campos usan al menos 16 px. Va fuera de @layer
+ * para ganarle a utilidades como text-xs/text-sm.
+ */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
