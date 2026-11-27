@@ -3,12 +3,13 @@
  *
  * - Carga y valida las variables de entorno del contrato (.env.load.local).
  * - Guard QA/prod: aborta si la URL no es la de QA. Prod solo con LOAD_TARGET=prod + LOAD_PROD_CONFIRM
- *   y sin usuarios reales (assertNoRealUsers), para la prueba previa al lanzamiento.
+ *   y sin usuarios reales fuera de la lista blanca aprobada (assertNoRealUsers).
  * - Cliente mínimo con fetch para PostgREST (service role) y Auth Admin API, con
  *   reintentos con backoff en 429/5xx/errores de red y un limitador de concurrencia.
  *
  * Nunca se imprimen ni se escriben claves. Los mensajes de error se redactan.
  */
+import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -457,16 +458,75 @@ export function createClient(env) {
   return { rest, auth, signInWithPassword }
 }
 
+// --- Lista blanca de usuarios reales (solo prod) ------------------------------
+// Prod ya tiene testers reales (prueba cerrada de Google Play): no se pueden borrar. El freno
+// acepta SOLO a los usuarios de una lista generada con load/allowlist-real-users.mjs y aprobada
+// por el operador con LOAD_ALLOWLIST_SHA256=<hash>. Cualquier diferencia (un usuario de más, uno
+// de menos o un email cambiado), una lista vieja o un hash no aprobado aborta.
+export const ALLOWLIST_PATH = join(LOAD_DIR, '.tmp-prod', 'allowed-real-users.json')
+export const ALLOWLIST_MAX_AGE_MS = 24 * 3600 * 1000
+
+/** Usuarios Auth que no son de carga, normalizados ({ id, email }) y ordenados por id. */
+export function realUsersOf(users) {
+  return users
+    .filter((u) => !LOAD_EMAIL_RE.test(u.email ?? ''))
+    .map((u) => ({ id: String(u.id), email: String(u.email ?? '').toLowerCase() }))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+}
+
+/** Hash sha256 de la lista (ref de prod + usuarios ordenados). Se recalcula siempre: nunca se confía en uno guardado. */
+export function allowlistHash(users) {
+  const canon = realUsersOf(users.map((u) => ({ id: u.id, email: u.email ?? '' })))
+  return createHash('sha256').update(JSON.stringify({ ref: PROD_REF, users: canon })).digest('hex')
+}
+
 /**
- * Freno de prod: aborta si hay algún usuario Auth que no sea de carga. La prueba en prod solo
- * se corre antes del lanzamiento, con la base vacía. En QA no hace nada.
+ * Compara los usuarios reales actuales con la lista blanca. Pura (sin red), para poder probarla.
+ * @returns {{ ok: true } | { ok: false, reason: string }}
+ */
+export function checkAllowlist({ real, allowlist, approvedHash, now = Date.now() }) {
+  if (!real.length) return { ok: true }
+  const no = (reason) => ({ ok: false, reason })
+  if (!allowlist || !Array.isArray(allowlist.users)) {
+    return no(`hay ${real.length} usuario(s) reales y no existe la lista blanca. Genérala con load/allowlist-real-users.mjs y apruébala.`)
+  }
+  if (allowlist.project_ref !== PROD_REF) return no('la lista blanca no es de este proyecto de producción.')
+  const generated = Date.parse(allowlist.generated_at ?? '')
+  if (!Number.isFinite(generated) || generated > now + 60_000) return no('la fecha de la lista blanca no es válida.')
+  if (now - generated > ALLOWLIST_MAX_AGE_MS) return no('la lista blanca tiene más de 24 h. Genérala y apruébala de nuevo.')
+  const hash = allowlistHash(allowlist.users)
+  if (!approvedHash) return no('falta LOAD_ALLOWLIST_SHA256: revisa la lista y aprueba su hash.')
+  if (String(approvedHash).trim().toLowerCase() !== hash) return no('LOAD_ALLOWLIST_SHA256 no coincide con la lista blanca: la lista cambió o no está aprobada.')
+
+  const allowed = new Map(realUsersOf(allowlist.users).map((u) => [u.id, u.email]))
+  const current = new Map(real.map((u) => [u.id, u.email]))
+  const extra = real.filter((u) => !allowed.has(u.id)).map((u) => u.id)
+  const missing = [...allowed.keys()].filter((id) => !current.has(id))
+  const changed = real.filter((u) => allowed.has(u.id) && allowed.get(u.id) !== u.email).map((u) => u.id)
+  if (extra.length || missing.length || changed.length) {
+    const parts = []
+    if (extra.length) parts.push(`${extra.length} usuario(s) real(es) nuevo(s) fuera de la lista (${extra.join(', ')})`)
+    if (missing.length) parts.push(`${missing.length} usuario(s) de la lista ya no existe(n) (${missing.join(', ')})`)
+    if (changed.length) parts.push(`${changed.length} usuario(s) con email distinto al aprobado (${changed.join(', ')})`)
+    return no(`los usuarios reales no coinciden con la lista blanca: ${parts.join('; ')}. Genérala y apruébala de nuevo.`)
+  }
+  return { ok: true }
+}
+
+/**
+ * Freno de prod: aborta si hay algún usuario Auth que no sea de carga y no esté exactamente en la
+ * lista blanca aprobada. Los usuarios aprobados nunca se tocan. En QA no hace nada.
  */
 export async function assertNoRealUsers(auth, env) {
   if (env.target !== 'prod') return
-  const real = (await auth.listUsers()).filter((u) => !LOAD_EMAIL_RE.test(u.email ?? ''))
-  if (real.length) {
-    fail(`PRODUCCIÓN tiene ${real.length} usuario(s) que no son de carga. La prueba en prod solo corre sin usuarios reales. Abortado.`)
-  }
+  const real = realUsersOf(await auth.listUsers())
+  const res = checkAllowlist({
+    real,
+    allowlist: readJson(ALLOWLIST_PATH, null),
+    approvedHash: process.env.LOAD_ALLOWLIST_SHA256,
+  })
+  if (!res.ok) fail(`Freno de PRODUCCIÓN: ${res.reason} Abortado.`)
+  if (real.length) console.log(`Freno de prod: ${real.length} usuario(s) real(es) aprobados en la lista blanca; no se tocan.`)
 }
 
 /** Filtro PostgREST `in.(a,b,c)` con valores validados (solo ids/uuids/emails seguros). */

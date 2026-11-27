@@ -7,7 +7,8 @@
 #   <run> = nombre libre de la corrida, p. ej. 2026-10-22-smoke
 #
 # Variables opcionales: SMOKE=1 (humo corto), TOKENS_FILE, LOGIN_FRACTION, LOAD_MIX, REFRESH_PROB.
-# Nunca imprime claves. Prod solo con LOAD_TARGET=prod + LOAD_PROD_CONFIRM y sin usuarios reales.
+# Nunca imprime claves. Prod solo con LOAD_TARGET=prod + LOAD_PROD_CONFIRM y sin usuarios reales
+# fuera de la lista blanca aprobada (load/allowlist-real-users.mjs + LOAD_ALLOWLIST_SHA256).
 set -euo pipefail
 
 QA_REF="kqhmclbexnnsbzbgerbx"
@@ -47,7 +48,8 @@ if [ "${LOAD_TARGET:-}" = "prod" ]; then
   TARGET_REF="$PROD_REF"
   ENV_FILE="$APP_DIR/.env.load.prod.local"
   DEFAULT_TOKENS="load/.tmp-prod/tokens.json"
-  # Freno: aborta si prod tiene usuarios que no son de carga (mismo chequeo que el seed).
+  # Freno: aborta si prod tiene usuarios reales fuera de la lista blanca aprobada
+  # (LOAD_ALLOWLIST_SHA256; mismo chequeo que el seed).
   (cd "$APP_DIR" && node --env-file="$ENV_FILE" --input-type=module -e "
     const m = await import('./load/lib/env.mjs');
     const env = m.loadEnv({ service: true });

@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, isAuthRetryableFetchError, type SupabaseClient } from '@supabase/supabase-js'
 import { TERMS_BUCKET, validateTermsPdf } from '@/domain/rules/termsDocument'
 import type {
   BodyGoal,
@@ -642,6 +642,9 @@ export class SupabaseRepository implements GymRepository {
     const { data: sessionData, error: sessionError } =
       await this.client.auth.getSession()
     if (sessionError) {
+      // Sin red (p. ej. al volver de segundo plano) no se pudo renovar el token:
+      // la sesión sigue guardada y se renueva al recuperar la conexión.
+      if (isAuthRetryableFetchError(sessionError)) throw new Error(sessionError.message)
       await this.client.auth.signOut()
       return null
     }

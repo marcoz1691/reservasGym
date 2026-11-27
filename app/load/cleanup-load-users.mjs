@@ -31,7 +31,7 @@ import { rmSync } from 'node:fs'
 import {
   REPORTS_DIR, TOKENS_PATH, META_PATH, LOAD_EMAIL_RE, LOAD_SESSION_ID_RE, LOAD_SESSION_TITLE_PREFIX,
   MAX_LOAD_USERS, STAFF_EMAIL, emailForN, POPULAR_SESSION_ID,
-  loadEnv, createClient, parseArgs, intArg, fail, writeJson, chunk, inList, mapPool,
+  loadEnv, createClient, assertNoRealUsers, parseArgs, intArg, fail, writeJson, chunk, inList, mapPool,
 } from './lib/env.mjs'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -79,6 +79,8 @@ async function main() {
 
   const env = loadEnv({ service: true })
   const { rest, auth } = createClient(env)
+  // Prod: los testers de la lista blanca no se tocan; si los usuarios reales cambiaron, no se limpia.
+  await assertNoRealUsers(auth, env)
   const t0 = Date.now()
   const timings = {}
 

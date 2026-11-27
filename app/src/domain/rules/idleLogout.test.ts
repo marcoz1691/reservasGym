@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { STAFF_IDLE_LIMIT_MS, hasIdleLimit, idleLimitMs, isIdleExpired } from './idleLogout'
 
 describe('cierre de sesión por inactividad', () => {
-  it('admin y recepción 30 minutos, socio 5 minutos', () => {
+  it('admin y recepción 30 minutos; el socio no tiene cierre por inactividad', () => {
     expect(idleLimitMs('admin')).toBe(30 * 60 * 1000)
     expect(idleLimitMs('staff')).toBe(30 * 60 * 1000)
-    expect(idleLimitMs('member')).toBe(5 * 60 * 1000)
+    expect(idleLimitMs('member')).toBeNull()
+    expect(hasIdleLimit('member')).toBe(false)
     expect(hasIdleLimit(null)).toBe(false)
   })
 

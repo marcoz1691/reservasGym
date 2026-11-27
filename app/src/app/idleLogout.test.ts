@@ -55,14 +55,12 @@ describe('useIdleLogout', () => {
     expect(signOut).toHaveBeenCalledTimes(1)
   })
 
-  it('al socio le cierra la sesión tras 5 minutos sin uso', () => {
+  it('al socio no le cierra la sesión por inactividad', () => {
     const signOut = vi.fn().mockResolvedValue(undefined)
     renderHook(() => useIdleLogout(member, signOut))
-    act(() => vi.advanceTimersByTime(4 * MIN))
+    act(() => vi.advanceTimersByTime(3 * 60 * MIN))
     expect(signOut).not.toHaveBeenCalled()
-    act(() => vi.advanceTimersByTime(1.5 * MIN))
-    expect(signOut).toHaveBeenCalledTimes(1)
-    expect(idleLogoutNoticeMinutes()).toBe(5)
+    expect(idleLogoutNoticeMinutes()).toBeNull()
   })
 
   it('sin usuario no hace nada', () => {

@@ -9,6 +9,10 @@ export type GymSnapshot = { user: User | null; state: GymState | null }
  * Misma lógica que tenía `refresh()`: si falla la carga y la sesión sigue
  * abierta, se conserva el estado anterior; sin sesión, se vacía. No lanza,
  * así un fallo de red no saca al socio de la app.
+ *
+ * Solo se vacía el usuario cuando Supabase confirma que no hay sesión. Si
+ * tampoco se puede consultar la sesión (sin red, p. ej. Android al volver de
+ * otra app), se conserva lo anterior: ese error no significa "sesión cerrada".
  */
 export async function fetchGymSnapshot(
   repo: GymRepository,
@@ -24,7 +28,7 @@ export async function fetchGymSnapshot(
       const user = await repo.getCurrentUser()
       return { user, state: user ? (previous?.state ?? null) : null }
     } catch {
-      return { user: null, state: null }
+      return previous ?? { user: null, state: null }
     }
   }
 }
